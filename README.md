@@ -4,7 +4,7 @@ One npm package that gives any terminal-capable coding agent the same resumable,
 evidence-backed development workflow.
 
 ```bash
-npm install -g @empirical/sdd
+npm install -g empirical-sdd
 cd your-project
 empirical init
 ```
@@ -134,7 +134,7 @@ The server uses stdio and is started on demand by the host. It is not a daemon.
 Tools and IDEs can embed the exact same engine:
 
 ```ts
-import { EmpiricalProject } from "@empirical/sdd";
+import { EmpiricalProject } from "empirical-sdd";
 
 const project = await EmpiricalProject.open(process.cwd());
 const action = await project.next();

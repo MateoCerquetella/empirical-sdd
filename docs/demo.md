@@ -8,7 +8,7 @@ This walkthrough uses a new repository and a Quick workflow to add a working
 After the npm package is published, install it once on the machine:
 
 ```bash
-npm install -g @empirical/sdd
+npm install -g empirical-sdd
 empirical --version
 ```
 

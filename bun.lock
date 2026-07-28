@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@empirical/sdd",
+      "name": "empirical-sdd",
       "devDependencies": {
         "@modelcontextprotocol/sdk": "^1.30.0",
         "@types/node": "^26.1.2",

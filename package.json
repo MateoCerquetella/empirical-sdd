@@ -1,5 +1,5 @@
 {
-  "name": "@empirical/sdd",
+  "name": "empirical-sdd",
   "version": "2.0.0",
   "description": "Agent-neutral, resumable spec-driven development for every terminal-capable coding agent",
   "type": "module",

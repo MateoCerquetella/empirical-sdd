@@ -139,11 +139,11 @@ async function main(): Promise<void> {
     }
     case "update": {
       if (takeFlag(context.args, "--check")) {
-        console.log(`Installed ${PRODUCT_VERSION}. Check npm with: npm view @empirical/sdd version`);
+        console.log(`Installed ${PRODUCT_VERSION}. Check npm with: npm view empirical-sdd version`);
         return;
       }
       const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-      const result = spawnSync(npm, ["install", "-g", "@empirical/sdd@latest"], { stdio: "inherit" });
+      const result = spawnSync(npm, ["install", "-g", "empirical-sdd@latest"], { stdio: "inherit" });
       if (result.error || result.status !== 0) {
         throw new EmpiricalError("UPDATE_FAILED", result.error?.message ?? `npm exited with ${String(result.status)}`);
       }
@@ -247,7 +247,7 @@ async function readStdin(): Promise<string> {
 function printHelp(): void {
   console.log(`Empirical v${PRODUCT_VERSION}
 
-Install once: npm install -g @empirical/sdd
+Install once: npm install -g empirical-sdd
 
 Usage:
   empirical init [--profile quick|strong]

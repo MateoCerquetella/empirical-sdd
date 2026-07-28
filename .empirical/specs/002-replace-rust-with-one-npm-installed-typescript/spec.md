@@ -14,7 +14,7 @@ without installing an agent-specific command pack.
 
 ## Acceptance Criteria
 
-- [ ] [AC-1] `npm install -g @empirical/sdd` installs one `empirical` executable without requiring Rust, Cargo, or Bun at runtime.
+- [ ] [AC-1] `npm install -g empirical-sdd` installs one `empirical` executable without requiring Rust, Cargo, or Bun at runtime.
 - [ ] [AC-2] `empirical init` creates portable `.empirical/` state and safely adds automatic project guidance without overwriting existing instructions.
 - [ ] [AC-3] The package exposes a self-guiding CLI and importable TypeScript API backed by the same revisioned Quick and Strong workflow engine.
 - [ ] [AC-4] The package exposes an on-demand stdio MCP server whose tools operate on the same repository state as the CLI.
