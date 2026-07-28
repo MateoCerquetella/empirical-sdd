@@ -1,10 +1,8 @@
 $ErrorActionPreference = "Stop"
 
-if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
-    throw "Empirical requires Rust/Cargo 1.85 or newer."
+if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+    throw "Empirical requires Node.js 20+ and npm."
 }
 
-cargo install --locked --force --git https://github.com/MateoCerquetella/empirical-sdd empirical-sdd
-empirical agents sync
-
-Write-Host "Empirical and all supported global agent command packs are installed."
+npm install -g @empirical/sdd@latest
+empirical --version

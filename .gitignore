@@ -1,4 +1,6 @@
-/target/
+/dist/
+/node_modules/
+*.tgz
 *.tmp
 .DS_Store
 
@@ -7,3 +9,6 @@
 ai/.runtime/
 ai/.sdd-write-lock
 ai/.phase-result.json
+
+# Empirical uses committed state; only transient locks are ignored.
+.empirical/*.lock

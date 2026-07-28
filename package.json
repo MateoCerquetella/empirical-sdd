@@ -1,0 +1,58 @@
+{
+  "name": "@empirical/sdd",
+  "version": "2.0.0",
+  "description": "Agent-neutral, resumable spec-driven development for every terminal-capable coding agent",
+  "type": "module",
+  "bin": {
+    "empirical": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "bun run scripts/build.ts",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test",
+    "test:dist": "bun run build && bun run scripts/smoke-mcp.ts",
+    "prepack": "bun run build",
+    "test:package": "npm pack --dry-run",
+    "ci": "bun run check && bun test && bun run test:dist && bun run test:package"
+  },
+  "keywords": [
+    "agents",
+    "mcp",
+    "sdd",
+    "spec-driven-development",
+    "codex",
+    "claude"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MateoCerquetella/empirical-sdd.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MateoCerquetella/empirical-sdd/issues"
+  },
+  "homepage": "https://github.com/MateoCerquetella/empirical-sdd#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2",
+    "zod": "^4.4.3"
+  }
+}

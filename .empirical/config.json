@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "profile": "strong",
+  "maxRepairAttempts": 2,
+  "evidence": {
+    "required": true,
+    "browserForUi": true,
+    "screenshotForUi": true,
+    "codeReview": true
+  },
+  "legacySource": null
+}

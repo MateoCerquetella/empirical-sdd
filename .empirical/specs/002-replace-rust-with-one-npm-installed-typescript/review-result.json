@@ -1,0 +1,14 @@
+{
+  "revision": 6,
+  "outcome": "passed",
+  "summary": "Final review found no blocking correctness, security, portability, or packaging issues. The npm/Bun implementation preserves existing agent configuration, validates untrusted completion data, requires evidence, and keeps MCP optional.",
+  "actor": "codex-reviewer",
+  "evidence": [
+    {
+      "criterionId": "all",
+      "kind": "review",
+      "passed": true,
+      "summary": "Reviewed the shared core, atomic repository store, CLI, MCP adapter, agent integrations, migration behavior, tests, package contents, documentation, and CI; no blocking findings remain."
+    }
+  ]
+}

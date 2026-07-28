@@ -1,6 +1,0 @@
-description = "Initialize or adopt Empirical SDD in the current repository"
-prompt = """
-Follow the empirical-init workflow. Use the installed `empirical` CLI and the
-repository's neutral `ai/` files. Preserve existing v1 content. User context:
-{{args}}
-"""
