@@ -4,7 +4,7 @@
   "description": "Agent-neutral, resumable spec-driven development for every terminal-capable coding agent",
   "type": "module",
   "bin": {
-    "empirical": "./dist/cli.js"
+    "empirical": "dist/cli.js"
   },
   "exports": {
     ".": {
