@@ -652,6 +652,9 @@ fn sync_directory(path: &Path) -> Result<()> {
             .and_then(|directory| directory.sync_all())
             .map_err(|error| SddError::io(path, error))?;
     }
+    #[cfg(not(unix))]
+    let _ = path;
+
     Ok(())
 }
 

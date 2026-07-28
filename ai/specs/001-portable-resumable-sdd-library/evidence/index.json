@@ -367,6 +367,139 @@
         "implementationActor": "codex-evidence-repair",
         "reviewDisposition": "approved"
       }
+    },
+    {
+      "schemaVersion": 2,
+      "id": "EV-20260728-WINDOWS-PORTABILITY-SUITE",
+      "specId": "001-portable-resumable-sdd-library",
+      "specRevision": 1,
+      "workspaceHash": "sha256:e6a20c832dd29681e8e97ac7839c0cc333115cf0e2a4eb9e371220277b2580be",
+      "criterionIds": [
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6",
+        "AC-7",
+        "AC-8"
+      ],
+      "kind": "test",
+      "verdict": "passed",
+      "producer": "codex-windows-portability-tester",
+      "reviewer": null,
+      "summary": "The Windows portability patch passed formatting, Clippy with warnings denied, Rust 1.85 checks, 48 unit tests, 2 CLI tests, 5 conformance tests, and Cargo package verification.",
+      "command": [
+        "cargo",
+        "test",
+        "--all-targets",
+        "--all-features"
+      ],
+      "exitCode": 0,
+      "outputHash": "sha256:c19b32991876578f040bc482f02bb414f3638d5c2bd239a043c289a1ef30ab16",
+      "artifactPath": null,
+      "artifactHash": null,
+      "createdAt": "2026-07-28T20:52:00Z",
+      "metadata": {
+        "cliTests": "2",
+        "clippy": "passed with -D warnings",
+        "conformanceTests": "5",
+        "msrv": "1.85.0",
+        "packageVerification": "passed, 104 files",
+        "uiCriteria": "0",
+        "unitTests": "48"
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "id": "EV-20260728-WINDOWS-PORTABILITY-REVIEW",
+      "specId": "001-portable-resumable-sdd-library",
+      "specRevision": 1,
+      "workspaceHash": "sha256:e6a20c832dd29681e8e97ac7839c0cc333115cf0e2a4eb9e371220277b2580be",
+      "criterionIds": [],
+      "kind": "code_review",
+      "verdict": "passed",
+      "producer": "codex-windows-portability-reviewer",
+      "reviewer": "codex-windows-portability-reviewer",
+      "summary": "Reviewed the platform-specific durability path and full one-line source diff; non-Unix explicitly consumes the no-op parameter while Unix retains directory fsync behavior. No portability or correctness blockers remain.",
+      "command": null,
+      "exitCode": null,
+      "outputHash": null,
+      "artifactPath": null,
+      "artifactHash": null,
+      "createdAt": "2026-07-28T20:52:00Z",
+      "metadata": {
+        "implementationActor": "codex-evidence-repair",
+        "reviewDisposition": "approved",
+        "uiCriteria": "0"
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "id": "EV-20260728-CLI-FIRST-FINAL-SUITE",
+      "specId": "001-portable-resumable-sdd-library",
+      "specRevision": 1,
+      "workspaceHash": "sha256:fa8ec1f723204d748bcc879d388da63400878087253a71c974ba48d13c605f04",
+      "criterionIds": [
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6",
+        "AC-7",
+        "AC-8"
+      ],
+      "kind": "test",
+      "verdict": "passed",
+      "producer": "codex-cli-final-tester",
+      "reviewer": null,
+      "summary": "The CLI-first release tree passed formatting, Clippy with warnings denied, Rust 1.85 checks, 48 unit tests, 2 CLI tests, 5 conformance tests, and Cargo package verification.",
+      "command": [
+        "cargo",
+        "test",
+        "--all-targets",
+        "--all-features"
+      ],
+      "exitCode": 0,
+      "outputHash": "sha256:9e09706f8ea2d605427a41aca29623f38dc729c1cf7785db9e20583d52cf2854",
+      "artifactPath": null,
+      "artifactHash": null,
+      "createdAt": "2026-07-28T20:57:00Z",
+      "metadata": {
+        "cliTests": "2",
+        "clippy": "passed with -D warnings",
+        "conformanceTests": "5",
+        "distribution": "standalone empirical CLI",
+        "msrv": "1.85.0",
+        "packageVerification": "passed, 104 files",
+        "uiCriteria": "0",
+        "unitTests": "48"
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "id": "EV-20260728-CLI-FIRST-FINAL-REVIEW",
+      "specId": "001-portable-resumable-sdd-library",
+      "specRevision": 1,
+      "workspaceHash": "sha256:fa8ec1f723204d748bcc879d388da63400878087253a71c974ba48d13c605f04",
+      "criterionIds": [],
+      "kind": "code_review",
+      "verdict": "passed",
+      "producer": "codex-cli-final-reviewer",
+      "reviewer": "codex-cli-final-reviewer",
+      "summary": "Reviewed the Windows portability fix and CLI-first product wording. The installed surface is the standalone empirical executable; the optional Rust API introduces no app, service, host, database, or IDE dependency.",
+      "command": null,
+      "exitCode": null,
+      "outputHash": null,
+      "artifactPath": null,
+      "artifactHash": null,
+      "createdAt": "2026-07-28T20:57:00Z",
+      "metadata": {
+        "implementationActor": "codex-evidence-repair",
+        "reviewDisposition": "approved",
+        "uiCriteria": "0"
+      }
     }
   ]
 }

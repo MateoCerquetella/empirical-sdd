@@ -1,7 +1,12 @@
-# Empirical SDD
+# Empirical CLI
 
-Portable, evidence-backed Spec-Driven Development for any agent, IDE, terminal,
-or CI system.
+The CLI-first, evidence-backed development workflow for any terminal, agent,
+IDE, or CI system.
+
+The installed product is one standalone command-line executable: `empirical`.
+It does not install or run a GUI application, background service, Agentum
+runtime, IDE plug-in, database, or MCP server. A Rust API is available for tool
+authors, but it is an optional embedding surface over the same CLI protocol.
 
 Empirical SDD keeps the approachable `ai/` workspace used by the original
 [Empirical SDD + DDD starter](https://github.com/goempirical/empirical-sdd-ddd-starter),
@@ -17,7 +22,7 @@ caches. Delete them and another conforming client can continue from
 
 ## What changed
 
-| Concern | Original v1 starter | Earlier runtime-coupled v2 | This library |
+| Concern | Original v1 starter | Earlier runtime-coupled v2 | Empirical CLI |
 |---|---|---|---|
 | Portability | Markdown scaffold | Product/runtime coupled | Neutral schemas, files, Rust API, and CLI |
 | Continuation | Role guidance | Runtime orchestration | Persistent `run-until-stop` loop |

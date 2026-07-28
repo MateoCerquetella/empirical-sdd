@@ -25,8 +25,9 @@ client cache could remove authoritative state.
 
 ## The combined design
 
-This library retains the v1 filesystem vocabulary and moves the stronger v2
-controls into a neutral protocol:
+The `empirical` CLI retains the v1 filesystem vocabulary and moves the stronger
+v2 controls into a neutral protocol. Its optional Rust API exposes the same
+engine to tool authors; it is not a separate app or runtime:
 
 - v1 Markdown remains readable before adoption and preserved afterward;
 - `revision` is an optimistic compare-and-swap token for every transition;
