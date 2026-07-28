@@ -1,0 +1,372 @@
+{
+  "schemaVersion": 2,
+  "specId": "001-portable-resumable-sdd-library",
+  "specRevision": 1,
+  "records": [
+    {
+      "schemaVersion": 2,
+      "id": "EV-20260728-FULL-SUITE",
+      "specId": "001-portable-resumable-sdd-library",
+      "specRevision": 1,
+      "workspaceHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "criterionIds": [
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6",
+        "AC-7",
+        "AC-8"
+      ],
+      "kind": "test",
+      "verdict": "passed",
+      "producer": "codex-tester",
+      "reviewer": null,
+      "summary": "39 unit tests, 2 CLI tests, and 5 cross-client conformance tests passed on the final source tree.",
+      "command": [
+        "cargo",
+        "test",
+        "--all-targets"
+      ],
+      "exitCode": 0,
+      "outputHash": "sha256:01a06e314b117261657c4624b5b80eff7d8b6bae23f564b9d78b0c30ce0ba6cb",
+      "artifactPath": null,
+      "artifactHash": null,
+      "createdAt": "2026-07-28T19:32:43Z",
+      "metadata": {
+        "cliTests": "2",
+        "conformanceTests": "5",
+        "msrv": "1.85.0",
+        "uiCriteria": "0",
+        "unitTests": "39",
+        "workspaceBinding": "pre-release-unbound"
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "id": "EV-20260728-RELEASE-SUITE",
+      "specId": "001-portable-resumable-sdd-library",
+      "specRevision": 1,
+      "workspaceHash": "sha256:13eb8a1836e9e8adaf59f575c5ae26d07c522834966d6484ad2aafd487adedf5",
+      "criterionIds": [
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6",
+        "AC-7",
+        "AC-8"
+      ],
+      "kind": "test",
+      "verdict": "passed",
+      "producer": "codex-tester",
+      "reviewer": null,
+      "summary": "48 unit tests, 2 CLI tests, and 5 cross-client conformance tests passed on the release source tree.",
+      "command": [
+        "cargo",
+        "test",
+        "--all-targets",
+        "--all-features"
+      ],
+      "exitCode": 0,
+      "outputHash": "sha256:172bbdf61fd2e739f8280cc594b00b472ec8cd1b898e42b86a44ae91e3755ce0",
+      "artifactPath": null,
+      "artifactHash": null,
+      "createdAt": "2026-07-28T20:24:50Z",
+      "metadata": {
+        "cliTests": "2",
+        "clippy": "passed with -D warnings",
+        "conformanceTests": "5",
+        "msrv": "1.85.0",
+        "packageVerification": "passed, 101 files",
+        "uiCriteria": "0",
+        "unitTests": "48"
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "id": "EV-20260728-LIVE-V1-MIGRATION",
+      "specId": "001-portable-resumable-sdd-library",
+      "specRevision": 1,
+      "workspaceHash": "sha256:13eb8a1836e9e8adaf59f575c5ae26d07c522834966d6484ad2aafd487adedf5",
+      "criterionIds": [
+        "AC-1",
+        "AC-7"
+      ],
+      "kind": "human_verification",
+      "verdict": "passed",
+      "producer": "codex-tester",
+      "reviewer": null,
+      "summary": "The current public v1 starter was inspected without mutation, then a fresh clone was adopted and upgraded with every original playbook preserved and doctor reporting healthy.",
+      "command": null,
+      "exitCode": null,
+      "outputHash": null,
+      "artifactPath": null,
+      "artifactHash": null,
+      "createdAt": "2026-07-28T20:24:50Z",
+      "metadata": {
+        "originalPlaybooksModified": "0",
+        "source": "https://github.com/goempirical/empirical-sdd-ddd-starter",
+        "upgradeConflicts": "0"
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "id": "EV-20260728-GLOBAL-PACKS",
+      "specId": "001-portable-resumable-sdd-library",
+      "specRevision": 1,
+      "workspaceHash": "sha256:13eb8a1836e9e8adaf59f575c5ae26d07c522834966d6484ad2aafd487adedf5",
+      "criterionIds": [
+        "AC-8"
+      ],
+      "kind": "human_verification",
+      "verdict": "passed",
+      "producer": "codex-tester",
+      "reviewer": null,
+      "summary": "One agents sync installed all 28 Empirical command files across Shared Agent Skills, Codex, Claude Code, and Gemini CLI; the second check was up to date.",
+      "command": null,
+      "exitCode": null,
+      "outputHash": null,
+      "artifactPath": null,
+      "artifactHash": null,
+      "createdAt": "2026-07-28T20:24:50Z",
+      "metadata": {
+        "commandFiles": "28",
+        "hosts": "agent-skills,codex,claude-code,gemini-cli",
+        "perAgentIntegration": "false"
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "id": "EV-20260728-FINAL-RELEASE-SUITE",
+      "specId": "001-portable-resumable-sdd-library",
+      "specRevision": 1,
+      "workspaceHash": "sha256:76cc0bd13fe4940f5f971629426848f9edaf1ef0e1d0a066b047964652eba46a",
+      "criterionIds": [
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6",
+        "AC-7",
+        "AC-8"
+      ],
+      "kind": "test",
+      "verdict": "passed",
+      "producer": "codex-final-tester",
+      "reviewer": null,
+      "summary": "48 unit tests, 2 CLI tests, and 5 cross-client conformance tests passed on the final repaired source tree.",
+      "command": [
+        "cargo",
+        "test",
+        "--all-targets",
+        "--all-features"
+      ],
+      "exitCode": 0,
+      "outputHash": "sha256:b17151ea199b19e993a0bee1de4545bd75dbf14d61746ee339a515190ddac4d2",
+      "artifactPath": null,
+      "artifactHash": null,
+      "createdAt": "2026-07-28T20:28:48Z",
+      "metadata": {
+        "cliTests": "2",
+        "clippy": "passed with -D warnings",
+        "conformanceTests": "5",
+        "msrv": "1.85.0",
+        "packageVerification": "passed, 101 files",
+        "uiCriteria": "0",
+        "unitTests": "48"
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "id": "EV-20260728-FINAL-V1-MIGRATION",
+      "specId": "001-portable-resumable-sdd-library",
+      "specRevision": 1,
+      "workspaceHash": "sha256:76cc0bd13fe4940f5f971629426848f9edaf1ef0e1d0a066b047964652eba46a",
+      "criterionIds": [
+        "AC-1",
+        "AC-7"
+      ],
+      "kind": "human_verification",
+      "verdict": "passed",
+      "producer": "codex-final-tester",
+      "reviewer": null,
+      "summary": "The public v1 starter was inspected without mutation, then adopted and upgraded in a fresh clone with every original playbook preserved and doctor healthy.",
+      "command": null,
+      "exitCode": null,
+      "outputHash": null,
+      "artifactPath": null,
+      "artifactHash": null,
+      "createdAt": "2026-07-28T20:28:48Z",
+      "metadata": {
+        "originalPlaybooksModified": "0",
+        "source": "https://github.com/goempirical/empirical-sdd-ddd-starter",
+        "upgradeConflicts": "0"
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "id": "EV-20260728-FINAL-GLOBAL-PACKS",
+      "specId": "001-portable-resumable-sdd-library",
+      "specRevision": 1,
+      "workspaceHash": "sha256:76cc0bd13fe4940f5f971629426848f9edaf1ef0e1d0a066b047964652eba46a",
+      "criterionIds": [
+        "AC-8"
+      ],
+      "kind": "human_verification",
+      "verdict": "passed",
+      "producer": "codex-final-tester",
+      "reviewer": null,
+      "summary": "One agents sync installed all 28 Empirical command files across Shared Agent Skills, Codex, Claude Code, and Gemini CLI; the follow-up check was current.",
+      "command": null,
+      "exitCode": null,
+      "outputHash": null,
+      "artifactPath": null,
+      "artifactHash": null,
+      "createdAt": "2026-07-28T20:28:48Z",
+      "metadata": {
+        "commandFiles": "28",
+        "hosts": "agent-skills,codex,claude-code,gemini-cli",
+        "perAgentIntegration": "false"
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "id": "EV-20260728-FINAL-CODE-REVIEW",
+      "specId": "001-portable-resumable-sdd-library",
+      "specRevision": 1,
+      "workspaceHash": "sha256:76cc0bd13fe4940f5f971629426848f9edaf1ef0e1d0a066b047964652eba46a",
+      "criterionIds": [],
+      "kind": "code_review",
+      "verdict": "passed",
+      "producer": "codex-independent-reviewer",
+      "reviewer": "codex-independent-reviewer",
+      "summary": "Reviewed the final diff, state/evidence invariants, live v1 adoption, filesystem boundaries, command execution and delivery authorization, package contents, and release checks; no blockers remain.",
+      "command": null,
+      "exitCode": null,
+      "outputHash": null,
+      "artifactPath": null,
+      "artifactHash": null,
+      "createdAt": "2026-07-28T20:31:40Z",
+      "metadata": {
+        "implementationActor": "codex-evidence-repair",
+        "reviewDisposition": "approved",
+        "uiCriteria": "0"
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "id": "EV-20260728-PUBLISH-SUITE",
+      "specId": "001-portable-resumable-sdd-library",
+      "specRevision": 1,
+      "workspaceHash": "sha256:93f4af93fa25d79e6ac5326b347fc585f849e0770ef4fe235a103884278454ef",
+      "criterionIds": [
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6",
+        "AC-7",
+        "AC-8"
+      ],
+      "kind": "test",
+      "verdict": "passed",
+      "producer": "codex-publish-tester",
+      "reviewer": null,
+      "summary": "The publish tree passed 48 unit, 2 CLI, and 5 cross-client conformance tests after final whitespace normalization.",
+      "command": [
+        "cargo",
+        "test",
+        "--all-targets",
+        "--all-features"
+      ],
+      "exitCode": 0,
+      "outputHash": "sha256:8032ed4846f5e75d474363752bcfe32d7216529d6b02d43db216f730e42e808e",
+      "artifactPath": null,
+      "artifactHash": null,
+      "createdAt": "2026-07-28T20:36:24Z",
+      "metadata": {
+        "totalTests": "55",
+        "uiCriteria": "0"
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "id": "EV-20260728-PUBLISH-V1-MIGRATION",
+      "specId": "001-portable-resumable-sdd-library",
+      "specRevision": 1,
+      "workspaceHash": "sha256:93f4af93fa25d79e6ac5326b347fc585f849e0770ef4fe235a103884278454ef",
+      "criterionIds": [
+        "AC-1",
+        "AC-7"
+      ],
+      "kind": "human_verification",
+      "verdict": "passed",
+      "producer": "codex-publish-tester",
+      "reviewer": null,
+      "summary": "The public v1 starter remained unchanged during inspection and retained every original playbook during adoption and upgrade.",
+      "command": null,
+      "exitCode": null,
+      "outputHash": null,
+      "artifactPath": null,
+      "artifactHash": null,
+      "createdAt": "2026-07-28T20:36:24Z",
+      "metadata": {
+        "source": "https://github.com/goempirical/empirical-sdd-ddd-starter",
+        "upgradeConflicts": "0"
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "id": "EV-20260728-PUBLISH-GLOBAL-PACKS",
+      "specId": "001-portable-resumable-sdd-library",
+      "specRevision": 1,
+      "workspaceHash": "sha256:93f4af93fa25d79e6ac5326b347fc585f849e0770ef4fe235a103884278454ef",
+      "criterionIds": [
+        "AC-8"
+      ],
+      "kind": "human_verification",
+      "verdict": "passed",
+      "producer": "codex-publish-tester",
+      "reviewer": null,
+      "summary": "One global sync installed all 28 Empirical command files across the four supported host layouts.",
+      "command": null,
+      "exitCode": null,
+      "outputHash": null,
+      "artifactPath": null,
+      "artifactHash": null,
+      "createdAt": "2026-07-28T20:36:24Z",
+      "metadata": {
+        "hosts": "agent-skills,codex,claude-code,gemini-cli",
+        "perAgentIntegration": "false"
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "id": "EV-20260728-PUBLISH-CODE-REVIEW",
+      "specId": "001-portable-resumable-sdd-library",
+      "specRevision": 1,
+      "workspaceHash": "sha256:93f4af93fa25d79e6ac5326b347fc585f849e0770ef4fe235a103884278454ef",
+      "criterionIds": [],
+      "kind": "code_review",
+      "verdict": "passed",
+      "producer": "codex-independent-publish-reviewer",
+      "reviewer": "codex-independent-publish-reviewer",
+      "summary": "The normalized publish tree matches the independently approved implementation; no release blockers remain.",
+      "command": null,
+      "exitCode": null,
+      "outputHash": null,
+      "artifactPath": null,
+      "artifactHash": null,
+      "createdAt": "2026-07-28T20:36:24Z",
+      "metadata": {
+        "implementationActor": "codex-evidence-repair",
+        "reviewDisposition": "approved"
+      }
+    }
+  ]
+}

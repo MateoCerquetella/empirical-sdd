@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MateoCerquetella/empirical-sdd/raw/main/schemas/state.schema.json",
+  "title": "Empirical SDD state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "schemaVersion",
+    "revision",
+    "projectId",
+    "currentSpec",
+    "profile",
+    "mode",
+    "phase",
+    "status",
+    "repairAttempts",
+    "specRevision",
+    "specHash",
+    "lastEvent",
+    "implementationActor",
+    "message"
+  ],
+  "properties": {
+    "protocol": { "const": "empirical-sdd" },
+    "schemaVersion": { "const": 2 },
+    "revision": { "type": "integer", "minimum": 0 },
+    "projectId": { "type": "string", "minLength": 1 },
+    "currentSpec": { "type": ["string", "null"] },
+    "profile": { "enum": ["quick", "strong"] },
+    "mode": { "enum": ["hitl", "autonomous"] },
+    "phase": {
+      "enum": ["idle", "shape", "specify", "design", "plan", "implement", "verify", "review", "deliver", "done"]
+    },
+    "status": { "enum": ["idle", "running", "waiting", "awaiting_human", "blocked", "done"] },
+    "repairAttempts": { "type": "integer", "minimum": 0, "maximum": 20 },
+    "specRevision": { "type": "integer", "minimum": 1 },
+    "specHash": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-fA-F]{64}$" },
+    "lastEvent": { "type": ["string", "null"] },
+    "implementationActor": { "type": ["string", "null"] },
+    "message": { "type": ["string", "null"] }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "phase": { "const": "done" } }, "required": ["phase"] },
+      "then": { "properties": { "status": { "const": "done" } } },
+      "else": { "properties": { "status": { "not": { "const": "done" } } } }
+    },
+    {
+      "if": { "properties": { "phase": { "const": "idle" } }, "required": ["phase"] },
+      "then": { "properties": { "status": { "const": "idle" } } },
+      "else": {
+        "properties": {
+          "status": { "not": { "const": "idle" } },
+          "currentSpec": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  ]
+}

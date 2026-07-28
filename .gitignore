@@ -1,0 +1,9 @@
+/target/
+*.tmp
+.DS_Store
+
+# Runtime data is external to the repository. These are ignored only as a
+# defensive measure for third-party adapters.
+ai/.runtime/
+ai/.sdd-write-lock
+ai/.phase-result.json

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MateoCerquetella/empirical-sdd/raw/main/schemas/evidence.schema.json",
+  "title": "Empirical SDD evidence record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "specId", "specRevision", "workspaceHash", "criterionIds", "kind", "verdict", "producer", "reviewer", "summary", "command", "exitCode", "outputHash", "artifactPath", "artifactHash", "createdAt", "metadata"],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "id": { "type": "string", "minLength": 1 },
+    "specId": { "type": "string", "minLength": 1 },
+    "specRevision": { "type": "integer", "minimum": 1 },
+    "workspaceHash": { "type": "string", "pattern": "^sha256:[0-9a-fA-F]{64}$" },
+    "criterionIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "kind": { "enum": ["test", "browser_assertion", "screenshot_review", "human_verification", "code_review"] },
+    "verdict": { "enum": ["passed", "failed"] },
+    "producer": { "type": "string", "minLength": 1 },
+    "reviewer": { "type": ["string", "null"] },
+    "summary": { "type": "string", "minLength": 1 },
+    "command": { "type": ["array", "null"], "items": { "type": "string" }, "minItems": 1 },
+    "exitCode": { "type": ["integer", "null"] },
+    "outputHash": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-fA-F]{64}$" },
+    "artifactPath": { "type": ["string", "null"] },
+    "artifactHash": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-fA-F]{64}$" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "metadata": { "type": "object", "additionalProperties": { "type": "string" } }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "const": "test" } }, "required": ["kind"] },
+      "then": {
+        "properties": {
+          "command": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+          "exitCode": { "type": "integer" },
+          "outputHash": { "type": "string", "pattern": "^sha256:[0-9a-fA-F]{64}$" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "artifactPath": { "type": "string" } }, "required": ["artifactPath"] },
+      "then": { "properties": { "artifactHash": { "type": "string", "minLength": 1 } } }
+    }
+  ]
+}

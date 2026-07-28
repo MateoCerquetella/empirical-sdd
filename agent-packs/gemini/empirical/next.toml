@@ -1,0 +1,6 @@
+description = "Advance exactly one Empirical workflow phase"
+prompt = """
+Run `empirical next --json`, perform exactly the returned phase using the
+repository playbooks, and check in a typed result at the observed revision.
+Additional user context: {{args}}
+"""

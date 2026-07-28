@@ -1,0 +1,6 @@
+description = "Continue Empirical autonomously until a real stop condition"
+prompt = """
+Continue the Empirical workflow from repository state until Done, Blocked,
+delivery-ready, a missing capability, or a necessary human decision. Preserve
+all evidence gates. Additional user context: {{args}}
+"""

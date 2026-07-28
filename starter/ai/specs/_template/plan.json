@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "specId": "000-feature",
+  "tasks": [
+    {
+      "id": "T-001",
+      "objective": "Deliver one independently verifiable outcome",
+      "dependencies": [],
+      "writeScopes": ["path/to/scope"],
+      "acceptanceCriteria": ["AC-1"]
+    }
+  ]
+}

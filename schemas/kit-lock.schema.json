@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MateoCerquetella/empirical-sdd/raw/main/schemas/kit-lock.schema.json",
+  "title": "Empirical SDD repository-kit lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "distribution", "version", "managed_files"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "distribution": { "const": "empirical-sdd" },
+    "version": { "type": "string", "minLength": 1 },
+    "managed_files": {
+      "type": "object",
+      "propertyNames": { "pattern": "^ai/" },
+      "additionalProperties": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+    },
+    "preserved_files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "default": []
+    }
+  }
+}

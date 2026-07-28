@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 2,
+  "id": "01KYN35R1QM6VARWARZ9DV36MF",
+  "occurredAt": "2026-07-28T19:28:08.759742Z",
+  "expectedRevision": 4,
+  "revision": 5,
+  "kind": "phase_passed",
+  "actor": "codex-implementation",
+  "summary": "Implemented the standalone Empirical library, CLI, compatibility layer, evidence loop, managed kits, and global agent command packs.",
+  "previousEvent": "01KYN35QYJKWJW8GXT1JR1001E",
+  "state": {
+    "protocol": "empirical-sdd",
+    "schemaVersion": 2,
+    "revision": 5,
+    "projectId": "PRJ-01KYN334D58TF65Q9CTVZA739D",
+    "currentSpec": "001-portable-resumable-sdd-library",
+    "profile": "strong",
+    "mode": "autonomous",
+    "phase": "verify",
+    "status": "waiting",
+    "repairAttempts": 1,
+    "specRevision": 1,
+    "specHash": "sha256:4f5a2ec77d8da9caf77fd7c17a32d9836216e89f55c12b50ce3e58c1e2dee6b4",
+    "lastEvent": "01KYN35R1QM6VARWARZ9DV36MF",
+    "implementationActor": "codex-implementation",
+    "message": null
+  }
+}

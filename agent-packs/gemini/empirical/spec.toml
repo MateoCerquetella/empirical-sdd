@@ -1,0 +1,6 @@
+description = "Create or refine an Empirical feature spec"
+prompt = """
+Follow the empirical-spec workflow using the installed `empirical` CLI. Choose
+Quick or Strong from risk and ambiguity, then create observable acceptance
+criteria. User request: {{args}}
+"""

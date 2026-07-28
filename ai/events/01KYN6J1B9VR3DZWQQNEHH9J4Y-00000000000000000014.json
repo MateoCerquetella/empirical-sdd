@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 2,
+  "id": "01KYN6J1B9VR3DZWQQNEHH9J4Y",
+  "occurredAt": "2026-07-28T20:27:17.226116Z",
+  "expectedRevision": 13,
+  "revision": 14,
+  "kind": "phase_started",
+  "actor": "codex-evidence-repair",
+  "summary": "Claimed implement for external check-in",
+  "previousEvent": "01KYN6ESWHECFKGA4CEF98TGZM",
+  "state": {
+    "protocol": "empirical-sdd",
+    "schemaVersion": 2,
+    "revision": 14,
+    "projectId": "PRJ-01KYN334D58TF65Q9CTVZA739D",
+    "currentSpec": "001-portable-resumable-sdd-library",
+    "profile": "strong",
+    "mode": "autonomous",
+    "phase": "implement",
+    "status": "running",
+    "repairAttempts": 1,
+    "specRevision": 1,
+    "specHash": "sha256:4f5a2ec77d8da9caf77fd7c17a32d9836216e89f55c12b50ce3e58c1e2dee6b4",
+    "lastEvent": "01KYN6J1B9VR3DZWQQNEHH9J4Y",
+    "implementationActor": "codex-implementation-repair",
+    "message": null
+  }
+}

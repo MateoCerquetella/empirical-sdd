@@ -1,0 +1,6 @@
+description = "Deliver only an evidenced and reviewed Empirical feature"
+prompt = """
+Confirm the Empirical workflow is delivery-ready, obtain separate user authority
+for each configured Git action, and invoke `empirical deliver` with only those
+permissions. Additional context: {{args}}
+"""

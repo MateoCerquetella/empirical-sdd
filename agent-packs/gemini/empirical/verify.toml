@@ -1,0 +1,6 @@
+description = "Verify Empirical criteria with tests, browser QA, and screenshot review"
+prompt = """
+Verify every current acceptance criterion. For UI criteria use a real browser,
+capture screenshots, inspect them, and write criterion-bound evidence. Then run
+`empirical validate --json`. Additional context: {{args}}
+"""

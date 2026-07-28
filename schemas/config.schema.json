@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MateoCerquetella/empirical-sdd/raw/main/schemas/config.schema.json",
+  "title": "Empirical SDD repository configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile", "loop_policy", "evidence", "delivery"],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "profile": { "enum": ["quick", "strong"] },
+    "loop_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["auto_continue", "max_repair_attempts"],
+      "properties": {
+        "auto_continue": { "type": "boolean" },
+        "max_repair_attempts": { "type": "integer", "minimum": 0, "maximum": 20 }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["require_per_criterion", "tests", "code_review", "independent_code_review", "browser", "screenshots_for_ui", "screenshot_review_for_ui"],
+      "properties": {
+        "require_per_criterion": { "type": "boolean" },
+        "tests": { "type": "boolean" },
+        "code_review": { "type": "boolean" },
+        "independent_code_review": { "type": "boolean" },
+        "browser": { "enum": ["disabled", "when_available", "required_for_ui", "required"] },
+        "screenshots_for_ui": { "type": "boolean" },
+        "screenshot_review_for_ui": { "type": "boolean" }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "push", "pull_request", "paths", "commit_message", "remote", "draft_pull_request"],
+      "properties": {
+        "commit": { "type": "boolean" },
+        "push": { "type": "boolean" },
+        "pull_request": { "type": "boolean" },
+        "paths": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "commit_message": { "type": "string", "minLength": 1 },
+        "remote": { "type": "string", "minLength": 1 },
+        "base_branch": { "type": "string", "minLength": 1 },
+        "draft_pull_request": { "type": "boolean" }
+      }
+    },
+    "adapters": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["program"],
+        "properties": {
+          "program": { "type": "string", "minLength": 1 },
+          "args": { "type": "array", "items": { "type": "string" } },
+          "environment": { "type": "object", "additionalProperties": { "type": "string" } },
+          "timeout_seconds": { "type": "integer", "minimum": 1 },
+          "capabilities": {
+            "type": "array",
+            "items": { "enum": ["tests", "browser", "screenshots", "screenshot_review", "code_review"] },
+            "uniqueItems": true
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "delivery": {
+            "properties": { "pull_request": { "const": true } },
+            "required": ["pull_request"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "delivery": {
+            "properties": { "push": { "const": true } },
+            "required": ["push"]
+          }
+        }
+      }
+    }
+  ]
+}
