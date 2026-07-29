@@ -1,6 +1,6 @@
 {
   "name": "empirical-sdd",
-  "version": "2.3.1",
+  "version": "0.20.0",
   "description": "Agent-neutral, resumable spec-driven development for every terminal-capable coding agent",
   "type": "module",
   "bin": {
@@ -26,7 +26,7 @@
     "test": "bun test",
     "test:dist": "bun run build && bun run scripts/smoke-mcp.ts",
     "prepack": "bun run build",
-    "test:package": "npm pack --dry-run",
+    "test:package": "bun run scripts/test-package.ts",
     "ci": "bun run check && bun test && bun run test:dist && bun run test:package"
   },
   "keywords": [

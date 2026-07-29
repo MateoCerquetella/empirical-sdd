@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 4,
+  "previousRevision": 3,
+  "actor": "codex",
+  "summary": "Planned the Rust-to-npm replacement and verification",
+  "createdAt": "2026-07-28T21:21:03.799Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 4,
+    "activeFeature": "002-replace-rust-with-one-npm-installed-typescript",
+    "request": "Replace Rust with one npm-installed TypeScript package, self-guiding CLI, and optional MCP support for Codex, Claude, Gemini, Cursor, and Windsurf",
+    "profile": "complex",
+    "phase": "implement",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Planned the Rust-to-npm replacement and verification",
+    "implementationActor": null,
+    "evidence": [],
+    "updatedAt": "2026-07-28T21:21:03.799Z",
+    "specDigest": null,
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null
+  }
+}

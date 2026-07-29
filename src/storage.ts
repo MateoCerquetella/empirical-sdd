@@ -1,17 +1,16 @@
 import { chmod, lstat, open, readFile, readdir, rename, rm, rmdir, stat, writeFile, mkdir } from "node:fs/promises";
+import type { Dirent } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { EmpiricalError } from "./errors.js";
 import {
   POLICY_SCHEMA_VERSION,
   SCHEMA_VERSION,
-  WORKSTREAM_SCHEMA_VERSION,
   type ProjectPolicy,
   type Phase,
   type Profile,
   type ProjectConfig,
   type TransitionEvent,
-  type WorkstreamManifest,
   type WorkflowState,
 } from "./types.js";
 
@@ -29,12 +28,12 @@ interface LockSnapshot {
 
 export class ProjectStore {
   readonly root: string;
-  readonly workstream: string;
+  readonly feature: string | null;
 
-  constructor(root: string, workstream = "default") {
+  constructor(root: string, feature: string | null = null) {
     this.root = resolve(root);
-    assertWorkstreamId(workstream);
-    this.workstream = workstream;
+    if (feature !== null) assertFeatureId(feature);
+    this.feature = feature;
   }
 
   get directory(): string {
@@ -45,18 +44,12 @@ export class ProjectStore {
     return join(this.directory, "config.json");
   }
 
-  get workstreamsPath(): string {
-    return join(this.directory, "workstreams.json");
-  }
-
   get policyPath(): string {
     return join(this.directory, "policy.json");
   }
 
   get stateDirectory(): string {
-    return this.workstream === "default"
-      ? this.directory
-      : join(this.directory, "workstreams", this.workstream);
+    return this.specDirectory(this.requireFeature());
   }
 
   get statePath(): string {
@@ -71,8 +64,8 @@ export class ProjectStore {
     return join(this.directory, "capabilities");
   }
 
-  forWorkstream(workstream: string): ProjectStore {
-    return new ProjectStore(this.root, workstream);
+  forFeature(feature: string): ProjectStore {
+    return new ProjectStore(this.root, feature);
   }
 
   capabilityDirectory(capability: string): string {
@@ -102,23 +95,17 @@ export class ProjectStore {
   }
 
   async exists(): Promise<boolean> {
-    return isFile(this.statePath);
+    return isFile(this.configPath);
   }
 
   async ensureLayout(): Promise<void> {
+    await this.assertProjectPathSafe();
+    if (this.feature) {
+      await this.assertFeaturePathSafe(this.feature, [this.statePath, this.eventsDirectory]);
+    }
     await mkdir(join(this.directory, "specs"), { recursive: true });
     await mkdir(this.capabilitiesDirectory, { recursive: true });
-    await mkdir(this.eventsDirectory, { recursive: true });
-  }
-
-  async loadWorkstreams(): Promise<WorkstreamManifest> {
-    if (!(await isFile(this.workstreamsPath))) return defaultWorkstreamManifest();
-    const manifest = await readJson<WorkstreamManifest>(this.workstreamsPath, "INVALID_WORKSTREAMS");
-    return normalizeWorkstreamManifest(manifest);
-  }
-
-  async selectedWorkstream(): Promise<string> {
-    return (await this.loadWorkstreams()).selected;
+    if (this.feature) await mkdir(this.eventsDirectory, { recursive: true });
   }
 
   async loadPolicy(): Promise<ProjectPolicy> {
@@ -137,55 +124,97 @@ export class ProjectStore {
     return normalizeConfig(config);
   }
 
-  async loadState(): Promise<WorkflowState> {
+  async loadState(recover = true): Promise<WorkflowState> {
+    if (!this.feature) {
+      const active = await this.activeFeature(recover);
+      if (active) return this.forFeature(active).loadState(recover);
+      const config = await this.loadConfig();
+      return idleState(config.profile);
+    }
+    await this.assertFeaturePathSafe(this.feature, [this.statePath, this.eventsDirectory]);
     const projected = normalizeState(
       await readJson<WorkflowState>(this.statePath, "PROJECT_NOT_INITIALIZED"),
     );
     const event = await this.latestEvent();
     if (event && event.revision > projected.revision) {
-      await writeJsonAtomic(this.statePath, event.state);
+      if (recover) await writeJsonAtomic(this.statePath, event.state);
       return event.state;
     }
     return projected;
   }
 
-  async writeInitial(config: ProjectConfig, state: WorkflowState): Promise<void> {
+  async writeConfig(config: ProjectConfig): Promise<void> {
     await this.ensureLayout();
-    await writeJsonAtomic(this.configPath, config);
-    await this.commitInitialState(state, "empirical-init", "Initialized Empirical");
+    await writeJsonAtomic(this.configPath, normalizeConfig(config));
     await this.ensureProjectMetadata();
   }
 
-  async writeInitialWorkstream(state: WorkflowState): Promise<void> {
-    if (await this.exists()) return;
+  async writeInitial(config: ProjectConfig): Promise<void> {
+    await this.writeConfig(config);
+  }
+
+  async writeInitialFeature(state: WorkflowState, actor = "empirical-start", summary?: string): Promise<void> {
+    if (!this.feature) throw new EmpiricalError("FEATURE_REQUIRED", "Feature-scoped state needs a feature store");
+    if (await isFile(this.statePath)) {
+      throw new EmpiricalError("FEATURE_EXISTS", `Feature ${this.feature} already has workflow state`);
+    }
     await this.ensureLayout();
-    await this.commitInitialState(state, "empirical-workstream", `Initialized ${this.workstream}`);
+    await this.commitInitialState(state, actor, summary ?? `Started ${this.feature}`);
   }
 
-  async createWorkstream(workstream: string, state: WorkflowState): Promise<boolean> {
-    assertWorkstreamId(workstream);
-    return this.withResourceLock("workstreams", async () => {
-      const manifest = await this.loadWorkstreams();
-      if (manifest.workstreams[workstream]) return false;
-      const scoped = this.forWorkstream(workstream);
-      await scoped.writeInitialWorkstream(state);
-      manifest.workstreams[workstream] = { createdAt: state.updatedAt };
-      await writeJsonAtomic(this.workstreamsPath, manifest);
-      return true;
+  async configure(update: Partial<ProjectConfig>): Promise<ProjectConfig> {
+    return this.withResourceLock("policy", async () => {
+      const current = await this.loadConfig();
+      const next = normalizeConfig({
+        ...current,
+        ...update,
+        isolation: { ...current.isolation, ...update.isolation },
+        decisions: { ...current.decisions, ...update.decisions },
+      } as ProjectConfig);
+      await writeJsonAtomic(this.configPath, next);
+      return next;
     });
   }
 
-  async selectWorkstream(workstream: string): Promise<WorkstreamManifest> {
-    assertWorkstreamId(workstream);
-    return this.withResourceLock("workstreams", async () => {
-      const manifest = await this.loadWorkstreams();
-      if (!manifest.workstreams[workstream]) {
-        throw new EmpiricalError("WORKSTREAM_NOT_FOUND", `Unknown workstream '${workstream}'`);
+  async activeFeature(recover = true): Promise<string | null> {
+    const active: string[] = [];
+    for (const feature of await this.listFeatureIds()) {
+      const scoped = this.forFeature(feature);
+      if (!(await isFile(scoped.statePath))) continue;
+      const state = await scoped.loadState(recover);
+      if (
+        state.phase !== "done"
+        && (state.status === "waiting" || state.status === "awaiting_human" || state.status === "blocked")
+      ) {
+        active.push(feature);
       }
-      manifest.selected = workstream;
-      await writeJsonAtomic(this.workstreamsPath, manifest);
-      return manifest;
-    });
+    }
+    if (active.length > 1) {
+      throw new EmpiricalError(
+        "MULTIPLE_ACTIVE_FEATURES",
+        `This checkout has multiple active features: ${active.join(", ")}`,
+        { features: active },
+      );
+    }
+    return active[0] ?? null;
+  }
+
+  async listFeatureIds(): Promise<string[]> {
+    const directory = join(this.directory, "specs");
+    if (await isSymbolicLink(directory)) {
+      throw new EmpiricalError("UNSAFE_SPEC_PATH", `Feature storage cannot use symbolic links: ${directory}`);
+    }
+    let entries: Dirent[];
+    try {
+      entries = await readdir(directory, { withFileTypes: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw error;
+    }
+    return entries
+      .filter((entry) => entry.isDirectory() && isFeatureId(entry.name))
+      .map((entry) => entry.name)
+      .sort();
   }
 
   async transition(
@@ -222,6 +251,7 @@ export class ProjectStore {
       effect?: () => Promise<() => Promise<void>>;
     }>,
   ): Promise<{ state: WorkflowState; value: T }> {
+    this.requireFeature();
     await this.ensureProjectMetadata();
     return this.withLock(async () => {
       const current = await this.loadState();
@@ -279,34 +309,144 @@ export class ProjectStore {
   }
 
   async migrateSchema(): Promise<Record<string, unknown>> {
-    await this.ensureProjectMetadata();
-    return this.withLock(async () => {
-      const rawConfig = await readJson<ProjectConfig>(this.configPath, "PROJECT_NOT_INITIALIZED");
-      const rawState = await readJson<WorkflowState>(this.statePath, "PROJECT_NOT_INITIALIZED");
+    const project = new ProjectStore(this.root);
+    await project.ensureProjectMetadata();
+    return project.withResourceLock("specs", async () => {
+      const rawConfig = await readJson<ProjectConfig>(project.configPath, "PROJECT_NOT_INITIALIZED");
       const configVersion = schemaVersion(rawConfig);
-      const stateVersion = schemaVersion(rawState);
       const config = normalizeConfig(rawConfig);
-      const state = normalizeState(rawState);
-      const configChanged = JSON.stringify(rawConfig) !== JSON.stringify(config);
-      const stateChanged = JSON.stringify(rawState) !== JSON.stringify(state);
-      const changed = configChanged || stateChanged;
-      if (configChanged) await writeJsonAtomic(this.configPath, config);
-      if (stateChanged) await writeJsonAtomic(this.statePath, state);
+      let changed = JSON.stringify(rawConfig) !== JSON.stringify(config);
+      if (changed) await writeJsonAtomic(project.configPath, config);
+
+      const legacyStatePath = join(project.directory, "state.json");
+      const legacyEvents = join(project.directory, "events");
+      let stateVersion: number | null = null;
+      let migratedFeature: string | null = null;
+      if (await isSymbolicLink(legacyStatePath) || await isSymbolicLink(legacyEvents)) {
+        throw new EmpiricalError("UNSAFE_MIGRATION_PATH", "Workflow migration cannot follow symbolic links");
+      }
+      const eventNames = await legacyEventNames(legacyEvents);
+      const hasLegacyState = await isFile(legacyStatePath);
+      if (!hasLegacyState && eventNames.length) {
+        throw new EmpiricalError(
+          "MIGRATION_CONFLICT",
+          "Cannot migrate root transition history because its state projection is missing",
+        );
+      }
+      if (hasLegacyState) {
+        const rawState = await readJson<WorkflowState>(legacyStatePath, "PROJECT_NOT_INITIALIZED");
+        stateVersion = schemaVersion(rawState);
+        const state = normalizeState(rawState);
+        const eventsByFeature = new Map<string, Array<{ name: string; event: TransitionEvent }>>();
+        const desiredState = new Map<string, WorkflowState>();
+
+        for (const name of eventNames) {
+          const sourcePath = join(legacyEvents, name);
+          if (await isSymbolicLink(sourcePath)) {
+            throw new EmpiricalError("UNSAFE_MIGRATION_PATH", `Workflow migration cannot follow ${sourcePath}`);
+          }
+          const event = normalizeEvent(await readJson<TransitionEvent>(sourcePath, "INVALID_EVENT"));
+          const feature = event.state.activeFeature;
+          if (!feature) {
+            throw new EmpiricalError(
+              "MIGRATION_CONFLICT",
+              `Cannot assign root transition event ${name} to a feature`,
+            );
+          }
+          assertFeatureId(feature);
+          const records = eventsByFeature.get(feature) ?? [];
+          records.push({ name, event });
+          eventsByFeature.set(feature, records);
+          const current = desiredState.get(feature);
+          if (!current || event.state.revision > current.revision) desiredState.set(feature, event.state);
+        }
+        if (state.activeFeature) {
+          assertFeatureId(state.activeFeature);
+          desiredState.set(state.activeFeature, state);
+          migratedFeature = state.activeFeature;
+        }
+
+        const features = [...new Set([...eventsByFeature.keys(), ...desiredState.keys()])].sort();
+        for (const feature of features) {
+          const scoped = project.forFeature(feature);
+          const specPath = project.specPath(feature);
+          await scoped.assertFeaturePathSafe(feature, [specPath, scoped.statePath, scoped.eventsDirectory]);
+          if (!(await isFile(specPath))) {
+            throw new EmpiricalError("MIGRATION_CONFLICT", `Cannot migrate ${feature}: its specification is missing`);
+          }
+          for (const { name, event } of eventsByFeature.get(feature) ?? []) {
+            const targetPath = join(scoped.eventsDirectory, name);
+            if (await isSymbolicLink(targetPath)) {
+              throw new EmpiricalError("UNSAFE_MIGRATION_PATH", `Workflow migration cannot follow ${targetPath}`);
+            }
+            if (await isFile(targetPath)) {
+              const existing = normalizeEvent(await readJson<TransitionEvent>(targetPath, "INVALID_EVENT"));
+              if (JSON.stringify(existing) !== JSON.stringify(event)) {
+                throw new EmpiricalError("MIGRATION_CONFLICT", `Transition event ${name} conflicts with ${feature} history`);
+              }
+            }
+          }
+          const projected = desiredState.get(feature);
+          if (projected && await isFile(scoped.statePath)) {
+            const existing = normalizeState(await readJson<WorkflowState>(scoped.statePath, "PROJECT_NOT_INITIALIZED"));
+            if (existing.revision === projected.revision && JSON.stringify(existing) !== JSON.stringify(projected)) {
+              throw new EmpiricalError("MIGRATION_CONFLICT", `Feature ${feature} has conflicting workflow state`);
+            }
+          }
+        }
+
+        for (const feature of features) {
+          const scoped = project.forFeature(feature);
+          await scoped.ensureLayout();
+          for (const { name, event } of eventsByFeature.get(feature) ?? []) {
+            const targetPath = join(scoped.eventsDirectory, name);
+            if (!(await isFile(targetPath))) await writeJsonAtomic(targetPath, event);
+          }
+          const projected = desiredState.get(feature);
+          if (!projected) continue;
+          const existing = await isFile(scoped.statePath)
+            ? normalizeState(await readJson<WorkflowState>(scoped.statePath, "PROJECT_NOT_INITIALIZED"))
+            : null;
+          if (!existing || existing.revision < projected.revision) {
+            await writeJsonAtomic(scoped.statePath, projected);
+          }
+        }
+
+        await rm(legacyStatePath, { force: true });
+        await rm(join(project.directory, "state.lock"), { force: true });
+        await rm(legacyEvents, { recursive: true, force: true });
+        changed = true;
+      }
+
+      for (const feature of await project.listFeatureIds()) {
+        const scoped = project.forFeature(feature);
+        await scoped.assertFeaturePathSafe(feature, [scoped.statePath, scoped.eventsDirectory]);
+        if (!(await isFile(scoped.statePath))) continue;
+        const raw = await readJson<WorkflowState>(scoped.statePath, "PROJECT_NOT_INITIALIZED");
+        const normalized = normalizeState(raw);
+        if (JSON.stringify(raw) !== JSON.stringify(normalized)) {
+          await writeJsonAtomic(scoped.statePath, normalized);
+          changed = true;
+        }
+      }
       return {
         changed,
         from: { config: configVersion, state: stateVersion },
         to: SCHEMA_VERSION,
+        migratedFeature,
       };
     });
   }
 
   async writeSpec(feature: string, contents: string): Promise<void> {
     const path = this.specPath(feature);
+    await this.assertFeaturePathSafe(feature, [path]);
     await mkdir(dirname(path), { recursive: true });
     await writeTextAtomic(path, contents);
   }
 
   async readSpec(feature: string): Promise<string> {
+    await this.assertFeaturePathSafe(feature, [this.specPath(feature)]);
     try {
       return await readFile(this.specPath(feature), "utf8");
     } catch (error) {
@@ -315,30 +455,26 @@ export class ProjectStore {
   }
 
   async writeEvidence(feature: string, evidence: unknown): Promise<void> {
+    await this.assertFeaturePathSafe(feature, [this.evidencePath(feature)]);
     await writeJsonAtomic(this.evidencePath(feature), evidence);
   }
 
   async readEvidence<T>(feature: string): Promise<T[]> {
+    await this.assertFeaturePathSafe(feature, [this.evidencePath(feature)]);
     if (!(await isFile(this.evidencePath(feature)))) return [];
     return readJson<T[]>(this.evidencePath(feature), "INVALID_EVIDENCE");
   }
 
-  async nextFeatureNumber(): Promise<number> {
-    const directory = join(this.directory, "specs");
-    await mkdir(directory, { recursive: true });
-    const entries = await readdir(directory, { withFileTypes: true });
-    const numbers = entries
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => /^([0-9]{3})-/.exec(entry.name)?.[1])
-      .filter((value): value is string => value !== undefined)
-      .map(Number);
-    return (numbers.length === 0 ? 0 : Math.max(...numbers)) + 1;
-  }
-
   async listCapabilityNames(): Promise<string[]> {
-    await mkdir(this.capabilitiesDirectory, { recursive: true });
     await this.assertCapabilityPathSafe();
-    return (await readdir(this.capabilitiesDirectory, { withFileTypes: true }))
+    let entries: Dirent[];
+    try {
+      entries = await readdir(this.capabilitiesDirectory, { withFileTypes: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw error;
+    }
+    return entries
       .filter((entry) => entry.isDirectory() && isCapabilityId(entry.name))
       .map((entry) => entry.name)
       .sort();
@@ -363,8 +499,19 @@ export class ProjectStore {
     });
   }
 
-  async withResourceLock<T>(resource: "workstreams" | "specs" | "capabilities" | "policy", operation: () => Promise<T>): Promise<T> {
+  async withResourceLock<T>(resource: "specs" | "capabilities" | "policy", operation: () => Promise<T>): Promise<T> {
     return withFileLock(join(this.directory, `${resource}.lock`), operation);
+  }
+
+  async assertCurrentSchemaReadOnly(): Promise<void> {
+    await this.assertProjectPathSafe();
+    const config = await readJson<ProjectConfig>(this.configPath, "PROJECT_NOT_INITIALIZED");
+    if (config.schemaVersion !== SCHEMA_VERSION || await pathExists(join(this.directory, "state.json")) || await pathExists(join(this.directory, "events"))) {
+      throw new EmpiricalError(
+        "MIGRATION_REQUIRED",
+        "This read-only operation requires schema 4; run empirical migrate first",
+      );
+    }
   }
 
   private eventPath(revision: number): string {
@@ -383,8 +530,12 @@ export class ProjectStore {
     }
     const name = names.at(-1);
     if (!name) return null;
+    const path = join(this.eventsDirectory, name);
+    if (await isSymbolicLink(path)) {
+      throw new EmpiricalError("UNSAFE_SPEC_PATH", `Feature storage cannot use symbolic links: ${path}`);
+    }
     return normalizeEvent(
-      await readJson<TransitionEvent>(join(this.eventsDirectory, name), "INVALID_EVENT"),
+      await readJson<TransitionEvent>(path, "INVALID_EVENT"),
     );
   }
 
@@ -410,6 +561,13 @@ export class ProjectStore {
     return withFileLock(join(this.stateDirectory, "state.lock"), operation);
   }
 
+  private requireFeature(): string {
+    if (!this.feature) {
+      throw new EmpiricalError("FEATURE_REQUIRED", "This operation requires a feature-scoped store");
+    }
+    return this.feature;
+  }
+
   private async assertCapabilityPathSafe(capability?: string): Promise<void> {
     const paths = [
       this.capabilitiesDirectory,
@@ -427,15 +585,42 @@ export class ProjectStore {
     }
   }
 
-  private async ensureProjectMetadata(): Promise<void> {
-    await mkdir(this.directory, { recursive: true });
-    if (!(await isFile(this.workstreamsPath))) {
-      await this.withResourceLock("workstreams", async () => {
-        if (!(await isFile(this.workstreamsPath))) {
-          await writeJsonAtomic(this.workstreamsPath, defaultWorkstreamManifest());
-        }
-      });
+  async assertFeaturePathSafe(feature: string, additional: string[] = []): Promise<void> {
+    assertFeatureId(feature);
+    const paths = [
+      this.directory,
+      join(this.directory, "specs"),
+      this.specDirectory(feature),
+      ...additional,
+    ];
+    for (const path of paths) {
+      if (await isSymbolicLink(path)) {
+        throw new EmpiricalError(
+          "UNSAFE_SPEC_PATH",
+          `Feature storage cannot use symbolic links: ${path}`,
+        );
+      }
     }
+  }
+
+  private async assertProjectPathSafe(): Promise<void> {
+    const paths = [
+      this.directory,
+      join(this.directory, "specs"),
+      this.capabilitiesDirectory,
+      this.configPath,
+      this.policyPath,
+    ];
+    for (const path of paths) {
+      if (await isSymbolicLink(path)) {
+        throw new EmpiricalError("UNSAFE_PROJECT_PATH", `Empirical storage cannot use symbolic links: ${path}`);
+      }
+    }
+  }
+
+  private async ensureProjectMetadata(): Promise<void> {
+    await this.assertProjectPathSafe();
+    await mkdir(this.directory, { recursive: true });
     if (!(await isFile(this.policyPath))) {
       await this.withResourceLock("policy", async () => {
         if (!(await isFile(this.policyPath))) await writeJsonAtomic(this.policyPath, defaultPolicy());
@@ -699,6 +884,29 @@ export async function isSymbolicLink(path: string): Promise<boolean> {
   }
 }
 
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await lstat(path);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+async function legacyEventNames(directory: string): Promise<string[]> {
+  try {
+    return (await readdir(directory, { withFileTypes: true }))
+      .filter((entry) => entry.isFile() || entry.isSymbolicLink())
+      .map((entry) => entry.name)
+      .filter((name) => /^[0-9]{8}\.json$/.test(name))
+      .sort();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
+}
+
 export async function readJson<T>(path: string, code = "INVALID_JSON"): Promise<T> {
   try {
     return JSON.parse(await readFile(path, "utf8")) as T;
@@ -707,19 +915,14 @@ export async function readJson<T>(path: string, code = "INVALID_JSON"): Promise<
   }
 }
 
-function assertFeatureId(feature: string): void {
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(feature)) {
+export function assertFeatureId(feature: string): void {
+  if (!isFeatureId(feature)) {
     throw new EmpiricalError("INVALID_FEATURE", `Invalid feature id: ${feature}`);
   }
 }
 
-export function assertWorkstreamId(workstream: string): void {
-  if (!isPortableId(workstream)) {
-    throw new EmpiricalError(
-      "INVALID_WORKSTREAM",
-      `Invalid workstream '${workstream}'; use lowercase letters, numbers, dots, underscores, or hyphens`,
-    );
-  }
+function isFeatureId(value: string): boolean {
+  return /^[a-z0-9][a-z0-9-]*$/.test(value) && value.length <= 80;
 }
 
 export function assertCapabilityId(capability: string): void {
@@ -733,40 +936,6 @@ export function assertCapabilityId(capability: string): void {
 
 function isCapabilityId(value: string): boolean {
   return /^[a-z0-9][a-z0-9-]*$/.test(value);
-}
-
-function isPortableId(value: string): boolean {
-  return /^[a-z0-9][a-z0-9._-]*$/.test(value) && value !== "." && value !== "..";
-}
-
-function defaultWorkstreamManifest(): WorkstreamManifest {
-  return {
-    schemaVersion: WORKSTREAM_SCHEMA_VERSION,
-    selected: "default",
-    workstreams: { default: { createdAt: new Date(0).toISOString() } },
-  };
-}
-
-function normalizeWorkstreamManifest(manifest: WorkstreamManifest): WorkstreamManifest {
-  if (manifest.schemaVersion !== WORKSTREAM_SCHEMA_VERSION || !isRecord(manifest.workstreams)) {
-    throw new EmpiricalError("INVALID_WORKSTREAMS", "Unsupported or malformed workstream manifest");
-  }
-  const workstreams: WorkstreamManifest["workstreams"] = {};
-  for (const [id, entry] of Object.entries(manifest.workstreams)) {
-    assertWorkstreamId(id);
-    if (!isRecord(entry) || typeof entry.createdAt !== "string") {
-      throw new EmpiricalError("INVALID_WORKSTREAMS", `Workstream '${id}' has invalid metadata`);
-    }
-    workstreams[id] = { createdAt: entry.createdAt };
-  }
-  if (!workstreams.default) {
-    throw new EmpiricalError("INVALID_WORKSTREAMS", "Workstream manifest must retain 'default'");
-  }
-  assertWorkstreamId(manifest.selected);
-  if (!workstreams[manifest.selected]) {
-    throw new EmpiricalError("INVALID_WORKSTREAMS", `Selected workstream '${manifest.selected}' does not exist`);
-  }
-  return { schemaVersion: WORKSTREAM_SCHEMA_VERSION, selected: manifest.selected, workstreams };
 }
 
 function defaultPolicy(): ProjectPolicy {
@@ -808,10 +977,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function normalizeConfig(config: ProjectConfig): ProjectConfig {
   assertSupportedSchema(config);
+  const value = config as unknown as Record<string, unknown>;
+  const isolation = isRecord(value.isolation) ? value.isolation : {};
+  const decisions = isRecord(value.decisions) ? value.decisions : {};
+  const mode = isolation.mode === "off" ? "off" : "ask";
+  const baseBranch = typeof isolation.baseBranch === "string" && isolation.baseBranch.trim()
+    ? isolation.baseBranch.trim()
+    : "auto";
+  const worktreePath = typeof isolation.worktreePath === "string" && isolation.worktreePath.trim()
+    ? isolation.worktreePath.trim()
+    : "../{repo}-{feature}";
+  const branchPattern = typeof isolation.branchPattern === "string" && isolation.branchPattern.trim()
+    ? isolation.branchPattern.trim()
+    : "{type}/{feature}";
+  validateWorktreeTemplates(worktreePath, branchPattern);
   return {
     ...config,
     schemaVersion: SCHEMA_VERSION,
     profile: normalizeProfile((config as { profile?: unknown }).profile),
+    isolation: { mode, baseBranch, worktreePath, branchPattern },
+    decisions: { complexRecords: decisions.complexRecords === "off" ? "off" : "required" },
+    setupComplete: typeof value.setupComplete === "boolean" ? value.setupComplete : false,
   };
 }
 
@@ -828,6 +1014,40 @@ function normalizeState(state: WorkflowState): WorkflowState {
     capabilityDeltaDigest: typeof state.capabilityDeltaDigest === "string"
       ? state.capabilityDeltaDigest
       : null,
+    evidence: Array.isArray(state.evidence) ? state.evidence : [],
+  };
+}
+
+function validateWorktreeTemplates(worktreePath: string, branchPattern: string): void {
+  if (!worktreePath.includes("{feature}")) {
+    throw new EmpiricalError("INVALID_CONFIG", "Worktree path template must contain {feature}");
+  }
+  if (!branchPattern.includes("{feature}") || !branchPattern.includes("{type}")) {
+    throw new EmpiricalError("INVALID_CONFIG", "Branch pattern must contain {type} and {feature}");
+  }
+  const allowed = (value: string) => value.replaceAll("{repo}", "").replaceAll("{feature}", "").replaceAll("{type}", "");
+  if (/[\0\r\n]/.test(worktreePath) || /[\0\r\n]/.test(branchPattern) || /[{}]/.test(allowed(worktreePath)) || /[{}]/.test(allowed(branchPattern))) {
+    throw new EmpiricalError("INVALID_CONFIG", "Worktree templates contain unsupported placeholders or control characters");
+  }
+}
+
+function idleState(profile: Profile): WorkflowState {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    revision: 0,
+    activeFeature: null,
+    request: null,
+    profile,
+    phase: "idle",
+    status: "idle",
+    repairAttempts: 0,
+    message: null,
+    implementationActor: null,
+    specDigest: null,
+    capabilityArchiveRequired: false,
+    capabilityDeltaDigest: null,
+    evidence: [],
+    updatedAt: new Date(0).toISOString(),
   };
 }
 
@@ -847,7 +1067,12 @@ function normalizeEvent(event: TransitionEvent): TransitionEvent {
 }
 
 function assertSupportedSchema(value: { schemaVersion: number }): void {
-  if (value.schemaVersion !== 1 && value.schemaVersion !== 2 && value.schemaVersion !== SCHEMA_VERSION) {
+  if (
+    value.schemaVersion !== 1
+    && value.schemaVersion !== 2
+    && value.schemaVersion !== 3
+    && value.schemaVersion !== SCHEMA_VERSION
+  ) {
     throw new EmpiricalError(
       "MIGRATION_REQUIRED",
       `Project schema ${String(value.schemaVersion)} is not supported; run empirical migrate`,

@@ -1,129 +1,89 @@
 # Architecture
 
-Empirical is one npm package with one source of business logic:
+Empirical 0.20 is a TypeScript library, Node.js CLI, and stdio MCP server over
+one committed `.empirical/` model.
+
+## Modules
+
+- `src/core.ts` owns the workflow state machine, exact revision gates, packets,
+  evidence rules, configuration, proposal/handoff orchestration, and Explain.
+- `src/storage.ts` owns schema normalization, atomic JSON/text writes,
+  feature-scoped journals, locks, recovery, and legacy default-state migration.
+- `src/worktrees.ts` owns shell-free Git inspection, proposals, safety checks,
+  and exact `git worktree add -b` execution.
+- `src/decisions.ts` owns Complex decision templates, validation,
+  supersession, and safe summaries.
+- `src/specifications.ts` owns capability-delta parsing, validation,
+  transactional projection, convergence, and rollback.
+- `src/discovery.ts` owns the five Socratic passes and durable approved briefs.
+- `src/integrations.ts` renders project and global native Agent Skills/commands.
+- `src/cli.ts` and `src/mcp.ts` adapt the same core API; they do not implement a
+  second workflow.
+
+## Ownership
 
 ```text
-Codex / Claude / Gemini / Cursor / Windsurf / other agents
-          |                    |                    |
-    project skills         MCP tools               CLI
-          \                    |                    /
-                   TypeScript core library
-                            |
-                 committed .empirical state
+project
+├── config + policy
+├── living capabilities
+├── discovery records
+└── feature
+    ├── contract + design + decisions + plan + deltas
+    ├── state + exact revision journal + lock
+    └── evidence
 ```
 
-## Package surfaces
+Each checkout discovers zero or one active feature. `waiting`,
+`awaiting_human`, and `blocked` states are resumable; `done` and idle states do
+not reserve a checkout. More than one resumable feature is rejected as an
+inconsistent repository.
 
-- `src/core.ts` implements initialization, v1 adoption, state transitions,
-  the Fast and Complex public workflows, Quick legacy-state compatibility,
-  Explore, workstream management, acceptance-criterion parsing, evidence gates,
-  Archive, and bounded repair routing.
-- `src/cli.ts` is the global `empirical` executable.
-- `src/mcp.ts` exposes the same operations as stdio MCP tools.
-- `src/integrations.ts` safely adds discovery instructions, project skills,
-  native manual commands, and project-scoped MCP configuration, plus explicit
-  user-level Agent Skills, without replacing unmanaged content.
-- `src/storage.ts` provides atomic JSON projection, append-only transition
-  events, workstream-scoped state, shared-resource locking, recovery, rollback
-  effects, and optimistic revisions.
-- `src/specifications.ts` parses and preflights requirement deltas, projects
-  canonical capability specifications, and prepares reversible archive writes.
+Feature-local state prevents two branches created from the same base from
+colliding on a project-global state file. Git worktrees isolate the source tree
+and branch. Shared capability projection remains serialized by a project-level
+resource lock during Archive.
 
-The MCP server owns no state. Deleting an agent's cache or MCP configuration
-does not affect the workflow because another client can resume from
-`.empirical/state.json` and `.empirical/events/` for the default workstream or
-the equivalent named-workstream paths.
+## Transactions
 
-Protocol schema 3 adds living capability specs, project policy, and independent
-named workstreams. The current engine reads schema-1 and schema-2 projects and
-upgrades them non-destructively on migration or the next state mutation.
+A normal transition:
 
-## Cooperative execution loop
+1. acquires `<feature>/state.lock`;
+2. recovers a newer valid journal event when needed;
+3. verifies the caller's exact revision;
+4. validates immutable contracts and phase gates;
+5. prepares any rollback-capable external effect;
+6. writes the next event atomically;
+7. writes the state projection atomically;
+8. removes only the lock instance owned by the caller.
 
-The CLI and MCP server coordinate state; they do not embed a coding model. The
-interactive Explore flow may explicitly launch an installed Codex runtime after
-an approved workflow is created. Otherwise the current host agent edits files,
-runs tests, uses a browser when required, and submits evidence.
+Stale-lock recovery checks age, process liveness, inode/device identity, and an
+ownership token. Windows sharing violations are retried within the same bounded
+wait.
 
-```text
-ordinary user request
-         |
-  vague? -- yes --> Socratic interview ---------+
-         \ no       five passes + approval     |
-          +-------------------------------------+
-                         |
-                project skill chooses
-                    /           \
-                 Fast          Complex
-                   |               |
-empirical_fast  empirical_complex      (MCP)
-empirical fast  empirical complex      (CLI)
-     \           /
-   current action packet
-            |
-   host agent does the work
-            |
- empirical complete / empirical archive
-            |
-   returned next action packet
-            +---- repeat until done, blocked, or awaiting human input
-```
+## Git isolation
 
-Fast and Complex start new work. `loop` is deliberately smaller: it only returns
-the current action for an existing workflow and takes no request or profile.
-Every start and completion response is itself the next action packet, which
-avoids a redundant state round trip between phases. A later session can resume
-through `empirical_loop()` or `empirical loop`.
+A proposal is read-only and resolves request, workflow, type, feature, base,
+base commit, branch, absolute path, exact argv, and an integrity token over the
+approved fields. Creation requires explicit approval and revalidates the active
+feature, base commit, token, cleanliness, and collisions immediately before
+invoking Git through an argument array. No shell, force, stash, implicit commit,
+cleanup, or deletion path exists.
 
-Fast reduces model round trips further by combining implementation,
-verification, and review into one revision. It does not weaken the evidence
-gate: all criterion evidence, required UI evidence, and review evidence arrive
-in the same completion. Complex retains explicit specification, design,
-planning, verification, and review gates. Quick is not a public workflow for
-new work; it remains only so older project state can be resumed safely.
+## Decision traceability
 
-After Complex Review, the workflow enters Archive. All capability deltas are
-preflighted before mutation. Capability writes happen as a reversible effect
-inside the exact-revision state transaction; a failed event/state projection
-restores the previous living specs. The Archive operation is idempotent after
-Done.
+Complex decisions store externally reviewable evidence, options, the accepted
+choice, trade-offs/risks, and verification. Design requires a valid accepted
+entry; Review revalidates the record and implementation alignment. Supersession
+is append-only and reciprocal. Explain derives its rationale from workflow state
+and artifact expectations; it never stores or exposes private model reasoning.
 
-## Shared project state and workstreams
+## Schema migration
 
-```text
-project-wide                          independently revisioned
-config + policy                      default: state.json + events/
-feature specs + deltas               named: workstreams/<id>/state.json + events/
-living capability specs
-        |                                      |
-        +-- shared resource locks     per-workstream state lock --+
-```
-
-Feature numbering and capability archive are globally serialized because their
-files are shared. Routine transitions in different workstreams use independent
-locks and revisions. Selection changes only the default addressed by a fresh
-command; action packets always preserve immutable workstream identity.
-
-## Portability boundary
-
-“Works on every agent” means:
-
-1. Native MCP tools on hosts that support and load project MCP configuration.
-2. Automatic project skills and repository guidance on hosts that support
-   them.
-3. Self-guiding `empirical fast "<request>"` and
-   `empirical complex "<request>"` fallbacks for any terminal-capable agent,
-   plus `empirical explore` for genuine ambiguity and `empirical loop` for resume.
-
-Normal initialization and integration produce committed project files.
-`empirical integrate --global` is a separate opt-in branch that works without a
-project and writes the five managed workflow skills into Codex, Claude Code,
-Cursor, Gemini CLI, and Windsurf's native user skill roots. It does not create
-workflow state, global MCP configuration, lifecycle hooks, or an agent runtime.
-
-The low-level start operation and machine-readable JSON remain programmatic
-integration surfaces, but neither is part of normal agent use. Legacy profile
-values are accepted only when loading persisted state.
-
-An agent with neither repository/terminal access nor MCP support cannot operate
-on a local checkout; that is a host limitation rather than a package adapter.
+Schema 4 reads schema 1, 2, and 3 configuration/state. A historical default
+root state and valid journal are normalized and partitioned beneath the feature
+named by each event, then the source projection is removed only after every
+destination has been validated and written successfully. The operation is
+idempotent and blocks on missing contracts, unassignable events, conflicting
+history, or symbolic-link paths. Read-only commands require explicit migration
+instead of mutating the project. Historical alternate parallel-state
+directories are left untouched and unsupported.

@@ -4,6 +4,8 @@ import { basename, join, resolve } from "node:path";
 import { EmpiricalError } from "./errors.js";
 import { installProjectIntegrations } from "./integrations.js";
 import { ProjectStore, discoverProject, isFile } from "./storage.js";
+import { createDecisionTemplate, requireValidDecisions, validateDecisions } from "./decisions.js";
+import { createGitWorktree, featureSlug, proposeWorktree as buildWorktreeProposal } from "./worktrees.js";
 import {
   capabilityDeltaDigest,
   listCapabilities,
@@ -15,6 +17,7 @@ import {
   PRODUCT_VERSION,
   SCHEMA_VERSION,
   type ActionPacket,
+  type ActionRationale,
   type AdoptionOptions,
   type ArchiveResult,
   type CapabilitySummary,
@@ -22,7 +25,9 @@ import {
   type Criterion,
   type Evidence,
   type EvidenceKind,
+  type ExplainReport,
   type ExplorationPacket,
+  type FeatureStartResult,
   type FeatureStartOptions,
   type InitOptions,
   type IntegrationReport,
@@ -30,11 +35,14 @@ import {
   type Profile,
   type ProjectConfig,
   type ProjectPolicy,
+  type ProjectConfigurationInput,
   type StartOptions,
   type ValidationReport,
-  type WorkstreamSummary,
   type Workflow,
   type WorkflowState,
+  type WorktreeCreateInput,
+  type WorktreeHandoff,
+  type WorktreeProposal,
 } from "./types.js";
 
 const FAST_PHASES: Phase[] = ["implement", "done"];
@@ -51,20 +59,27 @@ const COMPLEX_PHASES: Phase[] = [
 ];
 
 export class EmpiricalProject {
-  readonly store: ProjectStore;
+  store: ProjectStore;
+  private readonly readOnly: boolean;
 
-  private constructor(store: ProjectStore) {
+  private constructor(store: ProjectStore, readOnly = false) {
     this.store = store;
+    this.readOnly = readOnly;
   }
 
-  static async open(start = process.cwd(), workstream?: string): Promise<EmpiricalProject> {
+  static async open(start = process.cwd(), options: { migrate?: boolean } = {}): Promise<EmpiricalProject> {
     const base = await discoverProject(start);
-    const selected = workstream ?? await base.selectedWorkstream();
-    const store = base.forWorkstream(selected);
-    if (!(await store.exists())) {
-      throw new EmpiricalError("WORKSTREAM_NOT_FOUND", `Unknown workstream '${selected}'`);
-    }
-    return new EmpiricalProject(store);
+    const migrate = options.migrate !== false;
+    if (migrate) await base.migrateSchema();
+    const active = await base.activeFeature(migrate);
+    return new EmpiricalProject(active ? base.forFeature(active) : base);
+  }
+
+  static async openReadOnly(start = process.cwd()): Promise<EmpiricalProject> {
+    const base = await discoverProject(start);
+    await base.assertCurrentSchemaReadOnly();
+    const active = await base.activeFeature(false);
+    return new EmpiricalProject(active ? base.forFeature(active) : base, true);
   }
 
   static async initialize(
@@ -78,7 +93,10 @@ export class EmpiricalProject {
       const integrations = options.integrations === false
         ? emptyIntegrationReport()
         : await installProjectIntegrations(absoluteRoot);
-      return { project: new EmpiricalProject(store), state: await store.loadState(), integrations };
+      await store.migrateSchema();
+      const active = await store.activeFeature();
+      const project = new EmpiricalProject(active ? store.forFeature(active) : store);
+      return { project, state: await project.store.loadState(), integrations };
     }
     if (await isFile(join(absoluteRoot, "ai", "STATE.md"))) {
       throw new EmpiricalError(
@@ -88,9 +106,9 @@ export class EmpiricalProject {
     }
     const profile = options.profile ?? "complex";
     assertWorkflow(profile);
-    const config = defaultConfig(profile, null);
+    const config = defaultConfig(profile, null, options);
     const state = initialState(profile);
-    await store.writeInitial(config, state);
+    await store.writeInitial(config);
     const integrations = options.integrations === false
       ? emptyIntegrationReport()
       : await installProjectIntegrations(absoluteRoot);
@@ -107,7 +125,10 @@ export class EmpiricalProject {
       const integrations = options.integrations === false
         ? emptyIntegrationReport()
         : await installProjectIntegrations(absoluteRoot);
-      return { project: new EmpiricalProject(store), state: await store.loadState(), integrations };
+      await store.migrateSchema();
+      const active = await store.activeFeature();
+      const project = new EmpiricalProject(active ? store.forFeature(active) : store);
+      return { project, state: await project.store.loadState(), integrations };
     }
     const legacyStatePath = join(absoluteRoot, "ai", "STATE.md");
     if (!(await isFile(legacyStatePath))) {
@@ -133,7 +154,7 @@ export class EmpiricalProject {
       updatedAt: now,
       message: "Adopted non-destructively from ai/",
     };
-    await store.writeInitial(defaultConfig(profile, "ai"), state);
+    await store.writeInitial(defaultConfig(profile, "ai", options));
     if (feature) {
       const legacySpec = join(absoluteRoot, "ai", "specs", feature, "spec.md");
       if (await isFile(legacySpec)) {
@@ -145,19 +166,31 @@ export class EmpiricalProject {
           profile === "fast" ? renderFastSpec(feature, request) : renderSpec(feature, request),
         );
       }
+      await store.forFeature(feature).writeInitialFeature(state, "empirical-adopt", "Adopted Empirical v1 state");
     }
     const integrations = options.integrations === false
       ? emptyIntegrationReport()
       : await installProjectIntegrations(absoluteRoot);
-    return { project: new EmpiricalProject(store), state, integrations };
+    const project = new EmpiricalProject(feature ? store.forFeature(feature) : store);
+    return { project, state, integrations };
   }
 
   async status(): Promise<WorkflowState> {
-    return this.store.loadState();
+    return this.store.loadState(!this.readOnly);
   }
 
   async config(): Promise<ProjectConfig> {
     return this.store.loadConfig();
+  }
+
+  async configure(input: ProjectConfigurationInput): Promise<ProjectConfig> {
+    const current = await this.store.loadConfig();
+    return this.store.configure({
+      ...current,
+      isolation: { ...current.isolation, ...input.isolation },
+      decisions: { ...current.decisions, ...input.decisions },
+      setupComplete: input.setupComplete ?? true,
+    });
   }
 
   async policy(): Promise<ProjectPolicy> {
@@ -194,41 +227,6 @@ export class EmpiricalProject {
     };
   }
 
-  async workstreams(): Promise<WorkstreamSummary[]> {
-    const manifest = await this.store.loadWorkstreams();
-    const summaries: WorkstreamSummary[] = [];
-    for (const id of Object.keys(manifest.workstreams).sort()) {
-      const state = await this.store.forWorkstream(id).loadState();
-      summaries.push({
-        id,
-        selected: manifest.selected === id,
-        activeFeature: state.activeFeature,
-        request: state.request,
-        profile: state.profile,
-        phase: state.phase,
-        status: state.status,
-        revision: state.revision,
-        updatedAt: state.updatedAt,
-      });
-    }
-    return summaries;
-  }
-
-  async createWorkstream(id: string, profile?: Workflow): Promise<WorkstreamSummary> {
-    const configured = (await this.store.loadConfig()).profile;
-    const selectedProfile = profile ?? (configured === "quick" ? "complex" : configured);
-    assertWorkflow(selectedProfile);
-    const state = initialState(selectedProfile);
-    await this.store.createWorkstream(id, state);
-    const project = await EmpiricalProject.open(this.store.root, id);
-    return (await project.workstreams()).find((item) => item.id === id)!;
-  }
-
-  async selectWorkstream(id: string): Promise<WorkstreamSummary> {
-    await this.store.selectWorkstream(id);
-    return (await this.workstreams()).find((item) => item.id === id)!;
-  }
-
   async capabilities(): Promise<CapabilitySummary[]> {
     return listCapabilities(this.store);
   }
@@ -237,7 +235,7 @@ export class EmpiricalProject {
     return this.store.readCapability(name);
   }
 
-  async start(request: string, options: StartOptions = {}): Promise<ActionPacket> {
+  async start(request: string, options: StartOptions = {}): Promise<FeatureStartResult> {
     const cleanRequest = request.trim();
     if (!cleanRequest) {
       throw new EmpiricalError("REQUEST_REQUIRED", "A non-empty feature request is required");
@@ -245,51 +243,59 @@ export class EmpiricalProject {
     const configuredProfile = (await this.store.loadConfig()).profile;
     const profile = options.profile ?? (configuredProfile === "quick" ? "complex" : configuredProfile);
     assertWorkflow(profile);
-    const started = await this.store.withResourceLock("specs", () => this.store.transaction(async (current) => {
-      if (current.activeFeature && current.status !== "done") {
-        throw new EmpiricalError(
-          "FEATURE_ACTIVE",
-          `Feature ${current.activeFeature} is still ${current.status}; finish it before starting another`,
-        );
+    const base = new ProjectStore(this.store.root);
+    const active = await base.activeFeature();
+    if (active) {
+      const current = await base.forFeature(active).loadState();
+      if (current.request?.trim() === cleanRequest) {
+        this.store = base.forFeature(active);
+        return assertStartAction(await this.next(), cleanRequest, profile, options);
       }
-      const number = await this.store.nextFeatureNumber();
-      const feature = options.id ?? `${String(number).padStart(3, "0")}-${slugify(cleanRequest)}`;
-      if (await isFile(this.store.specPath(feature))) {
-        throw new EmpiricalError("FEATURE_EXISTS", `Feature ${feature} already exists`);
+      return this.proposeWorktree(cleanRequest, profile, { ...(options.id ? { feature: options.id } : {}) });
+    }
+    const started = await base.withResourceLock("specs", async () => {
+      const raced = await base.activeFeature();
+      if (raced) {
+        const current = await base.forFeature(raced).loadState();
+        if (current.request?.trim() === cleanRequest) {
+          return { existing: true as const, store: base.forFeature(raced), state: current, spec: await base.readSpec(raced) };
+        }
+        return { proposal: await this.proposeWorktree(cleanRequest, profile, { ...(options.id ? { feature: options.id } : {}) }) };
+      }
+      const feature = options.id ?? featureSlug(cleanRequest);
+      if ((await base.listFeatureIds()).includes(feature)) {
+        throw new EmpiricalError("FEATURE_EXISTS", `Feature ${feature} already exists; choose a distinct --id`);
       }
       const spec = profile === "fast"
         ? renderFastSpec(titleFromFeature(feature), cleanRequest)
         : renderSpec(titleFromFeature(feature), cleanRequest);
-      await this.store.writeSpec(feature, spec);
-      return {
-        actor: "empirical-start",
-        summary: `Started ${feature}`,
-        state: {
-          ...current,
-          activeFeature: feature,
-          request: cleanRequest,
-          profile,
-          phase: firstPhase(profile),
-          status: "waiting",
-          repairAttempts: 0,
-          message: null,
-          implementationActor: null,
-          specDigest: digest(spec),
-          capabilityArchiveRequired: profile === "complex",
-          capabilityDeltaDigest: null,
-          evidence: [],
-        },
-        value: { feature, spec },
+      await base.writeSpec(feature, spec);
+      if (profile === "complex") await createDecisionTemplate(base, feature);
+      const state: WorkflowState = {
+        ...initialState(profile),
+        revision: 1,
+        activeFeature: feature,
+        request: cleanRequest,
+        phase: firstPhase(profile),
+        status: "waiting",
+        specDigest: digest(spec),
+        capabilityArchiveRequired: profile === "complex",
+        updatedAt: new Date().toISOString(),
       };
-    }));
-    return this.packet(started.state, parseCriteria(started.value.spec));
+      const scoped = base.forFeature(feature);
+      await scoped.writeInitialFeature(state);
+      return { existing: false as const, store: scoped, state, spec };
+    });
+    if ("proposal" in started) return started.proposal;
+    this.store = started.store;
+    return this.packet(started.state, parseCriteria(started.spec));
   }
 
-  async fast(request: string, options: FeatureStartOptions = {}): Promise<ActionPacket> {
+  async fast(request: string, options: FeatureStartOptions = {}): Promise<FeatureStartResult> {
     return this.begin(request, "fast", options);
   }
 
-  async complex(request: string, options: FeatureStartOptions = {}): Promise<ActionPacket> {
+  async complex(request: string, options: FeatureStartOptions = {}): Promise<FeatureStartResult> {
     return this.begin(request, "complex", options);
   }
 
@@ -307,21 +313,20 @@ export class EmpiricalProject {
     request: string,
     profile: "fast" | "complex",
     options: FeatureStartOptions,
-  ): Promise<ActionPacket> {
-    const current = await this.store.loadState();
+  ): Promise<FeatureStartResult> {
+    const base = new ProjectStore(this.store.root);
+    const activeFeature = await base.activeFeature();
+    const current = activeFeature ? await base.forFeature(activeFeature).loadState() : await base.loadState();
     const cleanRequest = request.trim();
     if (!cleanRequest) {
       throw new EmpiricalError("REQUEST_REQUIRED", "A non-empty feature request is required");
     }
 
     const currentRequest = current.request?.trim();
-    const active = current.activeFeature !== null && current.status !== "done";
+    const active = current.activeFeature !== null && current.phase !== "done";
     if (active) {
       if (currentRequest !== cleanRequest) {
-        throw new EmpiricalError(
-          "FEATURE_ACTIVE",
-          `Feature ${current.activeFeature} is still ${current.status}; finish it before starting another`,
-        );
+        return this.proposeWorktree(cleanRequest, profile, { ...(options.id ? { feature: options.id } : {}) });
       }
       if (profile !== current.profile) {
         throw new EmpiricalError(
@@ -335,24 +340,10 @@ export class EmpiricalProject {
           `The active feature is ${current.activeFeature}, not ${options.id}`,
         );
       }
+      this.store = base.forFeature(current.activeFeature!);
       return assertStartAction(await this.next(), cleanRequest, profile, options);
     }
 
-    if (current.status === "done" && currentRequest === cleanRequest) {
-      if (profile !== current.profile) {
-        throw new EmpiricalError(
-          "PROFILE_CONFLICT",
-          `The completed feature used profile ${current.profile}, not ${profile}`,
-        );
-      }
-      if (options.id && options.id !== current.activeFeature) {
-        throw new EmpiricalError(
-          "FEATURE_EXISTS",
-          `The completed request belongs to ${current.activeFeature}, not ${options.id}`,
-        );
-      }
-      return assertStartAction(await this.next(), cleanRequest, profile, options);
-    }
     try {
       return await this.start(cleanRequest, { profile, ...options });
     } catch (error) {
@@ -360,17 +351,146 @@ export class EmpiricalProject {
         error instanceof EmpiricalError
         && (error.code === "FEATURE_ACTIVE" || error.code === "PROJECT_BUSY")
       ) {
-        const latest = await this.next();
-        if (latest.request === cleanRequest) {
-          return assertStartAction(latest, cleanRequest, profile, options);
+        const latest = await EmpiricalProject.open(this.store.root);
+        const action = await latest.next();
+        if (action.request === cleanRequest) {
+          this.store = latest.store;
+          return assertStartAction(action, cleanRequest, profile, options);
         }
       }
       throw error;
     }
   }
 
+  async proposeWorktree(
+    request: string,
+    workflow: Workflow,
+    overrides: {
+      changeType?: "feature" | "fix" | "chore";
+      feature?: string;
+      branch?: string;
+      path?: string;
+      base?: string;
+    } = {},
+  ): Promise<WorktreeProposal> {
+    const base = new ProjectStore(this.store.root);
+    const activeFeature = await base.activeFeature(!this.readOnly);
+    if (!activeFeature) {
+      throw new EmpiricalError("WORKTREE_NOT_NEEDED", "This checkout has no active feature; start the request here");
+    }
+    const config = await base.loadConfig();
+    if (config.isolation.mode === "off") {
+      throw new EmpiricalError(
+        "FEATURE_ACTIVE",
+        `Feature ${activeFeature} is active and automatic worktree proposals are disabled`,
+      );
+    }
+    return buildWorktreeProposal(
+      base.root,
+      request,
+      workflow,
+      activeFeature,
+      config.isolation,
+      overrides,
+    );
+  }
+
+  async createWorktree(input: WorktreeCreateInput): Promise<WorktreeHandoff> {
+    if (input.approved !== true) {
+      throw new EmpiricalError("WORKTREE_APPROVAL_REQUIRED", "Worktree creation requires approved: true");
+    }
+    const proposal = await this.proposeWorktree(input.request, input.workflow, {
+      ...(input.changeType ? { changeType: input.changeType } : {}),
+      ...(input.feature ? { feature: input.feature } : {}),
+      ...(input.branch ? { branch: input.branch } : {}),
+      ...(input.path ? { path: input.path } : {}),
+      ...(input.base ? { base: input.base } : {}),
+    });
+    if (proposal.activeFeature !== input.activeFeature) {
+      throw new EmpiricalError(
+        "STALE_WORKTREE_PROPOSAL",
+        `The active feature changed from ${input.activeFeature} to ${proposal.activeFeature}; review a new proposal`,
+      );
+    }
+    if (proposal.baseCommit !== input.baseCommit) {
+      throw new EmpiricalError(
+        "STALE_WORKTREE_PROPOSAL",
+        `Base ${proposal.base} moved after approval; review a new proposal`,
+      );
+    }
+    if (proposal.approvalToken !== input.approvalToken) {
+      throw new EmpiricalError(
+        "STALE_WORKTREE_PROPOSAL",
+        "The approved worktree fields changed; review and approve a new proposal",
+      );
+    }
+    await createGitWorktree(proposal);
+    try {
+      let project: EmpiricalProject;
+      try {
+        project = await EmpiricalProject.open(proposal.path);
+      } catch (error) {
+        if (!(error instanceof EmpiricalError) || error.code !== "PROJECT_NOT_INITIALIZED") throw error;
+        project = (await EmpiricalProject.initialize(proposal.path, { integrations: false })).project;
+      }
+      const result = proposal.workflow === "fast"
+        ? await project.fast(proposal.request, { id: proposal.feature })
+        : await project.complex(proposal.request, { id: proposal.feature });
+      if (result.kind !== "action") {
+        throw new EmpiricalError(
+          "WORKTREE_HANDOFF_FAILED",
+          `The new checkout already contains active feature ${result.activeFeature}`,
+        );
+      }
+      return {
+        kind: "worktree_handoff",
+        protocol: "empirical-sdd",
+        schemaVersion: SCHEMA_VERSION,
+        root: proposal.root,
+        path: proposal.path,
+        branch: proposal.branch,
+        base: proposal.base,
+        baseCommit: proposal.baseCommit,
+        feature: result.feature!,
+        revision: result.revision,
+        workflow: proposal.workflow,
+        resume: `cd ${JSON.stringify(proposal.path)} && empirical loop`,
+        action: result,
+      };
+    } catch (error) {
+      throw new EmpiricalError(
+        "WORKTREE_HANDOFF_FAILED",
+        `Git created ${proposal.path}, but Empirical handoff failed: ${error instanceof Error ? error.message : String(error)}`,
+        { path: proposal.path, branch: proposal.branch, base: proposal.base, baseCommit: proposal.baseCommit },
+      );
+    }
+  }
+
+  async explain(): Promise<ExplainReport> {
+    const state = await this.store.loadState(!this.readOnly);
+    const criteria = state.activeFeature
+      ? parseCriteria(await this.store.readSpec(state.activeFeature))
+      : [];
+    const packet = await this.packet(state, criteria);
+    const decisions = state.activeFeature && state.profile === "complex"
+      ? (await validateDecisions(this.store, state.activeFeature, false)).decisions
+          .filter((decision) => decision.status === "Accepted")
+      : [];
+    return {
+      protocol: "empirical-sdd",
+      schemaVersion: SCHEMA_VERSION,
+      root: this.store.root,
+      feature: state.activeFeature,
+      phase: state.phase,
+      status: state.status,
+      revision: state.revision,
+      rationale: packet.rationale,
+      decisions,
+    };
+  }
+
   async next(): Promise<ActionPacket> {
-    const state = await this.store.loadState();
+    const state = await this.store.loadState(!this.readOnly);
     const criteria = state.activeFeature
       ? parseCriteria(await this.store.readSpec(state.activeFeature))
       : [];
@@ -379,12 +499,6 @@ export class EmpiricalProject {
 
   async complete(input: CompletionInput): Promise<ActionPacket> {
     assertCompletionInput(input);
-    if (input.workstream && input.workstream !== this.store.workstream) {
-      throw new EmpiricalError(
-        "WORKSTREAM_MISMATCH",
-        `Completion targets '${input.workstream}', but this project is bound to '${this.store.workstream}'`,
-      );
-    }
     const summary = input.summary.trim();
     if (!summary) throw new EmpiricalError("SUMMARY_REQUIRED", "Completion summary cannot be blank");
     const actor = input.actor?.trim() || "agent";
@@ -489,7 +603,6 @@ export class EmpiricalProject {
         action: await this.next(),
         report: {
           feature: current.activeFeature,
-          workstream: this.store.workstream,
           capabilities: [],
           added: 0,
           modified: 0,
@@ -554,7 +667,6 @@ export class EmpiricalProject {
         ),
         report: {
           feature: archived.value,
-          workstream: this.store.workstream,
           capabilities: plan?.report.capabilities ?? [],
           added: plan?.report.added ?? 0,
           modified: plan?.report.modified ?? 0,
@@ -584,7 +696,7 @@ export class EmpiricalProject {
   }
 
   async verify(): Promise<ValidationReport> {
-    const state = await this.store.loadState();
+    const state = await this.store.loadState(!this.readOnly);
     if (!state.activeFeature) {
       return { valid: false, phase: state.phase, criteria: 0, missing: ["No active feature"] };
     }
@@ -627,31 +739,25 @@ export class EmpiricalProject {
   }
 
   async migrate(): Promise<Record<string, unknown>> {
-    const manifest = await this.store.loadWorkstreams();
-    const migrations: Array<Record<string, unknown>> = [];
-    for (const id of Object.keys(manifest.workstreams)) {
-      migrations.push({ workstream: id, ...await this.store.forWorkstream(id).migrateSchema() });
-    }
+    const migration = await new ProjectStore(this.store.root).migrateSchema();
     return {
-      changed: migrations.some((item) => item.changed === true),
-      migrations,
+      ...migration,
       version: PRODUCT_VERSION,
       schemaVersion: SCHEMA_VERSION,
     };
   }
 
   async doctor(): Promise<Record<string, unknown>> {
-    const state = await this.store.loadState();
+    const state = await this.store.loadState(!this.readOnly);
     const config = await this.store.loadConfig();
     return {
       ok: true,
       version: PRODUCT_VERSION,
       schemaVersion: SCHEMA_VERSION,
       root: this.store.root,
-      workstream: this.store.workstream,
       state,
       config,
-      workstreams: await this.workstreams(),
+      activeFeature: await new ProjectStore(this.store.root).activeFeature(!this.readOnly),
       policy: await this.store.loadPolicy(),
       capabilities: await this.capabilities(),
       runtime: "node",
@@ -683,6 +789,9 @@ export class EmpiricalProject {
     }
     if (state.phase === "design") {
       await requireArtifact(this.store.specDirectory(state.activeFeature!), "design.md");
+      if (config.decisions.complexRecords === "required" && state.profile === "complex") {
+        await requireValidDecisions(this.store, state.activeFeature!);
+      }
     }
     if (state.phase === "plan") {
       await requireArtifact(this.store.specDirectory(state.activeFeature!), "plan.md");
@@ -696,6 +805,9 @@ export class EmpiricalProject {
       await validateEvidenceArtifacts(this.store.root, evidence);
     }
     if (state.phase === "review" && config.evidence.codeReview) {
+      if (config.decisions.complexRecords === "required" && state.profile === "complex") {
+        await requireValidDecisions(this.store, state.activeFeature!);
+      }
       const review = input.evidence?.some((record) => record.kind === "review" && record.passed);
       if (!review) {
         throw new EmpiricalError("REVIEW_REQUIRED", "Review completion needs passing review evidence");
@@ -736,14 +848,31 @@ export class EmpiricalProject {
 
   private async packet(state: WorkflowState, criteria: Criterion[]): Promise<ActionPacket> {
     const policy = await this.store.loadPolicy();
+    const config = await this.store.loadConfig();
     const capabilities = await listCapabilities(this.store);
+    const artifacts = expectedArtifacts(state, config.decisions.complexRecords === "required");
+    const missingArtifacts: string[] = [];
+    for (const artifact of artifacts) {
+      if (artifact.includes("deltas/<capability>.md") && state.activeFeature) {
+        if (!(await validateFeatureDeltas(this.store, state.activeFeature)).valid) missingArtifacts.push(artifact);
+      } else if (artifact.endsWith("/decisions.md") && state.activeFeature) {
+        if (!(await validateDecisions(this.store, state.activeFeature, state.phase === "design" || state.phase === "review")).valid) {
+          missingArtifacts.push(artifact);
+        }
+      } else if (artifact.includes("<capability>")) {
+        missingArtifacts.push(artifact);
+      } else if (!(await isFile(join(this.store.root, artifact)))) {
+        missingArtifacts.push(artifact);
+      }
+    }
     return actionPacket(
       this.store.root,
-      this.store.workstream,
       state,
       criteria,
       policy,
       capabilities.map((capability) => capability.path),
+      artifacts,
+      missingArtifacts,
     );
   }
 }
@@ -784,7 +913,11 @@ export function parseCriteria(markdown: string): Criterion[] {
   return criteria;
 }
 
-function defaultConfig(profile: Profile, legacySource: "ai" | null): ProjectConfig {
+function defaultConfig(
+  profile: Profile,
+  legacySource: "ai" | null,
+  options: ProjectConfigurationInput = {},
+): ProjectConfig {
   return {
     schemaVersion: SCHEMA_VERSION,
     profile,
@@ -795,6 +928,16 @@ function defaultConfig(profile: Profile, legacySource: "ai" | null): ProjectConf
       screenshotForUi: true,
       codeReview: true,
     },
+    isolation: {
+      mode: options.isolation?.mode ?? "ask",
+      baseBranch: options.isolation?.baseBranch ?? "auto",
+      worktreePath: options.isolation?.worktreePath ?? "../{repo}-{feature}",
+      branchPattern: options.isolation?.branchPattern ?? "{type}/{feature}",
+    },
+    decisions: {
+      complexRecords: options.decisions?.complexRecords ?? "required",
+    },
+    setupComplete: options.setupComplete ?? true,
     legacySource,
   };
 }
@@ -897,11 +1040,12 @@ function renderRequest(request: string): string {
 
 function actionPacket(
   root: string,
-  workstream: string,
   state: WorkflowState,
   criteria: Criterion[],
   policy: ProjectPolicy,
   capabilityContext: string[],
+  artifacts: string[],
+  missingArtifacts: string[],
 ): ActionPacket {
   const evidence = requiredEvidence(state, criteria);
   const completionAvailable = state.status === "waiting"
@@ -915,10 +1059,10 @@ function actionPacket(
     : null;
   const archive = state.phase === "archive";
   return {
+    kind: "action",
     protocol: "empirical-sdd",
     schemaVersion: SCHEMA_VERSION,
     root,
-    workstream,
     feature: state.activeFeature,
     request: state.request,
     profile: state.profile,
@@ -926,9 +1070,10 @@ function actionPacket(
     status: state.status,
     revision: state.revision,
     instructions: instructionsFor(state, policy),
+    rationale: rationaleFor(state, artifacts, missingArtifacts, evidence),
     acceptanceCriteria: criteria,
     requiredEvidence: evidence,
-    artifacts: expectedArtifacts(state),
+    artifacts,
     projectContext: policy.context,
     capabilityContext,
     completion: {
@@ -936,15 +1081,48 @@ function actionPacket(
       mcpTool: archive ? "empirical_archive" : "empirical_complete",
       cli: completionAvailable
         ? archive
-          ? `empirical archive --workstream ${workstream} --revision ${state.revision}`
-          : `empirical complete --workstream ${workstream} --revision ${state.revision} --outcome passed --summary "<what you did>"${fastCliEvidence ?? (evidence.length > 0 ? " --evidence <evidence.json>" : "")}`
+          ? `empirical archive --revision ${state.revision}`
+          : `empirical complete --revision ${state.revision} --outcome passed --summary "<what you did>"${fastCliEvidence ?? (evidence.length > 0 ? " --evidence <evidence.json>" : "")}`
         : "",
       requiredFields: completionAvailable
         ? archive
-          ? ["workstream", "revision"]
-          : ["workstream", "revision", "outcome", "summary", ...(evidence.length > 0 ? ["evidence"] : [])]
+          ? ["revision"]
+          : ["revision", "outcome", "summary", ...(evidence.length > 0 ? ["evidence"] : [])]
         : [],
     },
+  };
+}
+
+function rationaleFor(
+  state: WorkflowState,
+  artifacts: string[],
+  missingArtifacts: string[],
+  evidence: EvidenceKind[],
+): ActionRationale {
+  const currentState = `${state.phase}/${state.status} at revision ${state.revision}`;
+  const nextAction = state.status === "blocked" || state.status === "awaiting_human"
+    ? "Resolve the stated gate, then retry the exact revision"
+    : state.phase === "idle"
+      ? "Start an approved Fast or Complex feature"
+      : state.phase === "done"
+        ? "Report completion"
+        : state.phase === "archive"
+          ? "Archive the reviewed capability deltas"
+          : `Complete ${state.phase} at revision ${state.revision}`;
+  const reason = state.phase === "idle"
+    ? "No non-terminal feature state exists in this checkout."
+    : state.phase === "done"
+      ? "All workflow gates have completed."
+      : state.status === "blocked" || state.status === "awaiting_human"
+        ? state.message ?? "The workflow state machine has an unresolved stop condition."
+        : `The ${state.profile} state machine advances from ${state.phase} only after its artifacts and evidence pass.`;
+  return {
+    currentState,
+    nextAction,
+    reason,
+    requiredContext: [...artifacts, ...evidence.map((kind) => `${kind} evidence`)],
+    missingContext: [...missingArtifacts, ...evidence.map((kind) => `${kind} evidence`)],
+    gate: state.status === "blocked" || state.status === "awaiting_human" ? "stop" : "proceed",
   };
 }
 
@@ -986,13 +1164,13 @@ function instructionsFor(state: WorkflowState, policy: ProjectPolicy): string {
   const instructions: Record<Exclude<Phase, "idle" | "done">, string> = {
     shape: `Read the request, edit ${relativeSpec(feature)}, and define concise observable acceptance criteria. Do not implement yet.`,
     specify: `Refine ${relativeSpec(feature)} into a complete contract with observable acceptance criteria, scope, non-goals, risks, and verification. Declare current-behavior changes in .empirical/specs/${feature}/deltas/<capability>.md using ADDED, MODIFIED, or REMOVED requirement blocks with scenarios.`,
-    design: `Design the solution and write .empirical/specs/${feature}/design.md. Resolve architectural risks before implementation.`,
+    design: `Design the solution in .empirical/specs/${feature}/design.md and maintain .empirical/specs/${feature}/decisions.md with accepted evidence, options, the chosen approach, trade-offs/risks, and verification. Record concise reviewable decisions, never private chain-of-thought.`,
     plan: `Break the approved design into an executable plan in .empirical/specs/${feature}/plan.md.`,
     implement: state.profile === "fast"
       ? "Fast lane: the packet already contains the complete generated criterion. Inspect only the relevant project files, implement in one focused pass, combine the smallest real test and diff review when practical, then run the returned completion command. Do not reread Empirical state or add redundant checks. If the work is no longer small and low-risk, report failure so Empirical can escalate it."
       : "Implement the current acceptance criteria. Preserve unrelated work and run focused checks while editing.",
     verify: "Run real tests for every criterion. For [UI] criteria, use a real browser and capture a screenshot. Return structured evidence.",
-    review: "Review the implementation against every criterion and the diff. Return passing review evidence or route failures back to implementation.",
+    review: `Review the implementation against every criterion, the diff, and accepted decisions in .empirical/specs/${feature}/decisions.md. Contradictions require an explicit accepted superseding entry. Return passing review evidence or route failures back to implementation.`,
     archive: "Apply the reviewed capability deltas to the living specifications with the returned empirical_archive operation. Do not edit capability specs manually during archive.",
   };
   return appendPolicy(instructions[state.phase], state, policy);
@@ -1008,13 +1186,14 @@ function appendPolicy(base: string, state: WorkflowState, policy: ProjectPolicy)
   return sections.join("\n\n");
 }
 
-function expectedArtifacts(state: WorkflowState): string[] {
+function expectedArtifacts(state: WorkflowState, decisionsRequired: boolean): string[] {
   if (!state.activeFeature) return [];
   const base = `.empirical/specs/${state.activeFeature}`;
   if (state.phase === "shape") return [`${base}/spec.md`];
   if (state.phase === "specify") return [`${base}/spec.md`, `${base}/deltas/<capability>.md`];
-  if (state.phase === "design") return [`${base}/design.md`];
+  if (state.phase === "design") return [`${base}/design.md`, ...(decisionsRequired ? [`${base}/decisions.md`] : [])];
   if (state.phase === "plan") return [`${base}/plan.md`];
+  if (state.phase === "review") return decisionsRequired ? [`${base}/decisions.md`] : [];
   if (state.phase === "archive") return [".empirical/capabilities/<capability>/spec.md"];
   return [];
 }

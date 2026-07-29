@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 30,
+  "previousRevision": 29,
+  "actor": "empirical-start",
+  "summary": "Started 007-use-openspec-s-strongest-product-ideas-to",
+  "createdAt": "2026-07-29T13:35:02.720Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 30,
+    "activeFeature": "007-use-openspec-s-strongest-product-ideas-to",
+    "request": "Use OpenSpec's strongest product ideas to evolve Empirical into a 10/10 npm-only SDD workflow: add living capability specifications and delta archival, an exploratory discovery path, safe multiple active workstreams, strong customization where it improves UX, preserve automatic ordinary-request activation, Fast and Complex workflows, exact revisions, mandatory evidence, MCP, and cross-agent portability, and deliver cohesive documentation, migration, tests, and packaging.",
+    "profile": "complex",
+    "phase": "specify",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": null,
+    "implementationActor": null,
+    "evidence": [],
+    "updatedAt": "2026-07-29T13:35:02.720Z",
+    "specDigest": "49c1de84b97349a3abd5452fc4e03e46ae4472f51b3f18dc70310ef24cd6064d",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null
+  }
+}

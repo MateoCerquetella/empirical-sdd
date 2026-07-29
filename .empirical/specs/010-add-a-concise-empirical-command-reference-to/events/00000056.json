@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 56,
+  "previousRevision": 55,
+  "actor": "empirical-start",
+  "summary": "Started 010-add-a-concise-empirical-command-reference-to",
+  "createdAt": "2026-07-29T15:39:28.056Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 56,
+    "activeFeature": "010-add-a-concise-empirical-command-reference-to",
+    "request": "Add a concise Empirical command reference to every generated agent instruction, covering interactive Socratic explore with optional Codex launch, direct Fast and Complex starts, workstreams, and loop resume, with integration tests ensuring the commands remain present.",
+    "profile": "fast",
+    "phase": "implement",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": null,
+    "implementationActor": null,
+    "evidence": [],
+    "updatedAt": "2026-07-29T15:39:28.056Z",
+    "specDigest": "3ba943b844c0ad90460e982292de596b405ea15d49f1a0b08016173330660718",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null
+  }
+}

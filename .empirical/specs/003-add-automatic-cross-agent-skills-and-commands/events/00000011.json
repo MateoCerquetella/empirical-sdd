@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 11,
+  "previousRevision": 10,
+  "actor": "agent",
+  "summary": "Planned core, CLI/MCP, integration generation, regression tests, documentation, packaging, and clean-repository Fast demo verification.",
+  "createdAt": "2026-07-28T22:10:33.035Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 11,
+    "activeFeature": "003-add-automatic-cross-agent-skills-and-commands",
+    "request": "Add automatic cross-agent skills and commands, an agent-native resumable loop, and a one-revision fast profile for trivial low-risk changes",
+    "profile": "complex",
+    "phase": "implement",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Planned core, CLI/MCP, integration generation, regression tests, documentation, packaging, and clean-repository Fast demo verification.",
+    "implementationActor": null,
+    "evidence": [],
+    "updatedAt": "2026-07-28T22:10:33.035Z",
+    "specDigest": null,
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null
+  }
+}

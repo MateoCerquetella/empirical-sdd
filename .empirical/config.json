@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "profile": "complex",
   "maxRepairAttempts": 2,
   "evidence": {
@@ -8,5 +8,15 @@
     "screenshotForUi": true,
     "codeReview": true
   },
-  "legacySource": null
+  "legacySource": null,
+  "isolation": {
+    "mode": "ask",
+    "baseBranch": "auto",
+    "worktreePath": "../{repo}-{feature}",
+    "branchPattern": "{type}/{feature}"
+  },
+  "decisions": {
+    "complexRecords": "required"
+  },
+  "setupComplete": false
 }

@@ -1,0 +1,68 @@
+[
+  {
+    "criterionId": "AC-1",
+    "kind": "test",
+    "passed": true,
+    "summary": "TypeScript, CLI, MCP, packet, generated guidance, documentation, and regression searches confirm the named parallel-state public surface is removed; legacy CLI flags and commands fail explicitly."
+  },
+  {
+    "criterionId": "AC-2",
+    "kind": "test",
+    "passed": true,
+    "summary": "Core and real-Git tests prove descriptive feature IDs and feature-local state, journal, locks, specifications, decisions, deltas, and evidence; linked checkouts progress without a root-state collision."
+  },
+  {
+    "criterionId": "AC-3",
+    "kind": "test",
+    "passed": true,
+    "summary": "Schema-1, schema-2, and schema-3 fixtures migrate default root state and partition shared root journals by their recorded feature; interrupted migration resumes, missing contracts preserve source history, symbolic-link targets block, terminal legacy state permits a new feature, and alternate parallel data is not consumed."
+  },
+  {
+    "criterionId": "AC-4",
+    "kind": "test",
+    "passed": true,
+    "summary": "CLI tests force the first-run interview, persist all five settings, prove it asks once, exercise empirical config, explicit flags, JSON, MCP, and non-interactive defaults."
+  },
+  {
+    "criterionId": "AC-5",
+    "kind": "test",
+    "passed": true,
+    "summary": "A real Git repository test proves unrelated work returns a complete proposal with exact request, inferred type, base, branch, path, and argv while Git status and the target filesystem remain unchanged."
+  },
+  {
+    "criterionId": "AC-6",
+    "kind": "test",
+    "passed": true,
+    "summary": "Real Git tests prove dirty-checkout blocking, base resolution, branch/path/registered-checkout collision rejection, approval-token integrity, stale active/base rejection, and exact shell-free git worktree add -b execution against the approved commit SHA without force."
+  },
+  {
+    "criterionId": "AC-7",
+    "kind": "test",
+    "passed": true,
+    "summary": "Source and built-distribution real-worktree smoke tests verify the new checkout starts the exact request and returns absolute path, branch, base, feature, revision, workflow, first action, and resume command."
+  },
+  {
+    "criterionId": "AC-8",
+    "kind": "test",
+    "passed": true,
+    "summary": "Decision parser/gate tests reject empty records, private-reasoning sections, malformed statuses and supersession; Complex Design blocks until a complete accepted decision and Review revalidates it."
+  },
+  {
+    "criterionId": "AC-9",
+    "kind": "test",
+    "passed": true,
+    "summary": "API, human CLI, JSON CLI, MCP, and packed-consumer checks show matching read-only Explain state, next-action reason, context gaps, gate, and accepted summaries with no private trace fields; read-only open observes journal recovery without writing and requires explicit migration for legacy state."
+  },
+  {
+    "criterionId": "AC-10",
+    "kind": "test",
+    "passed": true,
+    "summary": "bun run ci passed 56 source tests plus built distribution smoke covering Fast, Complex, Socratic Explore, Loop, exact revisions, evidence, Archive, deltas, policy, native/global integrations, lock recovery, and Windows retry classification."
+  },
+  {
+    "criterionId": "AC-11",
+    "kind": "test",
+    "passed": true,
+    "summary": "Package/product report 0.20.0; typecheck, 56 tests, distribution smoke, isolated-cache package dry-run, 17-file tarball inspection, empty-consumer install, CLI init/Explain, real Git worktree, documentation searches, and git diff --check passed. Registry mutation remains correctly deferred until Review/Archive and publish verification."
+  }
+]

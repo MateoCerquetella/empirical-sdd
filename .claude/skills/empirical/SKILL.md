@@ -22,8 +22,9 @@ daemon, or runtime.
    `empirical complex "<request>"`.
 5. If work is already active, resume it with `empirical_loop` or
    `empirical loop`. Loop takes no request or profile.
-6. Preserve the explicit packet workstream; create or address another workstream
-   for unrelated active work. Execute the action and complete the exact revision with every
+6. If unrelated work returns a worktree proposal, show its base, branch, path,
+   and command, wait for explicit human approval, then call the returned creation
+   operation. Execute the action and complete the exact revision with every
    required evidence item. For Fast, trust the generated criterion in the
    packet, inspect only relevant project files, implement directly, combine the
    focused test and diff review when practical, and use the returned completion
@@ -38,8 +39,9 @@ Command reference:
 - Socratic discovery, then launch Codex: `empirical explore "<idea>" --agent codex`
 - Direct tiny change: `empirical fast "<request>"`
 - Direct substantial or UI change: `empirical complex "<request>"`
-- Unrelated active work: `empirical workstream create <name>`, then add `--workstream <name>`
-- Resume active work: `empirical loop [--workstream <name>]`
+- Approved unrelated work: `empirical worktree create "<request>" --workflow fast|complex`
+- Resume active work: `empirical loop`
+- Explain state and accepted decisions: `empirical explain`
 
 The `--agent codex` form is a human terminal entrypoint. Agents must continue in
 their current runtime and use the MCP equivalents when available.

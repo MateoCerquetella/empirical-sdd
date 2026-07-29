@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 62,
+  "previousRevision": 61,
+  "actor": "agent",
+  "summary": "Superseded by the user's explicit requirement for global per-agent skill installation; the approved frozen contract only covered project-local entrypoints.",
+  "createdAt": "2026-07-29T16:06:02.745Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 62,
+    "activeFeature": "011-fix-empirical-integrate-so-it-installs-real",
+    "request": "Fix empirical integrate so it installs real user-invocable Empirical commands for every supported agent: add the missing Claude slash command, retain and verify Cursor, Gemini, and Windsurf commands, expose Codex through its supported project skill invocation, report exact per-agent command names after integration, update documentation, and add integration tests that prove every generated command artifact and invocation.",
+    "profile": "complex",
+    "phase": "implement",
+    "status": "blocked",
+    "repairAttempts": 0,
+    "message": "Superseded by the user's explicit requirement for global per-agent skill installation; the approved frozen contract only covered project-local entrypoints.",
+    "implementationActor": null,
+    "evidence": [],
+    "updatedAt": "2026-07-29T16:06:02.745Z",
+    "specDigest": "e537ef3a2804411cdfe1b20ec336f45526de91404ff353dd642ef6719a32ec00",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "05c584cae68f1cd3550912952e9354cf8c7d4418f7e7c756cecc82c79012ffa8"
+  }
+}

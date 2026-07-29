@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 15,
+  "previousRevision": 14,
+  "actor": "empirical-start",
+  "summary": "Started 004-fix-the-installed-empirical-cli-and-refresh",
+  "createdAt": "2026-07-28T23:08:33.392Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 15,
+    "activeFeature": "004-fix-the-installed-empirical-cli-and-refresh",
+    "request": "Fix the installed Empirical CLI and refresh the hello-world-harness integrations so ordinary agent prompts activate the Fast workflow",
+    "profile": "fast",
+    "phase": "implement",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": null,
+    "implementationActor": null,
+    "evidence": [],
+    "updatedAt": "2026-07-28T23:08:33.392Z",
+    "specDigest": "54778ea28e7b2bdcf90b10d275ed2e61c8022ad8edaf143dd60a4936e22236a3",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null
+  }
+}

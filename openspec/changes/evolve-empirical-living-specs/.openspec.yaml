@@ -1,4 +1,0 @@
-schema: spec-driven
-created: 2026-07-29
-goal: Make Empirical a cohesive 10/10 npm-only SDD workflow without cloning
-  OpenSpec or weakening enforcement.

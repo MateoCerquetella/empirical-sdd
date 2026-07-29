@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 3,
+  "revision": 1,
+  "previousRevision": 0,
+  "actor": "empirical-start",
+  "summary": "Started 013-replace-named-empirical-workstreams-with-one-active",
+  "createdAt": "2026-07-29T17:00:17.923Z",
+  "state": {
+    "schemaVersion": 3,
+    "revision": 1,
+    "activeFeature": "013-replace-named-empirical-workstreams-with-one-active",
+    "request": "Replace named Empirical workstreams with one active feature per Git worktree. Remove all workstream CLI flags, commands, MCP tools, manifests, types, storage, generated guidance, and documentation without named-workstream compatibility. Move revisions and events into feature-scoped state so parallel branches merge without shared state/event collisions, use descriptive feature slugs, and safely migrate existing default root state. Add an interactive first-run init/config wizard with persisted ask-or-off isolation, editable detected base branch, sibling ../<repo>-<feature> path, <type>/<feature> branch naming, required Complex decision records, and non-interactive flags/defaults. When unrelated work starts in an active clean checkout, preview and ask approval before executing git worktree add -b <type>/<feature> ../<repo>-<feature> <detected-base>; block dirty trees, unresolved bases, and collisions, never force, and support structured agent/MCP approval handoff. Add evidence-backed .empirical/specs/<feature>/decisions.md, enforce it at Complex Design and Review, and add empirical explain with current state, next-step reason, missing context, gate, decisions, and JSON output without storing private chain-of-thought. Exclude automatic stash/move/delete, agent launches, and enterprise Jira/ADR/wiki ceremony. Reset the alpha package version to 0.20.0, fully verify and publish it, then permanently unpublish npm versions 2.0.0, 2.2.0, 2.3.0, and 2.3.1 after explicit registry authentication.",
+    "profile": "complex",
+    "phase": "specify",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": null,
+    "implementationActor": null,
+    "specDigest": "9319bd622d0e4b2f8528f4787cffaae312cd3e5630060195fb57f70afaeea7ea",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": null,
+    "evidence": [],
+    "updatedAt": "2026-07-29T17:00:17.923Z"
+  }
+}

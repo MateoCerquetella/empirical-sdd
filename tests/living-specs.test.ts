@@ -42,6 +42,35 @@ async function writeDelta(
   await writeFile(join(directory, `${capability}.md`), contents, "utf8");
 }
 
+async function writeAcceptedDecision(directory: string): Promise<void> {
+  await writeFile(join(directory, "decisions.md"), `# Decisions
+
+## D-001: Preserve the capability boundary
+
+Status: Accepted
+
+### Evidence
+
+The existing capability specification is the canonical behavior contract.
+
+### Options
+
+1. Update it transactionally. 2. Maintain a second projection.
+
+### Chosen approach
+
+Update the canonical projection transactionally.
+
+### Trade-offs and risks
+
+Partial writes are a risk and require rollback.
+
+### Verification
+
+Exercise archive success, convergence, and rollback.
+`, "utf8");
+}
+
 async function advanceToArchive(
   project: EmpiricalProject,
   root: string,
@@ -59,6 +88,7 @@ async function advanceToArchive(
 
   action = await project.complete({ revision: action.revision, outcome: "passed", summary: "Specified" });
   await writeFile(join(directory, "design.md"), "# Design\n\nUse a deterministic export boundary.\n", "utf8");
+  await writeAcceptedDecision(directory);
   action = await project.complete({ revision: action.revision, outcome: "passed", summary: "Designed" });
   await writeFile(join(directory, "plan.md"), "# Plan\n\n1. Implement and verify export.\n", "utf8");
   action = await project.complete({ revision: action.revision, outcome: "passed", summary: "Planned" });
@@ -86,11 +116,11 @@ async function advanceToArchive(
       summary: "No blocking findings",
     }],
   });
-  expect(action).toMatchObject({ phase: "archive", status: "waiting", workstream: "default" });
+  expect(action).toMatchObject({ phase: "archive", status: "waiting" });
   expect(action.completion).toMatchObject({
     available: true,
     mcpTool: "empirical_archive",
-    requiredFields: ["workstream", "revision"],
+    requiredFields: ["revision"],
   });
   return { feature, revision: action.revision };
 }
@@ -108,8 +138,7 @@ describe("living capability specifications", () => {
       "published-reports",
       "# Published Reports Specification\n\n## Purpose\n\nCurrent report publication behavior.\n\n## Requirements\n\n_No current requirements._\n",
     );
-    const stateBefore = await readFile(project.store.statePath, "utf8");
-    const eventsBefore = await readdir(project.store.eventsDirectory);
+    const configBefore = await readFile(project.store.configPath, "utf8");
     const specsBefore = await readdir(join(root, ".empirical", "specs"));
 
     const first = await project.explore("  Make report sharing easier  ");
@@ -134,8 +163,7 @@ describe("living capability specifications", () => {
       projectContext: ["Reports are immutable after publication."],
       capabilityContext: [".empirical/capabilities/published-reports/spec.md"],
     });
-    expect(await readFile(project.store.statePath, "utf8")).toBe(stateBefore);
-    expect(await readdir(project.store.eventsDirectory)).toEqual(eventsBefore);
+    expect(await readFile(project.store.configPath, "utf8")).toBe(configBefore);
     expect(await readdir(join(root, ".empirical", "specs"))).toEqual(specsBefore);
   });
 
@@ -149,7 +177,6 @@ describe("living capability specifications", () => {
     expect(archived.action).toMatchObject({ phase: "done", status: "done", revision: ready.revision + 1 });
     expect(archived.report).toEqual({
       feature: ready.feature,
-      workstream: "default",
       capabilities: ["report-export"],
       added: 1,
       modified: 0,
@@ -302,6 +329,7 @@ describe("living capability specifications", () => {
 
     let action = await project.complete({ revision: 1, outcome: "passed", summary: "Specified" });
     await writeFile(join(directory, "design.md"), "# Design\n\nAtomic projection.\n", "utf8");
+    await writeAcceptedDecision(directory);
     action = await project.complete({ revision: action.revision, outcome: "passed", summary: "Designed" });
     await writeFile(join(directory, "plan.md"), "# Plan\n\n1. Archive atomically.\n", "utf8");
     action = await project.complete({ revision: action.revision, outcome: "passed", summary: "Planned" });

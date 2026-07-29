@@ -9,7 +9,7 @@ choose Fast only for explicit, tiny,
 localized, reversible, low-risk non-UI changes and Complex otherwise. Start with
 `empirical_fast` or `empirical_complex`; fall back to
 `empirical fast "<request>"` or `empirical complex "<request>"`. Resume active
-work with `empirical_loop` or `empirical loop`. Preserve its workstream, execute
+work with `empirical_loop` or `empirical loop`. Execute
 each returned action, complete exact revisions with evidence, archive after Review, and consume the
 response directly as the next action. Never select legacy Quick for new work,
 add profile/JSON controls, or launch another AI runtime.
@@ -19,8 +19,9 @@ Command reference:
 - Socratic discovery, then launch Codex: `empirical explore "<idea>" --agent codex`
 - Direct tiny change: `empirical fast "<request>"`
 - Direct substantial or UI change: `empirical complex "<request>"`
-- Unrelated active work: `empirical workstream create <name>`, then add `--workstream <name>`
-- Resume active work: `empirical loop [--workstream <name>]`
+- Approved unrelated work: `empirical worktree create "<request>" --workflow fast|complex`
+- Resume active work: `empirical loop`
+- Explain state and accepted decisions: `empirical explain`
 
 The `--agent codex` form is a human terminal entrypoint. Agents must continue in
 their current runtime and use the MCP equivalents when available.

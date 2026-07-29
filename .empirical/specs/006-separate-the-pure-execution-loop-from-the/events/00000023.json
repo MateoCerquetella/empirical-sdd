@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 23,
+  "previousRevision": 22,
+  "actor": "user-requirement-amendment",
+  "summary": "Reopened the contract to apply the requested Complex workflow name",
+  "createdAt": "2026-07-28T23:53:42.470Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 23,
+    "activeFeature": "006-separate-the-pure-execution-loop-from-the",
+    "request": "Separate the pure execution loop from the Fast and Complex SDD starters, keep Quick only for backward compatibility, and make ordinary agent prompts choose the SDD workflow automatically",
+    "profile": "complex",
+    "phase": "specify",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "The user renamed the full workflow from Strong to Complex.",
+    "implementationActor": null,
+    "evidence": [],
+    "updatedAt": "2026-07-28T23:53:42.470Z",
+    "specDigest": null,
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null
+  }
+}

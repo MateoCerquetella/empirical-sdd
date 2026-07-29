@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 4,
+  "revision": 16,
+  "previousRevision": 15,
+  "actor": "agent",
+  "summary": "Replaced obsolete @empirical/cli 1.0.6 with empirical-sdd 2.1.0 and regenerated the harness integrations from the current engine.",
+  "createdAt": "2026-07-28T23:10:34.811Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 16,
+    "activeFeature": "004-fix-the-installed-empirical-cli-and-refresh",
+    "request": "Fix the installed Empirical CLI and refresh the hello-world-harness integrations so ordinary agent prompts activate the Fast workflow",
+    "profile": "fast",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Replaced obsolete @empirical/cli 1.0.6 with empirical-sdd 2.1.0 and regenerated the harness integrations from the current engine.",
+    "implementationActor": "agent",
+    "evidence": [
+      {
+        "criterionId": "AC-1",
+        "kind": "test",
+        "passed": true,
+        "summary": "The global empirical executable now resolves to empirical-sdd, reports 2.1.0, migrated hello-world-harness to schema 2, and refreshed five native agent files plus four existing integrations."
+      },
+      {
+        "criterionId": "all",
+        "kind": "review",
+        "passed": true,
+        "summary": "Reviewed the repaired installation and harness output: the obsolete @empirical/cli package was the exact conflicting owner, only that package was removed, the current checkout replaced it, and the harness now contains the managed automatic skill and all native command fallbacks."
+      }
+    ],
+    "updatedAt": "2026-07-28T23:10:34.811Z",
+    "specDigest": "54778ea28e7b2bdcf90b10d275ed2e61c8022ad8edaf143dd60a4936e22236a3",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null
+  }
+}

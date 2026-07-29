@@ -1,142 +1,114 @@
-# Repository protocol
+# Empirical protocol 0.20
 
-The `.empirical/` directory is committed and portable:
+## Action packet
+
+Every current action is a structured `ActionPacket`:
+
+```json
+{
+  "kind": "action",
+  "protocol": "empirical-sdd",
+  "schemaVersion": 4,
+  "root": "/repo",
+  "feature": "add-team-invitations",
+  "request": "Add team invitations",
+  "profile": "complex",
+  "phase": "design",
+  "status": "waiting",
+  "revision": 2,
+  "instructions": "...",
+  "rationale": {
+    "currentState": "design/waiting at revision 2",
+    "nextAction": "Complete design at revision 2",
+    "reason": "...",
+    "requiredContext": [".../design.md", ".../decisions.md"],
+    "missingContext": ["..."],
+    "gate": "proceed"
+  },
+  "acceptanceCriteria": [],
+  "requiredEvidence": [],
+  "artifacts": [],
+  "projectContext": [],
+  "capabilityContext": [],
+  "completion": {
+    "available": true,
+    "mcpTool": "empirical_complete",
+    "cli": "empirical complete --revision 2 ...",
+    "requiredFields": ["revision", "outcome", "summary"]
+  }
+}
+```
+
+The packet is bound to the one active feature in its checkout. Mutations require
+the exact revision. A stale caller receives `STALE_REVISION` and cannot overwrite
+newer state.
+
+## Start result
+
+Fast and Complex return either an ActionPacket or a read-only proposal:
+
+```json
+{
+  "kind": "worktree_proposal",
+  "request": "Fix password reset expiry",
+  "workflow": "complex",
+  "changeType": "fix",
+  "feature": "fix-password-reset-expiry",
+  "branch": "fix/fix-password-reset-expiry",
+  "path": "/projects/app-fix-password-reset-expiry",
+  "base": "main",
+  "baseCommit": "0123456789abcdef0123456789abcdef01234567",
+  "activeFeature": "add-team-invitations",
+  "approvalToken": "<sha256-of-approved-fields>",
+  "command": ["git", "worktree", "add", "-b", "...", "<baseCommit>"],
+  "requiresApproval": true
+}
+```
+
+Structured creation repeats every editable proposal field plus `baseCommit`,
+`activeFeature`, and `approvalToken`, and requires `approved: true`. Any change
+requires a fresh proposal. Success returns `kind: worktree_handoff`, checkout
+metadata, the first ActionPacket, and an exact resume command.
+
+## Workflows
+
+Fast phases: `implement → done`.
+
+Complex phases:
 
 ```text
-.empirical/
-├── config.json
-├── policy.json
-├── workstreams.json
-├── state.json + events/             # default workstream; paths retained
-├── workstreams/<name>/
-│   └── state.json + events/         # independent revisions
-├── capabilities/<name>/spec.md      # current behavior
-└── specs/<feature>/
-    ├── spec.md
-    ├── design.md        # Complex only
-    ├── plan.md          # Complex only
-    └── deltas/<name>.md # new Complex work
+specify → design → plan → implement → verify → review → archive → done
 ```
 
-The current protocol schema is 3. Schema-1 and schema-2 repositories remain
-readable and can be stamped forward with `empirical migrate`; the next successful
-mutation also upgrades them. Existing state, events, specs, evidence, Quick
-compatibility, and adopted `ai/` content remain at their current paths as the
-`default` workstream.
+Quick is read-only compatibility for migrated legacy state and is never chosen
+for new work.
 
-Every transition supplies the revision from the current action packet. The
-store acquires a short-lived local lock, rejects stale revisions, writes a
-complete event atomically, and then projects the new state. If projection is
-interrupted, the latest event repairs it on the next read.
+Outcomes are `passed`, `failed`, `awaiting_human`, and `blocked`. Fast failure
+escalates the same feature to Complex Specify. Verify/Review failure returns to
+Implement until the configured repair ceiling is exceeded.
 
-Feature creation holds that same lock across feature numbering, specification
-creation, and state commit. Completed revisions record a specification digest;
-verification fails if criteria change after the evidence-bearing revision.
+## Evidence
 
-The two public workflow sequences are:
+Every criterion needs passing test evidence. `[UI]` criteria additionally need
+browser evidence and a repository-relative screenshot artifact. Review needs a
+passing review record. Artifact traversal and absolute paths are rejected.
+
+## Capability deltas
+
+Complex Specify validates one or more `deltas/<capability>.md` documents with
+ADDED, MODIFIED, or REMOVED requirement blocks and concrete scenarios. Their
+digest is frozen at Specify. Review and Archive reject later changes. Archive
+projects the reviewed deltas transactionally and is idempotent at its exact
+revision.
+
+## Persisted state
 
 ```text
-Fast:    Implement + Verify + Review → Done
-Complex: Specify → Design → Plan → Implement → Verify → Review → Archive → Done
+.empirical/specs/<feature>/state.json
+.empirical/specs/<feature>/events/00000001.json
+.empirical/specs/<feature>/state.lock
 ```
 
-Fast creates a concise `spec.md` from the request when it starts. Its single
-completion must include at least one acceptance criterion, passing test
-evidence for every criterion, required browser and screenshot evidence for UI
-criteria, and passing review evidence. Complex retains its separate phase gates,
-validates requirement deltas during Specify, and cannot reach Done until Archive
-projects them onto living capability specifications.
-
-Quick's historical Shape → Implement → Verify → Review sequence remains in the
-schema only for compatibility with existing repositories. New work cannot
-select Quick through the public Fast or Complex entry points.
-
-Acceptance criteria use this Markdown form:
-
-```markdown
-- [ ] [AC-1] A report can be exported.
-- [ ] [AC-UI-1] [UI] The export confirmation is visible.
-```
-
-Verify requires passing test evidence for each criterion. UI criteria
-also require browser and screenshot records. Review requires a passing review
-record. Verify or Review failure returns to Implement; exceeding the configured
-repair budget blocks the workflow.
-
-## Start and resume semantics
-
-`empirical explore "<problem>"` in an interactive terminal conducts a persisted
-five-pass Socratic interview. It asks one question at a time, saves draft and
-approved answers, requires approval, and can start Fast or Complex directly.
-`--agent codex` optionally launches Codex only after exact workflow creation.
-
-`empirical explore --json`, `empirical explore --no-interview`, non-TTY CLI,
-`empirical_explore`, and the TypeScript `explore()` method remain pure discovery
-packets. They return questions, project context, living-spec context, and suggested
-Fast/Complex calls without creating discovery, feature, event, or revision state.
-The current host agent uses that packet to conduct the same five passes in its
-conversation and waits for human approval before starting work.
-
-`empirical fast "<request>"` / `empirical_fast` and
-`empirical complex "<request>"` / `empirical_complex` create new work and return
-its first action packet. They never run an AI model; the current agent executes
-the packet.
-
-`empirical loop` and `empirical_loop` are pure resume operations:
-
-- they take no request or profile;
-- active work resumes without changing its revision;
-- idle and terminal state remain idle or terminal; and
-- they never create or replace a feature.
-
-Every Fast, Complex, and `complete` response is also the next packet. Agents
-should consume it directly and repeat until Done, Blocked, or awaiting human
-input; calling `loop` after each successful completion only adds an unnecessary
-round trip. A later agent session uses loop once to recover the current action.
-
-## Capability deltas and archive
-
-Each new Complex change writes one or more
-`.empirical/specs/<feature>/deltas/<capability>.md` files. The supported grammar
-is a strict, intentionally small OpenSpec-compatible subset:
-
-```markdown
-## Purpose
-
-Why this capability exists.
-
-## ADDED Requirements
-
-### Requirement: Observable behavior
-
-The system MUST provide the behavior.
-
-#### Scenario: Successful use
-
-- **WHEN** the behavior is requested
-- **THEN** the observable result occurs
-```
-
-`MODIFIED` requires the named requirement to exist. `REMOVED` requires it to
-exist and deletes it. `ADDED` requires it not to exist. Duplicate operations,
-unsafe capability identifiers, missing scenarios, and ambiguous projections are
-rejected. Archive preflights every delta, applies every capability through a
-rollback-capable transaction effect, advances the exact workstream revision, and
-converges safely when retried after success. Specify records a digest of the
-validated behavioral delta; later phases and Archive reject any unreviewed change
-to that approved delta.
-
-## Workstream identity
-
-Named workstreams scope state, events, locks, and revisions. Feature specs,
-capabilities, policy, and configuration are shared project resources protected by
-their own locks. `workstreams.json` records the selected workstream only as a
-command-line convenience. Every new action packet and completion command includes
-an explicit workstream, so later selection changes cannot redirect issued work.
-
-## Project policy
-
-`.empirical/policy.json` contains committed project context and optional arrays of
-per-phase guidance. Context is exposed separately in action packets. Phase guidance
-is appended after the built-in instruction and is explicitly subordinate to
-mandatory criteria, artifact, revision, evidence, review, delta, and archive gates.
+`state.json` is a recoverable projection of the append-only transition journal.
+Configuration, project policy, discovery, and living capabilities are shared at
+the project level.

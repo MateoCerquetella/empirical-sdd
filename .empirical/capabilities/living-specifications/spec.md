@@ -17,22 +17,25 @@ Every new Complex change MUST include at least one valid capability delta before
 
 ### Requirement: Reviewed deltas are archived before completion
 
-A Complex change MUST enter Archive after Review and MUST NOT reach Done until its validated deltas have been atomically applied to `.empirical/capabilities/<name>/spec.md`.
+A Complex change MUST enter Archive after Review and MUST NOT reach Done until
+its validated deltas have been atomically applied to
+`.empirical/capabilities/<name>/spec.md` through the exact feature-scoped
+revision.
 
 #### Scenario: Review passes
 
 - **WHEN** a Complex change receives passing review evidence
-- **THEN** its next action is Archive with an exact revision and explicit workstream
+- **THEN** its next action is Archive with its exact feature revision
 
 #### Scenario: Archive succeeds
 
 - **WHEN** all capability projections can be committed
-- **THEN** Empirical writes the living specifications and advances the change to Done as one logical transaction
+- **THEN** Empirical writes the living specifications and advances the feature to Done as one logical transaction
 
 #### Scenario: Archive partially fails
 
 - **WHEN** any capability projection cannot be written
-- **THEN** Empirical restores every capability already touched and leaves the workflow at the same Archive revision
+- **THEN** Empirical restores every capability already touched and leaves the feature at the same Archive revision
 
 ### Requirement: Capability delta operations are safe and repeatable
 

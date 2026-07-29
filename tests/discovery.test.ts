@@ -124,7 +124,7 @@ describe("Socratic discovery", () => {
     expect(record.answers).toHaveLength(5);
     expect(record.answers[1]!.followUp?.answer).toContain("wins by reaching the exit");
     expect(record.refinedRequest).toContain("Approved Socratic discovery");
-    expect(record.handoff).toMatchObject({ workstream: "default", revision: 1 });
+    expect(record.handoff).toMatchObject({ revision: 1 });
     expect(await readFile(
       join(root, ".empirical", "discoveries", record.id, "brief.md"),
       "utf8",
@@ -162,7 +162,8 @@ describe("Socratic discovery", () => {
 
   test("packet mode remains read-only and explicit about how to enter the interview", async () => {
     const { root, project } = await temporaryProject();
-    const stateBefore = await readFile(project.store.statePath, "utf8");
+    const configBefore = await readFile(project.store.configPath, "utf8");
+    const specsBefore = await readdir(join(root, ".empirical", "specs"));
     const child = Bun.spawn([
       Bun.argv[0]!,
       "run",
@@ -183,7 +184,8 @@ describe("Socratic discovery", () => {
     expect(stderr).toBe("");
     expect(stdout).toContain("packet mode (read-only)");
     expect(stdout).toContain("add --interactive");
-    expect(await readFile(project.store.statePath, "utf8")).toBe(stateBefore);
+    expect(await readFile(project.store.configPath, "utf8")).toBe(configBefore);
+    expect(await readdir(join(root, ".empirical", "specs"))).toEqual(specsBefore);
     expect(await readdir(join(root, ".empirical", "discoveries")).then(
       () => true,
       () => false,

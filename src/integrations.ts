@@ -14,8 +14,9 @@ const COMMAND_REFERENCE = `Command reference:
 - Socratic discovery, then launch Codex: \`empirical explore "<idea>" --agent codex\`
 - Direct tiny change: \`empirical fast "<request>"\`
 - Direct substantial or UI change: \`empirical complex "<request>"\`
-- Unrelated active work: \`empirical workstream create <name>\`, then add \`--workstream <name>\`
-- Resume active work: \`empirical loop [--workstream <name>]\`
+- Approved unrelated work: \`empirical worktree create "<request>" --workflow fast|complex\`
+- Resume active work: \`empirical loop\`
+- Explain state and accepted decisions: \`empirical explain\`
 
 The \`--agent codex\` form is a human terminal entrypoint. Agents must continue in
 their current runtime and use the MCP equivalents when available.`;
@@ -69,15 +70,15 @@ and consume the response until Done, Blocked, or awaiting human input.`,
 empirical_complex or \`empirical complex "<request>"\`. Execute the returned
 Specify, Design, Plan, Implement, Verify, Review, and Archive actions in order,
 complete each exact revision with all required evidence, and consume every
-response directly until Done, Blocked, or awaiting human input. Preserve the
-packet workstream and never weaken acceptance criteria or verification gates.`,
+response directly until Done, Blocked, or awaiting human input. Maintain the
+feature decision record and never weaken acceptance criteria or verification gates.`,
   },
   {
     name: "empirical-loop",
     description: "Resume the active Empirical workflow without starting new work.",
     instructions: `Resume the active workflow with empirical_loop or \`empirical loop\`. Loop takes
-no new request or profile. Preserve the returned workstream, execute the exact
-current action, complete its revision with every required artifact and evidence
+no new request or profile. Execute the exact current action, complete its
+revision with every required artifact and evidence
 item, and consume each response directly until Done, Blocked, or awaiting human
 input. Never replace the active feature with text attached to this invocation.`,
   },
@@ -142,9 +143,10 @@ work. The user does not need to mention Empirical.
    \`empirical complex "<the user's request>"\`.
 5. Resume active work through \`empirical_loop\` or \`empirical loop\`; loop
    takes no request or profile.
-6. Preserve the packet workstream; use a different named workstream for unrelated
-   active work. Execute the action and complete its exact revision with all required
-   evidence. Each completion response is already the next action; do not call
+6. If unrelated work returns a worktree proposal, show its base, branch, path,
+   and command; wait for explicit human approval, then execute the returned
+   worktree creation operation. Execute each action and complete its exact revision
+   with all required evidence. Each completion response is already the next action; do not call
    status, next, or loop redundantly.
 7. When Review returns Archive, apply its validated capability deltas with the
    returned archive operation. Continue until Done, Blocked, or genuinely awaiting
@@ -185,8 +187,9 @@ daemon, or runtime.
    \`empirical complex "<request>"\`.
 5. If work is already active, resume it with \`empirical_loop\` or
    \`empirical loop\`. Loop takes no request or profile.
-6. Preserve the explicit packet workstream; create or address another workstream
-   for unrelated active work. Execute the action and complete the exact revision with every
+6. If unrelated work returns a worktree proposal, show its base, branch, path,
+   and command, wait for explicit human approval, then call the returned creation
+   operation. Execute the action and complete the exact revision with every
    required evidence item. For Fast, trust the generated criterion in the
    packet, inspect only relevant project files, implement directly, combine the
    focused test and diff review when practical, and use the returned completion
@@ -216,7 +219,7 @@ choose Fast only for explicit, tiny,
 localized, reversible, low-risk non-UI changes and Complex otherwise. Start with
 \`empirical_fast\` or \`empirical_complex\`; fall back to
 \`empirical fast "<request>"\` or \`empirical complex "<request>"\`. Resume active
-work with \`empirical_loop\` or \`empirical loop\`. Preserve its workstream, execute
+work with \`empirical_loop\` or \`empirical loop\`. Execute
 each returned action, complete exact revisions with evidence, archive after Review, and consume the
 response directly as the next action. Never select legacy Quick for new work,
 add profile/JSON controls, or launch another AI runtime.
@@ -229,7 +232,7 @@ description = "Start or resume Empirical and continue in the current agent until
 prompt = """
 Run the request attached to this command through the repository's Empirical workflow. If there is no new request, resume the active feature.
 
-Use the current Gemini agent. ${SOCRATIC_AGENT_GUIDANCE} For concrete work, choose Fast only for explicit, tiny, localized, reversible, low-risk non-UI changes and Complex otherwise. Start with empirical_fast or empirical_complex; fall back to empirical fast "<request>" or empirical complex "<request>". Resume active work with empirical_loop or empirical loop. Preserve workstream identity, complete exact revisions with evidence, archive after Review, and consume every response directly. Never select legacy Quick for new work, add profile/JSON controls, or launch another AI runtime.
+Use the current Gemini agent. ${SOCRATIC_AGENT_GUIDANCE} For concrete work, choose Fast only for explicit, tiny, localized, reversible, low-risk non-UI changes and Complex otherwise. Start with empirical_fast or empirical_complex; fall back to empirical fast "<request>" or empirical complex "<request>". If unrelated work returns a worktree proposal, show it and wait for explicit approval before creation. Resume active work with empirical_loop or empirical loop. Complete exact revisions with evidence, archive after Review, and consume every response directly. Never select legacy Quick for new work, add profile/JSON controls, or launch another AI runtime.
 
 ${COMMAND_REFERENCE}
 """
@@ -247,8 +250,9 @@ Start or resume the repository's Empirical workflow for the current request.
 4. Start with \`empirical_fast\` or \`empirical_complex\`; fall back to
    \`empirical fast "<request>"\` or \`empirical complex "<request>"\`.
 5. Resume active work with \`empirical_loop\` or \`empirical loop\`.
-6. Preserve its workstream, execute the action, and complete its exact revision with all required
-   evidence.
+6. If unrelated work returns a worktree proposal, show it and wait for explicit
+   approval before creation. Execute the action and complete its exact revision
+   with all required evidence.
 7. Archive validated capability deltas after Review and consume every response.
 8. Stop only at Done, Blocked, or awaiting human input.
 

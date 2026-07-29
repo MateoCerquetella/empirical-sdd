@@ -33,7 +33,6 @@ export interface DiscoveryRecord {
   approvedAt: string | null;
   workflow: DiscoveryWorkflow | null;
   handoff: {
-    workstream: string;
     feature: string;
     revision: number;
   } | null;
@@ -218,7 +217,7 @@ export function renderDiscoveryMarkdown(record: DiscoveryRecord): string {
   }).join("\n\n");
   const refined = record.refinedRequest ? `\n\n## Refined request\n\n${quote(record.refinedRequest)}` : "";
   const handoff = record.handoff
-    ? `\n\n## Workflow handoff\n\n- Workflow: ${record.workflow}\n- Workstream: ${record.handoff.workstream}\n- Feature: ${record.handoff.feature}\n- Revision: ${record.handoff.revision}`
+    ? `\n\n## Workflow handoff\n\n- Workflow: ${record.workflow}\n- Feature: ${record.handoff.feature}\n- Revision: ${record.handoff.revision}`
     : "";
   return `# Socratic discovery: ${escapeInline(record.problem)}
 

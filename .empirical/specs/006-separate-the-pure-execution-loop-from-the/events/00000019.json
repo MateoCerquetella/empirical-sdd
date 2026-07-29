@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 19,
+  "previousRevision": 18,
+  "actor": "agent",
+  "summary": "Designed separate Fast/Strong starters over the transactional engine, a read-only zero-input Loop, automatic host-agent selection, and legacy Quick compatibility across CLI, MCP, TypeScript, and generated integrations.",
+  "createdAt": "2026-07-28T23:18:05.227Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 19,
+    "activeFeature": "006-separate-the-pure-execution-loop-from-the",
+    "request": "Separate the pure execution loop from the Fast and Strong SDD starters, keep Quick only for backward compatibility, and make ordinary agent prompts choose the SDD workflow automatically",
+    "profile": "complex",
+    "phase": "plan",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Designed separate Fast/Strong starters over the transactional engine, a read-only zero-input Loop, automatic host-agent selection, and legacy Quick compatibility across CLI, MCP, TypeScript, and generated integrations.",
+    "implementationActor": null,
+    "evidence": [],
+    "updatedAt": "2026-07-28T23:18:05.227Z",
+    "specDigest": "24a013f786d169c990efc759fbc8bd56c109b033f3332acba1a41642053b1c48",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null
+  }
+}

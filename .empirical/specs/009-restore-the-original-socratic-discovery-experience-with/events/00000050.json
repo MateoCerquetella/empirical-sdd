@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 50,
+  "previousRevision": 49,
+  "actor": "agent",
+  "summary": "Designed TTY mode selection, the five-pass adaptive interview, atomic discovery records, approval and workflow handoff, opt-in Codex launch, and agent-native Socratic guidance",
+  "createdAt": "2026-07-29T15:05:16.483Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 50,
+    "activeFeature": "009-restore-the-original-socratic-discovery-experience-with",
+    "request": "Restore the original Socratic discovery experience with an interactive CLI interview, adaptive questions, persisted answers, an approved refined request, and direct handoff into Fast or Complex without breaking read-only agent discovery or automation.",
+    "profile": "complex",
+    "phase": "plan",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Designed TTY mode selection, the five-pass adaptive interview, atomic discovery records, approval and workflow handoff, opt-in Codex launch, and agent-native Socratic guidance",
+    "implementationActor": null,
+    "evidence": [],
+    "updatedAt": "2026-07-29T15:05:16.483Z",
+    "specDigest": "a0af97c930a42e85df11e154a2f54637d0d360b0559a055ccf36654f0cad20ef",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "4ede8408575ec49017f27814e6cea9625f9594663eea9aa27d1758ae68b0401b"
+  }
+}

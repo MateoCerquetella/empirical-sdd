@@ -1,6 +1,5 @@
-export const SCHEMA_VERSION = 3 as const;
-export const PRODUCT_VERSION = "2.3.1";
-export const WORKSTREAM_SCHEMA_VERSION = 1 as const;
+export const SCHEMA_VERSION = 4 as const;
+export const PRODUCT_VERSION = "0.20.0";
 export const POLICY_SCHEMA_VERSION = 1 as const;
 
 export type Workflow = "fast" | "complex";
@@ -24,6 +23,20 @@ export type WorkflowStatus =
   | "done";
 export type Outcome = "passed" | "failed" | "awaiting_human" | "blocked";
 export type EvidenceKind = "test" | "browser" | "screenshot" | "review" | "human";
+export type ChangeType = "feature" | "fix" | "chore";
+export type IsolationMode = "ask" | "off";
+export type ComplexDecisionMode = "required" | "off";
+
+export interface IsolationConfig {
+  mode: IsolationMode;
+  baseBranch: string;
+  worktreePath: string;
+  branchPattern: string;
+}
+
+export interface DecisionConfig {
+  complexRecords: ComplexDecisionMode;
+}
 
 export interface ProjectConfig {
   schemaVersion: typeof SCHEMA_VERSION;
@@ -35,7 +48,16 @@ export interface ProjectConfig {
     screenshotForUi: boolean;
     codeReview: boolean;
   };
+  isolation: IsolationConfig;
+  decisions: DecisionConfig;
+  setupComplete: boolean;
   legacySource: "ai" | null;
+}
+
+export interface ProjectConfigurationInput {
+  isolation?: Partial<IsolationConfig>;
+  decisions?: Partial<DecisionConfig>;
+  setupComplete?: boolean;
 }
 
 export interface WorkflowState {
@@ -53,28 +75,6 @@ export interface WorkflowState {
   capabilityArchiveRequired: boolean;
   capabilityDeltaDigest: string | null;
   evidence: Evidence[];
-  updatedAt: string;
-}
-
-export interface WorkstreamEntry {
-  createdAt: string;
-}
-
-export interface WorkstreamManifest {
-  schemaVersion: typeof WORKSTREAM_SCHEMA_VERSION;
-  selected: string;
-  workstreams: Record<string, WorkstreamEntry>;
-}
-
-export interface WorkstreamSummary {
-  id: string;
-  selected: boolean;
-  activeFeature: string | null;
-  request: string | null;
-  profile: Profile;
-  phase: Phase;
-  status: WorkflowStatus;
-  revision: number;
   updatedAt: string;
 }
 
@@ -103,16 +103,24 @@ export interface CompletionInput {
   revision: number;
   outcome: Outcome;
   summary: string;
-  workstream?: string;
   actor?: string;
   evidence?: Evidence[];
 }
 
+export interface ActionRationale {
+  currentState: string;
+  nextAction: string;
+  reason: string;
+  requiredContext: string[];
+  missingContext: string[];
+  gate: "proceed" | "stop";
+}
+
 export interface ActionPacket {
+  kind: "action";
   protocol: "empirical-sdd";
   schemaVersion: typeof SCHEMA_VERSION;
   root: string;
-  workstream: string;
   feature: string | null;
   request: string | null;
   profile: Profile;
@@ -120,6 +128,7 @@ export interface ActionPacket {
   status: WorkflowStatus;
   revision: number;
   instructions: string;
+  rationale: ActionRationale;
   acceptanceCriteria: Criterion[];
   requiredEvidence: EvidenceKind[];
   artifacts: string[];
@@ -131,6 +140,84 @@ export interface ActionPacket {
     cli: string;
     requiredFields: string[];
   };
+}
+
+export interface WorktreeProposal {
+  kind: "worktree_proposal";
+  protocol: "empirical-sdd";
+  schemaVersion: typeof SCHEMA_VERSION;
+  root: string;
+  request: string;
+  workflow: Workflow;
+  changeType: ChangeType;
+  feature: string;
+  branch: string;
+  path: string;
+  base: string;
+  baseCommit: string;
+  activeFeature: string;
+  approvalToken: string;
+  command: string[];
+  requiresApproval: true;
+}
+
+export interface WorktreeCreateInput {
+  request: string;
+  workflow: Workflow;
+  changeType?: ChangeType;
+  feature?: string;
+  branch?: string;
+  path?: string;
+  base?: string;
+  baseCommit: string;
+  activeFeature: string;
+  approvalToken: string;
+  approved: true;
+}
+
+export interface WorktreeHandoff {
+  kind: "worktree_handoff";
+  protocol: "empirical-sdd";
+  schemaVersion: typeof SCHEMA_VERSION;
+  root: string;
+  path: string;
+  branch: string;
+  base: string;
+  baseCommit: string;
+  feature: string;
+  revision: number;
+  workflow: Workflow;
+  resume: string;
+  action: ActionPacket;
+}
+
+export type FeatureStartResult = ActionPacket | WorktreeProposal;
+
+export interface DecisionSummary {
+  id: string;
+  title: string;
+  status: "Accepted" | "Superseded";
+  chosenApproach: string;
+  supersedes: string[];
+  supersededBy: string | null;
+}
+
+export interface DecisionValidationReport {
+  valid: boolean;
+  decisions: DecisionSummary[];
+  issues: string[];
+}
+
+export interface ExplainReport {
+  protocol: "empirical-sdd";
+  schemaVersion: typeof SCHEMA_VERSION;
+  root: string;
+  feature: string | null;
+  phase: Phase;
+  status: WorkflowStatus;
+  revision: number;
+  rationale: ActionRationale;
+  decisions: DecisionSummary[];
 }
 
 export interface ExplorationPacket {
@@ -179,7 +266,6 @@ export interface DeltaValidationReport {
 
 export interface ArchiveReport {
   feature: string;
-  workstream: string;
   capabilities: string[];
   added: number;
   modified: number;
@@ -221,7 +307,7 @@ export interface AgentEntrypointReport {
   reload: string;
 }
 
-export interface InitOptions {
+export interface InitOptions extends ProjectConfigurationInput {
   profile?: Workflow;
   integrations?: boolean;
 }
@@ -235,7 +321,7 @@ export interface FeatureStartOptions {
   id?: string;
 }
 
-export interface AdoptionOptions {
+export interface AdoptionOptions extends ProjectConfigurationInput {
   profile?: Workflow;
   integrations?: boolean;
 }

@@ -20,7 +20,7 @@ interface CapabilityProjection {
 }
 
 export interface CapabilityArchivePlan {
-  report: Omit<ArchiveReport, "feature" | "workstream" | "converged">;
+  report: Omit<ArchiveReport, "feature" | "converged">;
   commit: () => Promise<() => Promise<void>>;
 }
 

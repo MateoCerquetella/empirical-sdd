@@ -33,18 +33,17 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_complex");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_explore");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_archive");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_workstreams");
+    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_worktree_propose");
+    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_worktree_create");
+    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_explain");
+    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_configure");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_capabilities");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_policy");
     expect(listed.tools.map((tool) => tool.name)).not.toContain("empirical_strong");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_start");
+    expect(listed.tools.map((tool) => tool.name)).not.toContain("empirical_workstreams");
 
     const loopTool = listed.tools.find((tool) => tool.name === "empirical_loop");
-    expect(Object.keys(loopTool?.inputSchema.properties ?? {})).toEqual(["root", "workstream"]);
-    const legacyStart = listed.tools.find((tool) => tool.name === "empirical_start");
-    expect(legacyStart?.inputSchema.properties?.profile).toMatchObject({
-      enum: ["fast", "complex"],
-    });
+    expect(Object.keys(loopTool?.inputSchema.properties ?? {})).toEqual(["root"]);
 
     const initialized = await client.callTool({
       name: "empirical_init",
@@ -90,7 +89,7 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
       status: "waiting",
       revision: 1,
       requiredEvidence: ["test", "review"],
-      workstream: "default",
+      kind: "action",
     });
 
     const resumed = await client.callTool({
@@ -132,6 +131,13 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
     });
     expect(resumedComplex.isError).not.toBe(true);
     expect(resumedComplex.structuredContent).toEqual(complex.structuredContent);
+
+    const explained = await client.callTool({ name: "empirical_explain", arguments: { root: complexRoot } });
+    expect(explained.isError).not.toBe(true);
+    expect(explained.structuredContent).toMatchObject({
+      feature: "replace-authentication-safely",
+      rationale: { gate: "proceed" },
+    });
   } finally {
     await client.close();
   }
