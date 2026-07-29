@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 3,
+  "revision": 51,
+  "previousRevision": 50,
+  "actor": "agent",
+  "summary": "Planned the discovery engine, interactive CLI, pure compatibility path, agent guidance, persistence tests, docs, versioning, and cross-platform verification",
+  "createdAt": "2026-07-29T15:05:39.494Z",
+  "state": {
+    "schemaVersion": 3,
+    "revision": 51,
+    "activeFeature": "009-restore-the-original-socratic-discovery-experience-with",
+    "request": "Restore the original Socratic discovery experience with an interactive CLI interview, adaptive questions, persisted answers, an approved refined request, and direct handoff into Fast or Complex without breaking read-only agent discovery or automation.",
+    "profile": "complex",
+    "phase": "implement",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Planned the discovery engine, interactive CLI, pure compatibility path, agent guidance, persistence tests, docs, versioning, and cross-platform verification",
+    "implementationActor": null,
+    "evidence": [],
+    "updatedAt": "2026-07-29T15:05:39.494Z",
+    "specDigest": "a0af97c930a42e85df11e154a2f54637d0d360b0559a055ccf36654f0cad20ef",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "4ede8408575ec49017f27814e6cea9625f9594663eea9aa27d1758ae68b0401b"
+  }
+}

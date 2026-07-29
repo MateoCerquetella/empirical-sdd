@@ -1,5 +1,5 @@
 export const SCHEMA_VERSION = 3 as const;
-export const PRODUCT_VERSION = "2.2.0";
+export const PRODUCT_VERSION = "2.3.0";
 export const WORKSTREAM_SCHEMA_VERSION = 1 as const;
 export const POLICY_SCHEMA_VERSION = 1 as const;
 

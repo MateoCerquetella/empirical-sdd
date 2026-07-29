@@ -154,6 +154,9 @@ describe("Empirical core", () => {
     expect(agentsSkill).toContain("empirical_fast");
     expect(agentsSkill).toContain("empirical_complex");
     expect(agentsSkill).toContain("empirical_explore");
+    expect(agentsSkill).toContain("original five Socratic passes");
+    expect(agentsSkill).toContain("Ask one question at a time");
+    expect(agentsSkill).toContain("wait for explicit human approval");
     expect(agentsSkill).toContain("empirical_loop");
     expect(agentsSkill).toContain("explicit packet workstream");
     expect(agentsSkill).toContain("archive validated deltas");

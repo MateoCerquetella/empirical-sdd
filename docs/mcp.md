@@ -16,7 +16,11 @@ empirical_explore(problem="Make report sharing easier")
 ```
 
 It returns discovery questions and committed context without creating workflow
-state. Concrete new work has two entry points:
+state. The current host agent then conducts the original five Socratic passes
+one question at a time, presents the refined contract, and waits for explicit
+human approval. The interactive terminal command provides the same interview
+directly and persists it under `.empirical/discoveries/`. Concrete new work has
+two entry points:
 
 ```text
 empirical_fast(request="Fix the heading typo")

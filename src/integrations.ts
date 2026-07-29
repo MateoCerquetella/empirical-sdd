@@ -6,6 +6,7 @@ import type { IntegrationReport } from "./types.js";
 const START = "<!-- empirical-sdd:start -->";
 const END = "<!-- empirical-sdd:end -->";
 const MANAGED_FILE_MARKER = "empirical-sdd:managed-file";
+const SOCRATIC_AGENT_GUIDANCE = `For genuinely vague work, retrieve repository and living-spec context with empirical_explore or empirical explore "<problem>", then conduct the original five Socratic passes in the current conversation: problem/user, observable outcome, boundaries/non-goals, failure/risk, and verification. Ask one question at a time, add only a material follow-up, show the complete refined contract, and wait for explicit human approval before starting Fast or Complex. Do not merely repeat the packet's generic questions.`;
 
 const GUIDANCE = `${START}
 ## Empirical SDD
@@ -15,8 +16,7 @@ fix, refactor, remove, migrate, upgrade, update tests, or continue repository
 work. The user does not need to mention Empirical.
 
 1. Use the current agent; never launch another AI runtime.
-2. Explore genuinely vague work through \`empirical_explore\` or
-   \`empirical explore "<problem>"\` before creating workflow state.
+2. ${SOCRATIC_AGENT_GUIDANCE}
 3. For concrete new work, choose Fast only when it is explicit, tiny, localized,
    reversible, low-risk, and non-UI. Choose Complex for everything else.
 4. Start through \`empirical_fast\` or \`empirical_complex\`. Without MCP, run
@@ -54,8 +54,7 @@ daemon, or runtime.
 
 1. Treat the user's ordinary coding request as the workflow request. The user
    does not choose a command or profile.
-2. Explore genuinely vague problems with \`empirical_explore\` or
-   \`empirical explore "<problem>"\` before starting workflow state.
+2. ${SOCRATIC_AGENT_GUIDANCE}
 3. For concrete work, choose Fast only when the behavior is explicit and the change
    is tiny, localized, reversible, low-risk, and non-UI. Choose Complex otherwise,
    including UI, security, authentication, permissions, payments, destructive
@@ -90,8 +89,7 @@ const CURSOR_COMMAND = `<!-- ${MANAGED_FILE_MARKER} -->
 Run the request attached to this command through the repository's Empirical
 workflow. If there is no new request, resume the active feature.
 
-Use the current Cursor agent. Explore vague problems first with
-\`empirical_explore\` or \`empirical explore "<problem>"\`. For concrete work,
+Use the current Cursor agent. ${SOCRATIC_AGENT_GUIDANCE} For concrete work,
 choose Fast only for explicit, tiny,
 localized, reversible, low-risk non-UI changes and Complex otherwise. Start with
 \`empirical_fast\` or \`empirical_complex\`; fall back to
@@ -107,7 +105,7 @@ description = "Start or resume Empirical and continue in the current agent until
 prompt = """
 Run the request attached to this command through the repository's Empirical workflow. If there is no new request, resume the active feature.
 
-Use the current Gemini agent. Explore vague problems first with empirical_explore or empirical explore "<problem>". For concrete work, choose Fast only for explicit, tiny, localized, reversible, low-risk non-UI changes and Complex otherwise. Start with empirical_fast or empirical_complex; fall back to empirical fast "<request>" or empirical complex "<request>". Resume active work with empirical_loop or empirical loop. Preserve workstream identity, complete exact revisions with evidence, archive after Review, and consume every response directly. Never select legacy Quick for new work, add profile/JSON controls, or launch another AI runtime.
+Use the current Gemini agent. ${SOCRATIC_AGENT_GUIDANCE} For concrete work, choose Fast only for explicit, tiny, localized, reversible, low-risk non-UI changes and Complex otherwise. Start with empirical_fast or empirical_complex; fall back to empirical fast "<request>" or empirical complex "<request>". Resume active work with empirical_loop or empirical loop. Preserve workstream identity, complete exact revisions with evidence, archive after Review, and consume every response directly. Never select legacy Quick for new work, add profile/JSON controls, or launch another AI runtime.
 """
 `;
 
@@ -117,8 +115,7 @@ const WINDSURF_WORKFLOW = `<!-- ${MANAGED_FILE_MARKER} -->
 Start or resume the repository's Empirical workflow for the current request.
 
 1. Use the current Cascade agent; never launch another AI runtime.
-2. Explore vague problems with \`empirical_explore\` or
-   \`empirical explore "<problem>"\` before starting workflow state.
+2. ${SOCRATIC_AGENT_GUIDANCE}
 3. For concrete work, choose Fast only for explicit, tiny, localized, reversible,
    low-risk non-UI changes and Complex otherwise.
 4. Start with \`empirical_fast\` or \`empirical_complex\`; fall back to
