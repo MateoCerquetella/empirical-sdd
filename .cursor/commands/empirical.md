@@ -13,3 +13,14 @@ work with `empirical_loop` or `empirical loop`. Preserve its workstream, execute
 each returned action, complete exact revisions with evidence, archive after Review, and consume the
 response directly as the next action. Never select legacy Quick for new work,
 add profile/JSON controls, or launch another AI runtime.
+
+Command reference:
+- Socratic discovery: `empirical explore "<idea>"`
+- Socratic discovery, then launch Codex: `empirical explore "<idea>" --agent codex`
+- Direct tiny change: `empirical fast "<request>"`
+- Direct substantial or UI change: `empirical complex "<request>"`
+- Unrelated active work: `empirical workstream create <name>`, then add `--workstream <name>`
+- Resume active work: `empirical loop [--workstream <name>]`
+
+The `--agent codex` form is a human terminal entrypoint. Agents must continue in
+their current runtime and use the MCP equivalents when available.

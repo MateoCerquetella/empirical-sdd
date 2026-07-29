@@ -1,81 +1,30 @@
 {
   "schemaVersion": 3,
-  "revision": 55,
-  "activeFeature": "009-restore-the-original-socratic-discovery-experience-with",
-  "request": "Restore the original Socratic discovery experience with an interactive CLI interview, adaptive questions, persisted answers, an approved refined request, and direct handoff into Fast or Complex without breaking read-only agent discovery or automation.",
-  "profile": "complex",
+  "revision": 57,
+  "activeFeature": "010-add-a-concise-empirical-command-reference-to",
+  "request": "Add a concise Empirical command reference to every generated agent instruction, covering interactive Socratic explore with optional Codex launch, direct Fast and Complex starts, workstreams, and loop resume, with integration tests ensuring the commands remain present.",
+  "profile": "fast",
   "phase": "done",
   "status": "done",
   "repairAttempts": 0,
-  "message": "Archived capability changes: exploratory-discovery",
+  "message": "Added a reusable command reference to every generated agent instruction and refreshed all managed agent files.",
   "implementationActor": "agent",
   "evidence": [
     {
       "criterionId": "AC-1",
       "kind": "test",
       "passed": true,
-      "artifact": "tests/discovery.test.ts",
-      "summary": "A forced interactive CLI subprocess completed all original five passes one question at a time, and a real packaged PTY run showed the same sequence."
-    },
-    {
-      "criterionId": "AC-2",
-      "kind": "test",
-      "passed": true,
-      "artifact": "tests/discovery.test.ts",
-      "summary": "Domain-aware tests prove game and browser questions, a single missing win/failure follow-up, suppression after a concrete answer, and conservative workflow recommendation."
-    },
-    {
-      "criterionId": "AC-3",
-      "kind": "test",
-      "passed": true,
-      "artifact": "tests/discovery.test.ts",
-      "summary": "Interactive tests verify five exact answers plus follow-up, refined request, approval, selected workflow, feature/revision handoff, readable Markdown, structured JSON, atomic writes, and symbolic-link rejection."
-    },
-    {
-      "criterionId": "AC-4",
-      "kind": "test",
-      "passed": true,
-      "artifact": "tests/discovery.test.ts",
-      "summary": "The CLI prints the full refined request before approval; save-only and :quit tests retain durable draft or approved records while workflow state remains idle at revision 0."
-    },
-    {
-      "criterionId": "AC-5",
-      "kind": "test",
-      "passed": true,
-      "artifact": "tests/discovery.test.ts",
-      "summary": "Approved game discovery starts Complex Specify at revision 1, approved tiny copy work starts Fast Implement, and explicit Codex launch failure leaves the exact workflow safely active and resumable."
-    },
-    {
-      "criterionId": "AC-6",
-      "kind": "test",
-      "passed": true,
-      "artifact": "tests/living-specs.test.ts",
-      "summary": "TypeScript, JSON CLI, --no-interview, and MCP Explore packets remain deterministic and mutation-free; state, events, specs, and discovery storage are unchanged."
-    },
-    {
-      "criterionId": "AC-7",
-      "kind": "test",
-      "passed": true,
-      "artifact": "tests/core.test.ts",
-      "summary": "Repeatable integration generation for Codex, Claude, Gemini, Cursor, and Windsurf now contains the original five passes, one-question-at-a-time rule, material follow-ups, refined contract, and explicit approval gate."
-    },
-    {
-      "criterionId": "AC-8",
-      "kind": "test",
-      "passed": true,
-      "artifact": "package.json",
-      "summary": "GitHub Actions run 30465256772 passed Ubuntu, macOS, and Windows. The release gate passed 50 tests and 337 assertions plus typecheck, built CLI/MCP smoke, real PTY interview, and npm 2.3.0 package validation."
+      "summary": "bun test tests/core.test.ts: 31 passed, 0 failed, 240 assertions; bun run check passed."
     },
     {
       "criterionId": "all",
       "kind": "review",
       "passed": true,
-      "artifact": "src/discovery.ts",
-      "summary": "Criterion-by-criterion implementation and diff review found no blocking correctness, security, compatibility, or UX issues. Review-driven fixes made later questions adapt to earlier domain answers, made --agent imply interview mode, warned against persisting secrets, reported EOF state accurately, and rejected traversal identifiers in addition to symbolic links. Workflow creation remains approval-gated, Fast override is explicit, Codex launch is allowlisted and shell-free, launch failure preserves resumability, and pure Explore interfaces remain unchanged."
+      "summary": "git diff --check passed; reviewed the generator, all eight refreshed managed files, and tests. Commands are explicit and --agent codex is clearly marked as human-only."
     }
   ],
-  "updatedAt": "2026-07-29T15:24:02.413Z",
-  "specDigest": "a0af97c930a42e85df11e154a2f54637d0d360b0559a055ccf36654f0cad20ef",
-  "capabilityArchiveRequired": true,
-  "capabilityDeltaDigest": "4ede8408575ec49017f27814e6cea9625f9594663eea9aa27d1758ae68b0401b"
+  "updatedAt": "2026-07-29T15:41:04.164Z",
+  "specDigest": "3ba943b844c0ad90460e982292de596b405ea15d49f1a0b08016173330660718",
+  "capabilityArchiveRequired": false,
+  "capabilityDeltaDigest": null
 }

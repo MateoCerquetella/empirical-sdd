@@ -15,5 +15,16 @@ Start or resume the repository's Empirical workflow for the current request.
 7. Archive validated capability deltas after Review and consume every response.
 8. Stop only at Done, Blocked, or awaiting human input.
 
+Command reference:
+- Socratic discovery: `empirical explore "<idea>"`
+- Socratic discovery, then launch Codex: `empirical explore "<idea>" --agent codex`
+- Direct tiny change: `empirical fast "<request>"`
+- Direct substantial or UI change: `empirical complex "<request>"`
+- Unrelated active work: `empirical workstream create <name>`, then add `--workstream <name>`
+- Resume active work: `empirical loop [--workstream <name>]`
+
+The `--agent codex` form is a human terminal entrypoint. Agents must continue in
+their current runtime and use the MCP equivalents when available.
+
 Never select legacy Quick for new work or add profile/JSON controls to the
 normal workflow.

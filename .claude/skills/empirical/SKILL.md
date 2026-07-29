@@ -33,6 +33,17 @@ daemon, or runtime.
 8. Stop only at `done`, `blocked`, or `awaiting_human`. Explain a blocker or
    required decision clearly. Keep Fast updates and checks proportional.
 
+Command reference:
+- Socratic discovery: `empirical explore "<idea>"`
+- Socratic discovery, then launch Codex: `empirical explore "<idea>" --agent codex`
+- Direct tiny change: `empirical fast "<request>"`
+- Direct substantial or UI change: `empirical complex "<request>"`
+- Unrelated active work: `empirical workstream create <name>`, then add `--workstream <name>`
+- Resume active work: `empirical loop [--workstream <name>]`
+
+The `--agent codex` form is a human terminal entrypoint. Agents must continue in
+their current runtime and use the MCP equivalents when available.
+
 Quick exists only to resume legacy workflow state. Do not choose it for new
 work or add profile/JSON controls to the normal path.
 
