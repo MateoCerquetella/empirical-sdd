@@ -1,69 +1,71 @@
 {
-  "schemaVersion": 1,
-  "revision": 7,
-  "activeFeature": "002-replace-rust-with-one-npm-installed-typescript",
-  "request": "Replace Rust with one npm-installed TypeScript package, self-guiding CLI, and optional MCP support for Codex, Claude, Gemini, Cursor, and Windsurf",
-  "profile": "strong",
+  "schemaVersion": 2,
+  "revision": 29,
+  "activeFeature": "006-separate-the-pure-execution-loop-from-the",
+  "request": "Separate the pure execution loop from the Fast and Complex SDD starters, keep Quick only for backward compatibility, and make ordinary agent prompts choose the SDD workflow automatically",
+  "profile": "complex",
   "phase": "done",
   "status": "done",
   "repairAttempts": 0,
-  "message": "Final review found no blocking correctness, security, portability, or packaging issues. The npm/Bun implementation preserves existing agent configuration, validates untrusted completion data, requires evidence, and keeps MCP optional.",
-  "implementationActor": "codex",
+  "message": "Reviewed the Fast, Complex, and resume-only Loop separation across the core, CLI, MCP tools, generated integrations, legacy compatibility, docs, installers, concurrency and schema handling, and package smoke coverage; no blocking findings remain.",
+  "implementationActor": "agent",
   "evidence": [
     {
       "criterionId": "AC-1",
       "kind": "test",
       "passed": true,
-      "summary": "A packed tarball installed globally into an isolated prefix as one package and empirical --version returned 2.0.0."
+      "artifact": "tests/core.test.ts",
+      "summary": "Core, built CLI, and MCP tests prove that Fast starts at implementation with generated AC-1, combined test/review gates, and direct --test/--review completion shortcuts."
     },
     {
       "criterionId": "AC-2",
       "kind": "test",
       "passed": true,
-      "summary": "Initialization tests preserved existing AGENTS.md and MCP entries while creating portable state and discovery files."
+      "artifact": "tests/core.test.ts",
+      "summary": "Core, built CLI, and MCP tests prove project.complex, empirical complex, and empirical_complex enter Specify and retain Design, Plan, Implement, Verify, and Review gates."
     },
     {
       "criterionId": "AC-3",
       "kind": "test",
       "passed": true,
-      "summary": "Type checking and Quick/Strong workflow tests passed against the exported TypeScript core used by the CLI."
+      "artifact": "tests/core.test.ts",
+      "summary": "Core and MCP tests prove loop is a read-only idle, active, or terminal snapshot, while runtime and built-CLI checks reject request arguments."
     },
     {
       "criterionId": "AC-4",
       "kind": "test",
       "passed": true,
-      "summary": "An MCP SDK client discovered and called the source server, and the separately bundled Node stdio server passed a smoke test."
+      "artifact": "src/integrations.ts",
+      "summary": "Integration tests prove ordinary coding requests trigger managed skills and guidance that choose Fast only for tiny low-risk non-UI work, choose Complex otherwise, and continue returned packets to a terminal state."
     },
     {
       "criterionId": "AC-5",
       "kind": "test",
       "passed": true,
-      "summary": "Integration tests created Codex, Claude, Gemini, and Cursor MCP configuration plus shared AGENTS guidance without overwriting existing configuration."
+      "artifact": "README.md",
+      "summary": "Repository scans and distribution smoke tests prove normal help, docs, and generated guidance require no profile or JSON flags; programmatic output and low-level start remain available."
     },
     {
       "criterionId": "AC-6",
       "kind": "test",
       "passed": true,
-      "summary": "Quick workflow tests rejected missing evidence and required test, browser, screenshot, and review records before Done."
+      "artifact": "tests/core.test.ts",
+      "summary": "Compatibility tests resume existing Quick state and normalize legacy Strong state to Complex, while runtime guards, help, docs, skills, and MCP expose only Fast and Complex for new work."
     },
     {
       "criterionId": "AC-7",
       "kind": "test",
       "passed": true,
-      "summary": "The conformance tests preserved ai/ during v1 adoption and rejected a stale completion revision."
-    },
-    {
-      "criterionId": "AC-8",
-      "kind": "test",
-      "passed": true,
-      "summary": "bun run check, eight Bun tests, Node distribution smoke, npm pack inspection, and the cross-platform CI definition passed locally where executable."
+      "artifact": "package.json",
+      "summary": "bun run ci passed: 28 tests, 190 assertions, TypeScript checking, built Fast/Complex/Loop Node CLI plus stdio MCP smoke testing, integration safety, concurrency, schema and installer coverage, and npm pack dry-run."
     },
     {
       "criterionId": "all",
       "kind": "review",
       "passed": true,
-      "summary": "Reviewed the shared core, atomic repository store, CLI, MCP adapter, agent integrations, migration behavior, tests, package contents, documentation, and CI; no blocking findings remain."
+      "summary": "Diff review confirmed all seven acceptance criteria are implemented consistently across runtime, integrations, documentation, and tests, with no exposed credentials or blocking quality findings."
     }
   ],
-  "updatedAt": "2026-07-28T21:30:13.172Z"
+  "updatedAt": "2026-07-29T13:24:16.047Z",
+  "specDigest": "8af8f66e744c3884aba031e19396a57cc876e33308ec16dfa7b3bc7777e47bab"
 }

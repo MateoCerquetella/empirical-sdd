@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 1,
-  "profile": "strong",
+  "schemaVersion": 2,
+  "profile": "complex",
   "maxRepairAttempts": 2,
   "evidence": {
     "required": true,

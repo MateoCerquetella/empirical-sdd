@@ -1,7 +1,8 @@
-export const SCHEMA_VERSION = 1 as const;
-export const PRODUCT_VERSION = "2.0.0";
+export const SCHEMA_VERSION = 2 as const;
+export const PRODUCT_VERSION = "2.1.0";
 
-export type Profile = "quick" | "strong";
+export type Workflow = "fast" | "complex";
+export type Profile = Workflow | "quick";
 export type Phase =
   | "idle"
   | "shape"
@@ -45,6 +46,7 @@ export interface WorkflowState {
   repairAttempts: number;
   message: string | null;
   implementationActor: string | null;
+  specDigest: string | null;
   evidence: Evidence[];
   updatedAt: string;
 }
@@ -87,6 +89,7 @@ export interface ActionPacket {
   requiredEvidence: EvidenceKind[];
   artifacts: string[];
   completion: {
+    available: boolean;
     mcpTool: "empirical_complete";
     cli: string;
     requiredFields: string[];
@@ -110,17 +113,21 @@ export interface IntegrationReport {
 }
 
 export interface InitOptions {
-  profile?: Profile;
+  profile?: Workflow;
   integrations?: boolean;
 }
 
 export interface StartOptions {
-  profile?: Profile;
+  profile?: Workflow;
+  id?: string;
+}
+
+export interface FeatureStartOptions {
   id?: string;
 }
 
 export interface AdoptionOptions {
-  profile?: Profile;
+  profile?: Workflow;
   integrations?: boolean;
 }
 

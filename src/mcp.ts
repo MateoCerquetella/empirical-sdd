@@ -5,7 +5,7 @@ import { EmpiricalProject } from "./core.js";
 import { asErrorMessage } from "./errors.js";
 import { PRODUCT_VERSION, type Evidence } from "./types.js";
 
-const profileSchema = z.enum(["quick", "strong"]);
+const profileSchema = z.enum(["fast", "complex"]);
 const evidenceSchema = z.object({
   criterionId: z.string().min(1),
   kind: z.enum(["test", "browser", "screenshot", "review", "human"]),
@@ -19,10 +19,13 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     { name: "empirical-sdd", version: PRODUCT_VERSION },
     {
       instructions:
-        "Use Empirical to manage feature workflow state. Call empirical_status first. "
-        + "If no feature is active, call empirical_start with the user's request. Then call "
-        + "empirical_next, perform exactly that phase, and call empirical_complete at the "
-        + "returned revision. Continue until done, blocked, or awaiting human input.",
+        "Automatically use Empirical for repository-changing work. For new work choose "
+        + "empirical_fast only when the request is explicit, tiny, localized, reversible, "
+        + "low-risk, and non-UI; otherwise choose empirical_complex. Use empirical_loop only "
+        + "to resume work that is already active. Perform the returned action and call "
+        + "empirical_complete at its exact revision. Each completion response is the next "
+        + "action; consume it directly until done, blocked, or awaiting human input. The "
+        + "current host agent executes the work; Empirical never launches an AI runtime.",
     },
   );
 
@@ -73,10 +76,46 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
   );
 
   server.registerTool(
+    "empirical_fast",
+    {
+      title: "Start Fast SDD",
+      description: "Start or idempotently resume one explicit, tiny, localized, reversible, low-risk non-UI change.",
+      inputSchema: {
+        root: z.string().optional(),
+        request: z.string().min(1),
+        id: z.string().optional(),
+      },
+      annotations: { destructiveHint: false, idempotentHint: true },
+    },
+    async ({ root, request, id }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot);
+      return project.fast(request, { ...(id ? { id } : {}) });
+    }),
+  );
+
+  server.registerTool(
+    "empirical_complex",
+    {
+      title: "Start Complex SDD",
+      description: "Start or idempotently resume the full high-assurance SDD workflow. Use whenever Fast eligibility is uncertain.",
+      inputSchema: {
+        root: z.string().optional(),
+        request: z.string().min(1),
+        id: z.string().optional(),
+      },
+      annotations: { destructiveHint: false, idempotentHint: true },
+    },
+    async ({ root, request, id }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot);
+      return project.complex(request, { ...(id ? { id } : {}) });
+    }),
+  );
+
+  server.registerTool(
     "empirical_start",
     {
-      title: "Start a feature",
-      description: "Start a Quick or Strong feature from the user's plain-language request.",
+      title: "Legacy profile-based start",
+      description: "Compatibility entrypoint for older profile-based clients. New agents use empirical_fast or empirical_complex.",
       inputSchema: {
         root: z.string().optional(),
         request: z.string().min(1),
@@ -91,6 +130,21 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
         ...(profile ? { profile } : {}),
         ...(id ? { id } : {}),
       });
+    }),
+  );
+
+  server.registerTool(
+    "empirical_loop",
+    {
+      title: "Resume the agent loop",
+      description:
+        "Return the current resumable action without starting work or choosing an SDD workflow.",
+      inputSchema: { root: z.string().optional() },
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    },
+    async ({ root }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot);
+      return project.loop();
     }),
   );
 

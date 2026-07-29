@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 import { EmpiricalProject } from "./core.js";
 import { EmpiricalError, asErrorMessage } from "./errors.js";
 import { runMcpServer } from "./mcp.js";
-import { PRODUCT_VERSION, type CompletionInput, type Evidence, type Profile } from "./types.js";
+import { PRODUCT_VERSION, type CompletionInput, type Evidence, type Workflow } from "./types.js";
 
 interface CliContext {
   args: string[];
@@ -54,7 +54,7 @@ async function main(): Promise<void> {
       emit(
         { state: result.state, integrations: result.integrations, next: await result.project.next() },
         context.json,
-        () => `Empirical is ready in ${result.project.store.root}. Open any agent and say: Use Empirical to <your request>.`,
+        () => `Empirical is ready in ${result.project.store.root}. Reopen your agent once, then ask for the change normally.`,
       );
       return;
     }
@@ -71,6 +71,30 @@ async function main(): Promise<void> {
       );
       return;
     }
+    case "fast": {
+      const id = takeOption(context.args, "--id");
+      const requestOption = takeOption(context.args, "--request");
+      const request = requestOption ?? context.args.join(" ");
+      const project = await EmpiricalProject.open(context.root);
+      emit(
+        await project.fast(request, { ...(id ? { id } : {}) }),
+        context.json,
+        renderAction,
+      );
+      return;
+    }
+    case "complex": {
+      const id = takeOption(context.args, "--id");
+      const requestOption = takeOption(context.args, "--request");
+      const request = requestOption ?? context.args.join(" ");
+      const project = await EmpiricalProject.open(context.root);
+      emit(
+        await project.complex(request, { ...(id ? { id } : {}) }),
+        context.json,
+        renderAction,
+      );
+      return;
+    }
     case "start": {
       const profile = readProfile(context.args);
       const id = takeOption(context.args, "--id");
@@ -82,6 +106,18 @@ async function main(): Promise<void> {
         ...(id ? { id } : {}),
       });
       emit(action, context.json, renderAction);
+      return;
+    }
+    case "loop": {
+      if (context.args.length > 0) {
+        throw new EmpiricalError(
+          "INVALID_ARGUMENT",
+          "empirical loop takes no request or profile; use empirical fast or empirical complex to start work",
+        );
+      }
+      const project = await EmpiricalProject.open(context.root);
+      const action = await project.loop();
+      emit(action, context.json, renderLoopAction);
       return;
     }
     case "status": {
@@ -99,6 +135,10 @@ async function main(): Promise<void> {
       return;
     }
     case "complete": {
+      if (takeFlag(context.args, "--help") || takeFlag(context.args, "-h")) {
+        printCompleteHelp();
+        return;
+      }
       const project = await EmpiricalProject.open(context.root);
       const input = await completionInput(context.args);
       emit(await project.complete(input), context.json, renderAction);
@@ -133,8 +173,8 @@ async function main(): Promise<void> {
     }
     case "migrate": {
       const project = await EmpiricalProject.open(context.root);
-      const doctor = await project.doctor();
-      emit(doctor, context.json, () => `Project schema is current (${String(doctor.schemaVersion)}).`);
+      const migration = await project.migrate();
+      emit(migration, context.json, () => `Project schema is current (${String(migration.schemaVersion)}).`);
       return;
     }
     case "update": {
@@ -165,6 +205,12 @@ function parseGlobals(argv: string[]): CliContext {
 async function completionInput(args: string[]): Promise<CompletionInput> {
   const inputPath = takeOption(args, "--input");
   if (inputPath) {
+    if (args.length > 0) {
+      throw new EmpiricalError(
+        "INVALID_ARGUMENT",
+        `--input cannot be combined with other completion arguments: ${args.join(" ")}`,
+      );
+    }
     const text = inputPath === "-" ? await readStdin() : await readFile(inputPath, "utf8");
     return JSON.parse(text) as CompletionInput;
   }
@@ -179,9 +225,30 @@ async function completionInput(args: string[]): Promise<CompletionInput> {
   if (!summary) throw new EmpiricalError("SUMMARY_REQUIRED", "Use --summary \"<what happened>\"");
   const actor = takeOption(args, "--actor");
   const evidencePath = takeOption(args, "--evidence");
+  const testSummary = takeOption(args, "--test");
+  const reviewSummary = takeOption(args, "--review");
+  if (evidencePath && (testSummary || reviewSummary)) {
+    throw new EmpiricalError(
+      "INVALID_ARGUMENT",
+      "Use either --evidence or the Fast --test/--review shortcuts, not both",
+    );
+  }
+  const shortcutEvidence: Evidence[] = [
+    ...(testSummary
+      ? [{ criterionId: "AC-1", kind: "test" as const, passed: true, summary: testSummary }]
+      : []),
+    ...(reviewSummary
+      ? [{ criterionId: "all", kind: "review" as const, passed: true, summary: reviewSummary }]
+      : []),
+  ];
   const evidence = evidencePath
     ? JSON.parse(await readFile(evidencePath, "utf8")) as Evidence[]
-    : undefined;
+    : shortcutEvidence.length > 0
+      ? shortcutEvidence
+      : undefined;
+  if (args.length > 0) {
+    throw new EmpiricalError("INVALID_ARGUMENT", `Unknown completion arguments: ${args.join(" ")}`);
+  }
   return {
     revision,
     outcome: outcome as CompletionInput["outcome"],
@@ -191,11 +258,11 @@ async function completionInput(args: string[]): Promise<CompletionInput> {
   };
 }
 
-function readProfile(args: string[]): Profile | undefined {
+function readProfile(args: string[]): Workflow | undefined {
   const profile = takeOption(args, "--profile");
   if (!profile) return undefined;
-  if (profile !== "quick" && profile !== "strong") {
-    throw new EmpiricalError("INVALID_PROFILE", `Profile must be quick or strong, not '${profile}'`);
+  if (profile !== "fast" && profile !== "complex") {
+    throw new EmpiricalError("INVALID_PROFILE", `Workflow must be fast or complex, not '${profile}'`);
   }
   return profile;
 }
@@ -233,9 +300,31 @@ function emit(value: unknown, json: boolean, human: (value: unknown) => string):
 function renderAction(value: unknown): string {
   const action = value as Awaited<ReturnType<EmpiricalProject["next"]>>;
   const header = action.feature
-    ? `${action.feature}: ${action.phase} (${action.status}, revision ${action.revision})`
+    ? `${action.feature}: ${action.phase} (${action.profile}, ${action.status}, revision ${action.revision})`
     : `Empirical: ${action.phase}`;
-  return `${header}\n${action.instructions}`;
+  const sections = [header, action.instructions];
+  if (action.acceptanceCriteria.length > 0) {
+    sections.push(
+      `Acceptance criteria:\n${action.acceptanceCriteria
+        .map((criterion) => `- ${criterion.id}: ${criterion.text}`)
+        .join("\n")}`,
+    );
+  }
+  if (action.artifacts.length > 0) {
+    sections.push(`Required artifacts:\n${action.artifacts.map((artifact) => `- ${artifact}`).join("\n")}`);
+  }
+  if (action.requiredEvidence.length > 0) {
+    sections.push(`Required evidence: ${action.requiredEvidence.join(", ")}`);
+  }
+  if (action.completion.available) sections.push(`Complete with: ${action.completion.cli}`);
+  return sections.join("\n\n");
+}
+
+function renderLoopAction(value: unknown): string {
+  const action = value as Awaited<ReturnType<EmpiricalProject["loop"]>>;
+  const rendered = renderAction(action);
+  if (["idle", "done", "blocked", "awaiting_human"].includes(action.status)) return rendered;
+  return `${rendered}\nThe calling agent executes this action, completes revision ${action.revision}, and continues from the returned packet.`;
 }
 
 async function readStdin(): Promise<string> {
@@ -250,13 +339,15 @@ function printHelp(): void {
 Install once: npm install -g empirical-sdd
 
 Usage:
-  empirical init [--profile quick|strong]
-  empirical adopt [--profile quick|strong]
-  empirical start "<feature request>" [--profile quick|strong]
-  empirical next [--json]
+  empirical init
+  empirical adopt
+  empirical fast "<feature request>"
+  empirical complex "<feature request>"
+  empirical loop
+  empirical next
   empirical complete --revision N --outcome passed --summary "..." [--evidence file.json]
-  empirical status [--json]
-  empirical verify [--json]
+  empirical status
+  empirical verify
   empirical retry --revision N
   empirical integrate
   empirical doctor
@@ -264,7 +355,24 @@ Usage:
   empirical mcp
   empirical update [--check]
 
-Global options: --root <repository> --json`);
+Fast and Complex are the SDD workflows. Loop only resumes current state; it never
+chooses a workflow, starts work, or launches an AI runtime.
+`);
+}
+
+function printCompleteHelp(): void {
+  console.log(`Complete the current action at its exact revision.
+
+Fast:
+  empirical complete --revision N --outcome passed --summary "<what changed>" \\
+    --test "<focused check and result>" --review "<diff review>"
+
+Complex evidence phases:
+  empirical complete --revision N --outcome passed --summary "<what happened>" \\
+    --evidence <evidence.json>
+
+The Fast shortcuts create passing AC-1 test evidence and passing review evidence.
+Use --input <file|-> for a complete programmatic result document.`);
 }
 
 main().catch((error: unknown) => {

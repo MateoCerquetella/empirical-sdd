@@ -13,7 +13,8 @@ afterEach(async () => {
 
 test("the bundled stdio MCP server exposes and executes the portable workflow tools", async () => {
   const root = await mkdtemp(join(tmpdir(), "empirical-mcp-"));
-  directories.push(root);
+  const complexRoot = await mkdtemp(join(tmpdir(), "empirical-mcp-complex-"));
+  directories.push(root, complexRoot);
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: ["run", resolve("src/cli.ts"), "mcp", "--root", root],
@@ -26,20 +27,89 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
     const listed = await client.listTools();
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_next");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_complete");
+    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_loop");
+    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_fast");
+    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_complex");
+    expect(listed.tools.map((tool) => tool.name)).not.toContain("empirical_strong");
+    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_start");
+
+    const loopTool = listed.tools.find((tool) => tool.name === "empirical_loop");
+    expect(Object.keys(loopTool?.inputSchema.properties ?? {})).toEqual(["root"]);
+    const legacyStart = listed.tools.find((tool) => tool.name === "empirical_start");
+    expect(legacyStart?.inputSchema.properties?.profile).toMatchObject({
+      enum: ["fast", "complex"],
+    });
 
     const initialized = await client.callTool({
       name: "empirical_init",
-      arguments: { root, profile: "quick" },
+      arguments: { root },
     });
     expect(initialized.isError).not.toBe(true);
+    expect(initialized.structuredContent).toMatchObject({
+      state: { profile: "complex", phase: "idle", revision: 0 },
+    });
+
+    const idle = await client.callTool({
+      name: "empirical_loop",
+      arguments: { root },
+    });
+    expect(idle.isError).not.toBe(true);
+    expect(idle.structuredContent).toMatchObject({ phase: "idle", revision: 0 });
 
     const started = await client.callTool({
-      name: "empirical_start",
-      arguments: { root, request: "Add a status page" },
+      name: "empirical_fast",
+      arguments: { root, request: "Add a status command" },
     });
     expect(started.isError).not.toBe(true);
-    expect(JSON.stringify(started.content)).toContain("shape");
+    expect(started.structuredContent).toMatchObject({
+      request: "Add a status command",
+      profile: "fast",
+      phase: "implement",
+      status: "waiting",
+      revision: 1,
+      requiredEvidence: ["test", "review"],
+    });
+
+    const resumed = await client.callTool({
+      name: "empirical_loop",
+      arguments: { root },
+    });
+    expect(resumed.isError).not.toBe(true);
+    expect(resumed.structuredContent).toEqual(started.structuredContent);
+
+    const idempotentFast = await client.callTool({
+      name: "empirical_fast",
+      arguments: { root, request: "Add a status command" },
+    });
+    expect(idempotentFast.isError).not.toBe(true);
+    expect(idempotentFast.structuredContent).toEqual(started.structuredContent);
+
+    const complexInitialized = await client.callTool({
+      name: "empirical_init",
+      arguments: { root: complexRoot },
+    });
+    expect(complexInitialized.isError).not.toBe(true);
+
+    const complex = await client.callTool({
+      name: "empirical_complex",
+      arguments: { root: complexRoot, request: "Replace authentication safely" },
+    });
+    expect(complex.isError).not.toBe(true);
+    expect(complex.structuredContent).toMatchObject({
+      request: "Replace authentication safely",
+      profile: "complex",
+      phase: "specify",
+      status: "waiting",
+      revision: 1,
+    });
+
+    const resumedComplex = await client.callTool({
+      name: "empirical_loop",
+      arguments: { root: complexRoot },
+    });
+    expect(resumedComplex.isError).not.toBe(true);
+    expect(resumedComplex.structuredContent).toEqual(complex.structuredContent);
   } finally {
     await client.close();
   }
-});
+}, 20_000);

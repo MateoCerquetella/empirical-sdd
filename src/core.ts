@@ -1,4 +1,5 @@
 import { mkdir, readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { basename, join, resolve } from "node:path";
 import { EmpiricalError } from "./errors.js";
 import { installProjectIntegrations } from "./integrations.js";
@@ -12,6 +13,7 @@ import {
   type Criterion,
   type Evidence,
   type EvidenceKind,
+  type FeatureStartOptions,
   type InitOptions,
   type IntegrationReport,
   type Phase,
@@ -19,11 +21,13 @@ import {
   type ProjectConfig,
   type StartOptions,
   type ValidationReport,
+  type Workflow,
   type WorkflowState,
 } from "./types.js";
 
+const FAST_PHASES: Phase[] = ["implement", "done"];
 const QUICK_PHASES: Phase[] = ["shape", "implement", "verify", "review", "done"];
-const STRONG_PHASES: Phase[] = [
+const COMPLEX_PHASES: Phase[] = [
   "specify",
   "design",
   "plan",
@@ -63,8 +67,8 @@ export class EmpiricalProject {
         "An Empirical v1 ai/ workspace already exists; run empirical adopt",
       );
     }
-    const profile = options.profile ?? "quick";
-    assertProfile(profile);
+    const profile = options.profile ?? "complex";
+    assertWorkflow(profile);
     const config = defaultConfig(profile, null);
     const state = initialState(profile);
     await store.writeInitial(config, state);
@@ -98,8 +102,8 @@ export class EmpiricalProject {
     const legacyPhase = legacyField(legacy, "current_phase")
       ?? legacyField(legacy, "currentPhase")
       ?? legacyField(legacy, "phase");
-    const profile = options.profile ?? "strong";
-    assertProfile(profile);
+    const profile = options.profile ?? "complex";
+    assertWorkflow(profile);
     const phase = feature ? mapLegacyPhase(legacyPhase, profile) : "idle";
     const now = new Date().toISOString();
     const state: WorkflowState = {
@@ -116,7 +120,11 @@ export class EmpiricalProject {
       if (await isFile(legacySpec)) {
         await store.writeSpec(feature, await readFile(legacySpec, "utf8"));
       } else {
-        await store.writeSpec(feature, renderSpec(feature, `Adopted v1 feature ${feature}`));
+        const request = `Adopted v1 feature ${feature}`;
+        await store.writeSpec(
+          feature,
+          profile === "fast" ? renderFastSpec(feature, request) : renderSpec(feature, request),
+        );
       }
     }
     const integrations = options.integrations === false
@@ -138,34 +146,129 @@ export class EmpiricalProject {
     if (!cleanRequest) {
       throw new EmpiricalError("REQUEST_REQUIRED", "A non-empty feature request is required");
     }
-    const current = await this.store.loadState();
-    if (current.activeFeature && current.status !== "done") {
+    const configuredProfile = (await this.store.loadConfig()).profile;
+    const profile = options.profile ?? (configuredProfile === "quick" ? "complex" : configuredProfile);
+    assertWorkflow(profile);
+    const started = await this.store.transaction(async (current) => {
+      if (current.activeFeature && current.status !== "done") {
+        throw new EmpiricalError(
+          "FEATURE_ACTIVE",
+          `Feature ${current.activeFeature} is still ${current.status}; finish it before starting another`,
+        );
+      }
+      const number = await this.store.nextFeatureNumber();
+      const feature = options.id ?? `${String(number).padStart(3, "0")}-${slugify(cleanRequest)}`;
+      if (await isFile(this.store.specPath(feature))) {
+        throw new EmpiricalError("FEATURE_EXISTS", `Feature ${feature} already exists`);
+      }
+      const spec = profile === "fast"
+        ? renderFastSpec(titleFromFeature(feature), cleanRequest)
+        : renderSpec(titleFromFeature(feature), cleanRequest);
+      await this.store.writeSpec(feature, spec);
+      return {
+        actor: "empirical-start",
+        summary: `Started ${feature}`,
+        state: {
+          ...current,
+          activeFeature: feature,
+          request: cleanRequest,
+          profile,
+          phase: firstPhase(profile),
+          status: "waiting",
+          repairAttempts: 0,
+          message: null,
+          implementationActor: null,
+          specDigest: digest(spec),
+          evidence: [],
+        },
+        value: { feature, spec },
+      };
+    });
+    return actionPacket(this.store.root, started.state, parseCriteria(started.value.spec));
+  }
+
+  async fast(request: string, options: FeatureStartOptions = {}): Promise<ActionPacket> {
+    return this.begin(request, "fast", options);
+  }
+
+  async complex(request: string, options: FeatureStartOptions = {}): Promise<ActionPacket> {
+    return this.begin(request, "complex", options);
+  }
+
+  async loop(): Promise<ActionPacket> {
+    if (arguments.length > 0) {
       throw new EmpiricalError(
-        "FEATURE_ACTIVE",
-        `Feature ${current.activeFeature} is still ${current.status}; finish it before starting another`,
+        "INVALID_ARGUMENT",
+        "Loop only resumes current work; start new work with empirical fast or empirical complex",
       );
     }
-    const profile = options.profile ?? (await this.store.loadConfig()).profile;
-    assertProfile(profile);
-    const number = await this.store.nextFeatureNumber();
-    const feature = options.id ?? `${String(number).padStart(3, "0")}-${slugify(cleanRequest)}`;
-    if (await isFile(this.store.specPath(feature))) {
-      throw new EmpiricalError("FEATURE_EXISTS", `Feature ${feature} already exists`);
-    }
-    await this.store.writeSpec(feature, renderSpec(titleFromFeature(feature), cleanRequest));
-    await this.store.transition(current.revision, "empirical-start", `Started ${feature}`, (state) => ({
-      ...state,
-      activeFeature: feature,
-      request: cleanRequest,
-      profile,
-      phase: firstPhase(profile),
-      status: "waiting",
-      repairAttempts: 0,
-      message: null,
-      implementationActor: null,
-      evidence: [],
-    }));
     return this.next();
+  }
+
+  private async begin(
+    request: string,
+    profile: "fast" | "complex",
+    options: FeatureStartOptions,
+  ): Promise<ActionPacket> {
+    const current = await this.store.loadState();
+    const cleanRequest = request.trim();
+    if (!cleanRequest) {
+      throw new EmpiricalError("REQUEST_REQUIRED", "A non-empty feature request is required");
+    }
+
+    const currentRequest = current.request?.trim();
+    const active = current.activeFeature !== null && current.status !== "done";
+    if (active) {
+      if (currentRequest !== cleanRequest) {
+        throw new EmpiricalError(
+          "FEATURE_ACTIVE",
+          `Feature ${current.activeFeature} is still ${current.status}; finish it before starting another`,
+        );
+      }
+      if (profile !== current.profile) {
+        throw new EmpiricalError(
+          "PROFILE_CONFLICT",
+          `The active feature uses profile ${current.profile}, not ${profile}`,
+        );
+      }
+      if (options.id && options.id !== current.activeFeature) {
+        throw new EmpiricalError(
+          "FEATURE_ACTIVE",
+          `The active feature is ${current.activeFeature}, not ${options.id}`,
+        );
+      }
+      return assertStartAction(await this.next(), cleanRequest, profile, options);
+    }
+
+    if (current.status === "done" && currentRequest === cleanRequest) {
+      if (profile !== current.profile) {
+        throw new EmpiricalError(
+          "PROFILE_CONFLICT",
+          `The completed feature used profile ${current.profile}, not ${profile}`,
+        );
+      }
+      if (options.id && options.id !== current.activeFeature) {
+        throw new EmpiricalError(
+          "FEATURE_EXISTS",
+          `The completed request belongs to ${current.activeFeature}, not ${options.id}`,
+        );
+      }
+      return assertStartAction(await this.next(), cleanRequest, profile, options);
+    }
+    try {
+      return await this.start(cleanRequest, { profile, ...options });
+    } catch (error) {
+      if (
+        error instanceof EmpiricalError
+        && (error.code === "FEATURE_ACTIVE" || error.code === "PROJECT_BUSY")
+      ) {
+        const latest = await this.next();
+        if (latest.request === cleanRequest) {
+          return assertStartAction(latest, cleanRequest, profile, options);
+        }
+      }
+      throw error;
+    }
   }
 
   async next(): Promise<ActionPacket> {
@@ -178,56 +281,77 @@ export class EmpiricalProject {
 
   async complete(input: CompletionInput): Promise<ActionPacket> {
     assertCompletionInput(input);
-    const current = await this.store.loadState();
-    if (input.revision !== current.revision) {
-      throw new EmpiricalError(
-        "STALE_REVISION",
-        `Expected revision ${input.revision}, but the project is at ${current.revision}`,
-      );
-    }
-    if (!current.activeFeature || current.phase === "idle" || current.phase === "done") {
-      throw new EmpiricalError("NO_ACTIVE_PHASE", "There is no active phase to complete");
-    }
-    if (current.status === "blocked") {
-      throw new EmpiricalError("WORKFLOW_BLOCKED", "Resolve the blocker and run empirical retry");
-    }
-    if (current.status === "awaiting_human") {
-      throw new EmpiricalError("AWAITING_HUMAN", "Run empirical retry after the decision is provided");
-    }
     const summary = input.summary.trim();
     if (!summary) throw new EmpiricalError("SUMMARY_REQUIRED", "Completion summary cannot be blank");
     const actor = input.actor?.trim() || "agent";
-    const criteria = parseCriteria(await this.store.readSpec(current.activeFeature));
-    const config = await this.store.loadConfig();
-
-    if (input.outcome === "passed") {
-      await this.validatePhasePass(current, input, criteria, config);
-    }
-
-    await this.store.transition(current.revision, actor, summary, (state) => {
+    const completed = await this.store.transaction(async (current) => {
+      if (input.revision !== current.revision) {
+        throw new EmpiricalError(
+          "STALE_REVISION",
+          `Expected revision ${input.revision}, but the project is at ${current.revision}`,
+        );
+      }
+      if (!current.activeFeature || current.phase === "idle" || current.phase === "done") {
+        throw new EmpiricalError("NO_ACTIVE_PHASE", "There is no active phase to complete");
+      }
+      if (current.status === "blocked") {
+        throw new EmpiricalError("WORKFLOW_BLOCKED", "Resolve the blocker and run empirical retry");
+      }
+      if (current.status === "awaiting_human") {
+        throw new EmpiricalError("AWAITING_HUMAN", "Run empirical retry after the decision is provided");
+      }
+      const specBefore = await this.store.readSpec(current.activeFeature);
+      const specBeforeDigest = digest(specBefore);
+      if (
+        current.specDigest
+        && current.specDigest !== specBeforeDigest
+        && current.phase !== "shape"
+        && current.phase !== "specify"
+      ) {
+        throw new EmpiricalError(
+          "SPEC_CHANGED",
+          "The specification changed after it was approved; restore it or start a new feature",
+        );
+      }
+      const criteria = parseCriteria(specBefore);
+      const config = await this.store.loadConfig();
+      if (input.outcome === "passed") {
+        await this.validatePhasePass(current, input, criteria, config);
+      }
+      const state = structuredClone(current);
+      state.specDigest = specBeforeDigest;
       if (input.outcome === "awaiting_human") {
         state.status = "awaiting_human";
         state.message = summary;
-        return state;
-      }
-      if (input.outcome === "blocked") {
+      } else if (input.outcome === "blocked") {
         state.status = "blocked";
         state.message = summary;
-        return state;
+      } else if (input.outcome === "failed") {
+        routeFailure(state, summary, config.maxRepairAttempts);
+      } else {
+        if (state.phase === "implement") state.implementationActor = actor;
+        if (input.evidence?.length) state.evidence.push(...input.evidence);
+        state.phase = followingPhase(state.profile, state.phase);
+        state.status = state.phase === "done" ? "done" : "waiting";
+        state.message = summary;
+        if (state.phase === "done") state.repairAttempts = 0;
       }
-      if (input.outcome === "failed") {
-        return routeFailure(state, summary, config.maxRepairAttempts);
-      }
-
-      if (state.phase === "implement") state.implementationActor = actor;
-      if (input.evidence?.length) state.evidence.push(...input.evidence);
-      state.phase = followingPhase(state.profile, state.phase);
-      state.status = state.phase === "done" ? "done" : "waiting";
-      state.message = summary;
-      if (state.phase === "done") state.repairAttempts = 0;
-      return state;
+      return {
+        actor,
+        summary,
+        state,
+        value: specBefore,
+        validate: async () => {
+          if (await this.store.readSpec(current.activeFeature!) !== specBefore) {
+            throw new EmpiricalError(
+              "SPEC_CHANGED",
+              "The specification changed during completion; read the latest action and retry",
+            );
+          }
+        },
+      };
     });
-    return this.next();
+    return actionPacket(this.store.root, completed.state, parseCriteria(completed.value));
   }
 
   async retry(expectedRevision: number, actor = "human"): Promise<ActionPacket> {
@@ -237,12 +361,15 @@ export class EmpiricalProject {
     )) {
       throw new EmpiricalError("NOT_PAUSED", "The workflow is not blocked or awaiting human input");
     }
-    await this.store.transition(expectedRevision, actor, "Resumed workflow", (state) => ({
+    const state = await this.store.transition(expectedRevision, actor, "Resumed workflow", (state) => ({
       ...state,
       status: "waiting",
       message: null,
     }));
-    return this.next();
+    const criteria = state.activeFeature
+      ? parseCriteria(await this.store.readSpec(state.activeFeature))
+      : [];
+    return actionPacket(this.store.root, state, criteria);
   }
 
   async verify(): Promise<ValidationReport> {
@@ -250,7 +377,8 @@ export class EmpiricalProject {
     if (!state.activeFeature) {
       return { valid: false, phase: state.phase, criteria: 0, missing: ["No active feature"] };
     }
-    const criteria = parseCriteria(await this.store.readSpec(state.activeFeature));
+    const spec = await this.store.readSpec(state.activeFeature);
+    const criteria = parseCriteria(spec);
     const config = await this.store.loadConfig();
     const missing = validateEvidence(
       criteria,
@@ -258,6 +386,9 @@ export class EmpiricalProject {
       config,
       state.phase === "review" || state.phase === "done",
     );
+    if (state.specDigest && state.specDigest !== digest(spec)) {
+      missing.push("Specification changed after the last completed revision");
+    }
     for (const record of state.evidence) {
       if (
         record.kind === "screenshot"
@@ -273,6 +404,11 @@ export class EmpiricalProject {
 
   async integrations(): Promise<IntegrationReport> {
     return installProjectIntegrations(this.store.root);
+  }
+
+  async migrate(): Promise<Record<string, unknown>> {
+    const migration = await this.store.migrateSchema();
+    return { ...migration, version: PRODUCT_VERSION, schemaVersion: SCHEMA_VERSION };
   }
 
   async doctor(): Promise<Record<string, unknown>> {
@@ -316,25 +452,30 @@ export class EmpiricalProject {
       if (missing.length > 0) {
         throw new EmpiricalError("EVIDENCE_REQUIRED", `Verification is incomplete: ${missing.join("; ")}`);
       }
-      for (const record of evidence) {
-        if (
-          record.kind === "screenshot"
-          && record.passed
-          && record.artifact
-          && !(await isFile(join(this.store.root, record.artifact)))
-        ) {
-          throw new EmpiricalError(
-            "EVIDENCE_REQUIRED",
-            `Screenshot artifact does not exist: ${record.artifact}`,
-          );
-        }
-      }
+      await validateEvidenceArtifacts(this.store.root, evidence);
     }
     if (state.phase === "review" && config.evidence.codeReview) {
       const review = input.evidence?.some((record) => record.kind === "review" && record.passed);
       if (!review) {
         throw new EmpiricalError("REVIEW_REQUIRED", "Review completion needs passing review evidence");
       }
+    }
+    if (state.profile === "fast" && state.phase === "implement") {
+      if (criteria.length === 0) {
+        throw new EmpiricalError(
+          "CRITERIA_REQUIRED",
+          `Add at least one '- [ ] [AC-1] observable behavior' to ${relativeSpec(state.activeFeature)}`,
+        );
+      }
+      const evidence = input.evidence ?? [];
+      const missing = validateEvidence(criteria, evidence, config, true);
+      if (missing.length > 0) {
+        throw new EmpiricalError(
+          "EVIDENCE_REQUIRED",
+          `Fast completion is incomplete: ${missing.join("; ")}`,
+        );
+      }
+      await validateEvidenceArtifacts(this.store.root, evidence);
     }
   }
 }
@@ -389,6 +530,7 @@ function initialState(profile: Profile): WorkflowState {
     repairAttempts: 0,
     message: null,
     implementationActor: null,
+    specDigest: null,
     evidence: [],
     updatedAt: new Date().toISOString(),
   };
@@ -399,7 +541,7 @@ function renderSpec(title: string, request: string): string {
 
 ## Request
 
-${request}
+${renderRequest(request)}
 
 ## Goal
 
@@ -420,7 +562,60 @@ Describe the observable result.
 `;
 }
 
+function renderFastSpec(title: string, request: string): string {
+  const criterion = request
+    .replace(/<!--/g, "&lt;!--")
+    .replace(/-->/g, "--&gt;")
+    .replace(/\s+/g, " ")
+    .trim();
+  return `# ${title}
+
+## Request
+
+${renderRequest(request)}
+
+## Goal
+
+${criterion}
+
+## Acceptance Criteria
+
+- [ ] [AC-1] ${criterion}
+
+## Scope
+
+Small, localized, and reversible changes required by the request.
+
+## Non-goals
+
+Unrequested behavior or broader architectural changes.
+
+## Verification
+
+Run the smallest real check that proves AC-1 and inspect the resulting diff.
+`;
+}
+
+function renderRequest(request: string): string {
+  return request
+    .replace(/<!--/g, "&lt;!--")
+    .replace(/-->/g, "--&gt;")
+    .split(/\r?\n/)
+    .map((line) => `> ${line}`)
+    .join("\n");
+}
+
 function actionPacket(root: string, state: WorkflowState, criteria: Criterion[]): ActionPacket {
+  const evidence = requiredEvidence(state, criteria);
+  const completionAvailable = state.status === "waiting"
+    && state.phase !== "idle"
+    && state.phase !== "done";
+  const fastCliEvidence = state.profile === "fast"
+    && evidence.length === 2
+    && evidence.includes("test")
+    && evidence.includes("review")
+    ? ' --test "<test result>" --review "<diff review>"'
+    : null;
   return {
     protocol: "empirical-sdd",
     schemaVersion: SCHEMA_VERSION,
@@ -433,20 +628,54 @@ function actionPacket(root: string, state: WorkflowState, criteria: Criterion[])
     revision: state.revision,
     instructions: instructionsFor(state),
     acceptanceCriteria: criteria,
-    requiredEvidence: requiredEvidence(state.phase, criteria),
+    requiredEvidence: evidence,
     artifacts: expectedArtifacts(state),
     completion: {
+      available: completionAvailable,
       mcpTool: "empirical_complete",
-      cli: `empirical complete --revision ${state.revision} --outcome passed --summary "<what you did>"`,
-      requiredFields: ["revision", "outcome", "summary"],
+      cli: completionAvailable
+        ? `empirical complete --revision ${state.revision} --outcome passed --summary "<what you did>"${fastCliEvidence ?? (evidence.length > 0 ? " --evidence <evidence.json>" : "")}`
+        : "",
+      requiredFields: completionAvailable
+        ? ["revision", "outcome", "summary", ...(evidence.length > 0 ? ["evidence"] : [])]
+        : [],
     },
   };
+}
+
+function assertStartAction(
+  action: ActionPacket,
+  request: string,
+  profile: "fast" | "complex",
+  options: FeatureStartOptions,
+): ActionPacket {
+  if (action.request?.trim() !== request) {
+    throw new EmpiricalError(
+      "FEATURE_ACTIVE",
+      action.feature
+        ? `Feature ${action.feature} belongs to a different request`
+        : "The requested feature is no longer active",
+    );
+  }
+  if (profile !== action.profile) {
+    throw new EmpiricalError(
+      "PROFILE_CONFLICT",
+      `The feature uses profile ${action.profile}, not ${profile}`,
+    );
+  }
+  if (options.id && options.id !== action.feature) {
+    throw new EmpiricalError(
+      "FEATURE_ACTIVE",
+      `The active feature is ${action.feature ?? "none"}, not ${options.id}`,
+    );
+  }
+  return action;
 }
 
 function instructionsFor(state: WorkflowState): string {
   if (state.status === "blocked") return `Stop. Resolve this blocker before retrying: ${state.message ?? "unknown"}`;
   if (state.status === "awaiting_human") return `Stop and ask the user: ${state.message ?? "a decision is required"}`;
-  if (state.phase === "idle") return "No feature is active. Call empirical_start or run empirical start \"<request>\".";
+  if (state.phase === "idle") return "No feature is active. Start it with empirical_fast or empirical_complex; use empirical loop only to resume current work.";
   if (state.phase === "done") return "The feature passed verification and review. Report completion; delivery is manual.";
   const feature = state.activeFeature ?? "current feature";
   const instructions: Record<Exclude<Phase, "idle" | "done">, string> = {
@@ -454,7 +683,9 @@ function instructionsFor(state: WorkflowState): string {
     specify: `Refine ${relativeSpec(feature)} into a complete contract with observable acceptance criteria, scope, non-goals, risks, and verification.`,
     design: `Design the solution and write .empirical/specs/${feature}/design.md. Resolve architectural risks before implementation.`,
     plan: `Break the approved design into an executable plan in .empirical/specs/${feature}/plan.md.`,
-    implement: "Implement the current acceptance criteria. Preserve unrelated work and run focused checks while editing.",
+    implement: state.profile === "fast"
+      ? "Fast lane: the packet already contains the complete generated criterion. Inspect only the relevant project files, implement in one focused pass, combine the smallest real test and diff review when practical, then run the returned completion command. Do not reread Empirical state or add redundant checks. If the work is no longer small and low-risk, report failure so Empirical can escalate it."
+      : "Implement the current acceptance criteria. Preserve unrelated work and run focused checks while editing.",
     verify: "Run real tests for every criterion. For [UI] criteria, use a real browser and capture a screenshot. Return structured evidence.",
     review: "Review the implementation against every criterion and the diff. Return passing review evidence or route failures back to implementation.",
   };
@@ -470,14 +701,16 @@ function expectedArtifacts(state: WorkflowState): string[] {
   return [];
 }
 
-function requiredEvidence(phase: Phase, criteria: Criterion[]): EvidenceKind[] {
-  if (phase === "review") return ["review"];
-  if (phase !== "verify") return [];
-  const kinds = new Set<EvidenceKind>(["test"]);
-  if (criteria.some((criterion) => criterion.ui)) {
+function requiredEvidence(state: WorkflowState, criteria: Criterion[]): EvidenceKind[] {
+  const fast = state.profile === "fast" && state.phase === "implement";
+  if (state.phase !== "verify" && state.phase !== "review" && !fast) return [];
+  const kinds = new Set<EvidenceKind>();
+  if (state.phase === "verify" || fast) kinds.add("test");
+  if ((state.phase === "verify" || fast) && criteria.some((criterion) => criterion.ui)) {
     kinds.add("browser");
     kinds.add("screenshot");
   }
+  if (state.phase === "review" || fast) kinds.add("review");
   return [...kinds];
 }
 
@@ -492,8 +725,8 @@ function validateEvidence(
   if (criteria.length === 0) missing.push("No acceptance criteria are defined");
   for (const criterion of criteria) {
     const records = evidence.filter((record) => record.criterionId === criterion.id && record.passed);
-    if (!records.some((record) => ["test", "browser", "human"].includes(record.kind))) {
-      missing.push(`${criterion.id} has no passing behavioral evidence`);
+    if (!records.some((record) => record.kind === "test")) {
+      missing.push(`${criterion.id} has no passing test evidence`);
     }
     if (criterion.ui && config.evidence.browserForUi && !records.some((record) => record.kind === "browser")) {
       missing.push(`${criterion.id} has no browser evidence`);
@@ -518,6 +751,14 @@ function routeFailure(
   maxRepairAttempts: number,
 ): WorkflowState {
   state.message = summary;
+  if (state.profile === "fast" && state.phase === "implement") {
+    state.profile = "complex";
+    state.phase = "specify";
+    state.repairAttempts = 0;
+    state.evidence = [];
+    state.status = "waiting";
+    return state;
+  }
   if (state.phase === "verify" || state.phase === "review") {
     state.repairAttempts += 1;
     state.evidence = [];
@@ -534,11 +775,16 @@ function routeFailure(
 }
 
 function firstPhase(profile: Profile): Phase {
+  if (profile === "fast") return "implement";
   return profile === "quick" ? "shape" : "specify";
 }
 
 function followingPhase(profile: Profile, phase: Phase): Phase {
-  const sequence = profile === "quick" ? QUICK_PHASES : STRONG_PHASES;
+  const sequence = profile === "fast"
+    ? FAST_PHASES
+    : profile === "quick"
+      ? QUICK_PHASES
+      : COMPLEX_PHASES;
   const index = sequence.indexOf(phase);
   if (index < 0) throw new EmpiricalError("INVALID_PHASE", `Phase ${phase} is not valid for ${profile}`);
   return sequence[index + 1] ?? "done";
@@ -547,6 +793,7 @@ function followingPhase(profile: Profile, phase: Phase): Phase {
 function mapLegacyPhase(value: string | null, profile: Profile): Phase {
   const phase = value?.toLowerCase() ?? "";
   if (/done|complete|ready/.test(phase)) return "done";
+  if (profile === "fast") return "implement";
   if (/review/.test(phase)) return "review";
   if (/test|verify|qa/.test(phase)) return "verify";
   if (/develop|implement|dev/.test(phase)) return "implement";
@@ -594,13 +841,33 @@ async function requireArtifact(directory: string, name: string): Promise<void> {
   }
 }
 
+async function validateEvidenceArtifacts(root: string, evidence: Evidence[]): Promise<void> {
+  for (const record of evidence) {
+    if (
+      record.kind === "screenshot"
+      && record.passed
+      && record.artifact
+      && !(await isFile(join(root, record.artifact)))
+    ) {
+      throw new EmpiricalError(
+        "EVIDENCE_REQUIRED",
+        `Screenshot artifact does not exist: ${record.artifact}`,
+      );
+    }
+  }
+}
+
+function digest(contents: string): string {
+  return createHash("sha256").update(contents).digest("hex");
+}
+
 function emptyIntegrationReport(): IntegrationReport {
   return { created: [], updated: [], preserved: [] };
 }
 
-function assertProfile(profile: string): asserts profile is Profile {
-  if (profile !== "quick" && profile !== "strong") {
-    throw new EmpiricalError("INVALID_PROFILE", `Profile must be quick or strong, not '${profile}'`);
+function assertWorkflow(profile: string): asserts profile is Workflow {
+  if (profile !== "fast" && profile !== "complex") {
+    throw new EmpiricalError("INVALID_PROFILE", `Workflow must be fast or complex, not '${profile}'`);
   }
 }
 

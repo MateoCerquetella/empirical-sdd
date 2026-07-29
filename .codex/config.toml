@@ -2,5 +2,4 @@
 [mcp_servers.empirical]
 command = "empirical"
 args = ["mcp"]
-cwd = ".."
 # empirical-sdd:mcp:end
