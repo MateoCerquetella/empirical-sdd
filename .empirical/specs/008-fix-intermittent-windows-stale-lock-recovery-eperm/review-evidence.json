@@ -1,0 +1,9 @@
+[
+  {
+    "criterionId": "all",
+    "kind": "review",
+    "passed": true,
+    "artifact": "src/storage.ts",
+    "summary": "Criterion and diff review found the retry set narrow, Windows-specific, and bounded by the existing deadline. Stale inspection now avoids unbounded spinning, while ownership tokens, inode/device comparison, recovery serialization, heartbeat, and compare-before-remove cleanup remain unchanged."
+  }
+]
