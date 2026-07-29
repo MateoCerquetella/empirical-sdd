@@ -32,6 +32,8 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_fast");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_complex");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_explore");
+    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_context");
+    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_handoff");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_archive");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_worktree_propose");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_worktree_create");
@@ -52,6 +54,23 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
     expect(initialized.isError).not.toBe(true);
     expect(initialized.structuredContent).toMatchObject({
       state: { profile: "complex", phase: "idle", revision: 0 },
+      knowledge: {
+        status: "current",
+        manifest: ".empirical/context/manifest.json",
+      },
+    });
+
+    const context = await client.callTool({ name: "empirical_context", arguments: { root } });
+    expect(context.isError).not.toBe(true);
+    expect(context.structuredContent).toMatchObject({
+      status: "current",
+      context: [
+        ".empirical/context/index.md",
+        ".empirical/context/overview.md",
+        ".empirical/context/architecture.md",
+        ".empirical/context/commands.md",
+        ".empirical/context/conventions.md",
+      ],
     });
 
     const explored = await client.callTool({

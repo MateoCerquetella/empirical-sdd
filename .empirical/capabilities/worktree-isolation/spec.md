@@ -9,30 +9,30 @@ keeping workflow state feature-scoped and safely resumable.
 
 ### Requirement: One active feature per checkout
 
-Empirical MUST run at most one non-terminal feature in a checkout and MUST store
-its state, journal, lock, decisions, specification, and evidence inside that
-feature's portable directory.
+Empirical MUST run at most one selected non-terminal feature in a checkout,
+store portable feature state beneath its feature directory, and keep the active
+selection in checkout-local Git metadata. A primary checkout without local
+metadata MAY recover one unambiguous non-terminal feature for compatibility; a
+new linked worktree MUST NOT inherit another checkout's active selection.
 
-#### Scenario: Parallel branches start from one base
+#### Scenario: A linked worktree starts from history containing blocked state
 
-- **WHEN** two clean linked worktrees start different features from the same base
-- **THEN** their descriptive feature directories, states, journals, and revisions do not share mutable root paths
+- **WHEN** the approved linked worktree is created from a commit containing a blocked feature owned by another checkout
+- **THEN** the new checkout starts its intended feature rather than inheriting the blocked selection
+- **AND** the owning checkout can still resume its blocked feature
 
 ### Requirement: Unrelated work requires approved isolation
 
-When a checkout already has active work, Empirical SHALL propose an editable
-base, change type, branch, and sibling path and SHALL NOT create a worktree until
-the human explicitly approves that exact proposal.
+When the current checkout has selected active work, Empirical SHALL propose an
+editable base, change type, branch, and sibling path and SHALL NOT create a
+worktree until the human explicitly approves that exact proposal. Successful
+creation MUST establish checkout-local ownership of the intended new feature.
 
 #### Scenario: The user approves a proposed feature worktree
 
-- **WHEN** the user approves the displayed branch, path, and base
-- **THEN** Empirical creates the linked worktree without force and starts the exact request there
-
-#### Scenario: The user cancels
-
-- **WHEN** the user declines or edits without final approval
-- **THEN** Git, project files, and the active workflow remain unchanged
+- **WHEN** the user approves the exact branch, path, base, and request
+- **THEN** Empirical creates the linked worktree without force
+- **AND** starts the exact request there even if portable history contains another checkout's feature state
 
 ### Requirement: Worktree creation preserves repository safety
 
@@ -47,11 +47,12 @@ never stash, move changes, reset branches, or pass a force option.
 
 ### Requirement: Worktree preferences are explicit and durable
 
-Interactive initialization SHALL ask once for worktree and decision preferences,
-persist them in project configuration, and allow later interactive or flag-based
-reconfiguration while automation uses deterministic safe defaults.
+The single agent entrypoint SHALL initialize safe worktree and decision defaults
+inside the current conversation and SHALL ask only material first-run questions.
+Internal CLI and MCP initialization flags MUST remain deterministic for automation.
 
-#### Scenario: A developer initializes in a terminal
+#### Scenario: An agent initializes a repository
 
-- **WHEN** no worktree preferences exist
-- **THEN** Empirical confirms isolation mode, detected base, path template, branch pattern, and decision-record policy one question at a time
+- **WHEN** no Empirical configuration exists
+- **THEN** the current agent applies or confirms isolation, base, path, branch, and decision settings
+- **AND** the user does not need a separate terminal initialization step

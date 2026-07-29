@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 4,
+  "previousRevision": 3,
+  "actor": "agent",
+  "summary": "Created a ten-step executable plan covering public types, agent detection and handoff, single-skill lifecycle installation, staged update, compact knowledge, checkout-local ownership, documentation, focused tests, full packaging verification, review, and archive.",
+  "createdAt": "2026-07-29T19:35:26.716Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 4,
+    "activeFeature": "replace-the-redundant-multi-command-ux-with-a-single-empirical",
+    "request": "Replace the redundant multi-command UX with a single Empirical entrypoint installed for every detected supported agent. Keep only empirical install and empirical update as normal human terminal lifecycle commands; the installed agent entrypoint must initialize an uninitialized repository, create and maintain compact repository knowledge, conduct Socratic discovery only when needed, choose Fast or Complex internally, resume active work, and after an approved spec offer to continue in the current agent, save, or launch a user-selected detected agent. Preserve structured MCP operations as internal automation APIs and hidden compatibility surfaces where necessary, remove separate Explore, Fast, Complex, and Loop installed skills from the normal user experience, never launch an agent without explicit approval, and verify lifecycle installation/update, agent-owned initialization, repository knowledge refresh, routing, resume, agent detection, explicit handoff, and worktree startup from repositories containing terminal or blocked historical feature state.",
+    "profile": "complex",
+    "phase": "implement",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Created a ten-step executable plan covering public types, agent detection and handoff, single-skill lifecycle installation, staged update, compact knowledge, checkout-local ownership, documentation, focused tests, full packaging verification, review, and archive.",
+    "implementationActor": null,
+    "specDigest": "9e548cb3bf262acaa62ee8a04685e391b777496f1298ec62bbea6b2b8b630e85",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "50ed791170f83ace742e5b504c3a7a058f39c728d4f05872a84081d9602d88f2",
+    "evidence": [],
+    "updatedAt": "2026-07-29T19:35:26.716Z"
+  }
+}

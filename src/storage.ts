@@ -3,6 +3,7 @@ import type { Dirent } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { EmpiricalError } from "./errors.js";
+import { readCheckoutSelection, writeCheckoutSelection } from "./checkouts.js";
 import {
   POLICY_SCHEMA_VERSION,
   SCHEMA_VERSION,
@@ -160,6 +161,7 @@ export class ProjectStore {
     }
     await this.ensureLayout();
     await this.commitInitialState(state, actor, summary ?? `Started ${this.feature}`);
+    await writeCheckoutSelection(this.root, this.feature);
   }
 
   async configure(update: Partial<ProjectConfig>): Promise<ProjectConfig> {
@@ -189,14 +191,32 @@ export class ProjectStore {
         active.push(feature);
       }
     }
-    if (active.length > 1) {
+    const checkout = await readCheckoutSelection(this.root);
+    if (checkout.feature) {
+      if (!active.includes(checkout.feature)) {
+        if (recover) await writeCheckoutSelection(this.root, null);
+      } else {
+        if (checkout.claimedElsewhere.has(checkout.feature)) {
+          throw new EmpiricalError(
+            "FEATURE_CLAIMED_BY_MULTIPLE_CHECKOUTS",
+            `Feature ${checkout.feature} is selected by more than one checkout`,
+          );
+        }
+        return checkout.feature;
+      }
+    }
+
+    const available = active.filter((feature) => !checkout.claimedElsewhere.has(feature));
+    if (available.length > 1) {
       throw new EmpiricalError(
         "MULTIPLE_ACTIVE_FEATURES",
-        `This checkout has multiple active features: ${active.join(", ")}`,
-        { features: active },
+        `This checkout has multiple unclaimed active features: ${available.join(", ")}`,
+        { features: available },
       );
     }
-    return active[0] ?? null;
+    const feature = available[0] ?? null;
+    if (feature && recover) await writeCheckoutSelection(this.root, feature);
+    return feature;
   }
 
   async listFeatureIds(): Promise<string[]> {
@@ -276,6 +296,9 @@ export class ProjectStore {
       let eventWritten = false;
       try {
         rollback = await prepared.effect?.();
+        if (next.phase === "done" && next.status === "done") {
+          await writeCheckoutSelection(this.root, null);
+        }
         await writeJsonAtomic(this.eventPath(event.revision), event);
         eventWritten = true;
         await writeJsonAtomic(this.statePath, next);

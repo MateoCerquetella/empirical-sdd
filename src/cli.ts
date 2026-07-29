@@ -3,6 +3,7 @@
 import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { createInterface } from "node:readline";
+import { homedir } from "node:os";
 import { EmpiricalProject } from "./core.js";
 import {
   buildRefinedRequest,
@@ -17,11 +18,15 @@ import {
 } from "./discovery.js";
 import { EmpiricalError, asErrorMessage } from "./errors.js";
 import { installGlobalAgentSkills } from "./integrations.js";
+import { updateEmpirical } from "./lifecycle.js";
 import { runMcpServer } from "./mcp.js";
 import { detectBase } from "./worktrees.js";
 import {
   PRODUCT_VERSION,
   type ActionPacket,
+  type AgentHandoffOffer,
+  type AgentIntegrationId,
+  type AuthorizedAgentHandoff,
   type CompletionInput,
   type Evidence,
   type ExplorationPacket,
@@ -42,21 +47,22 @@ interface CliContext {
 async function main(): Promise<void> {
   const context = parseGlobals(process.argv.slice(2));
   const command = context.args.shift();
-  if (!command) {
-    try {
-      const project = await EmpiricalProject.openReadOnly(context.root);
-      emit(await project.next(), context.json, renderAction);
-    } catch (error) {
-      if (error instanceof EmpiricalError && error.code === "PROJECT_NOT_INITIALIZED") printHelp();
-      else throw error;
-    }
-    return;
-  }
+  if (!command) return printHelp();
   if (["help", "--help", "-h"].includes(command)) return printHelp();
   if (["version", "--version", "-v"].includes(command)) return void console.log(PRODUCT_VERSION);
   if (command === "mcp") return runMcpServer(context.root);
 
   switch (command) {
+    case "install": {
+      const all = takeFlag(context.args, "--all");
+      assertNoArgs(context.args, "install");
+      const report = await installGlobalAgentSkills(homedir(), { all });
+      emit(report, context.json, () => renderIntegrationReport(
+        `Empirical installed one entrypoint per agent (${report.created.length} created, ${report.updated.length} updated, ${report.removed.length} obsolete removed, ${report.preserved.length} preserved).`,
+        report,
+      ));
+      return;
+    }
     case "init": {
       const profile = readProfile(context.args);
       const integrations = !takeFlag(context.args, "--no-integrations");
@@ -289,16 +295,18 @@ async function main(): Promise<void> {
     }
     case "integrate": {
       const global = takeFlag(context.args, "--global");
+      const all = takeFlag(context.args, "--all");
       assertNoArgs(context.args, "integrate");
       if (global) {
-        const report = await installGlobalAgentSkills();
+        const report = await installGlobalAgentSkills(homedir(), { all });
         emit(report, context.json, () => renderIntegrationReport(
-          `Global Agent Skills installed (${report.created.length} created, ${report.updated.length} updated, ${report.preserved.length} preserved).`, report));
+          `Empirical install compatibility alias completed (${report.created.length} created, ${report.updated.length} updated, ${report.removed.length} obsolete removed, ${report.preserved.length} preserved).`, report));
       } else {
+        if (all) throw new EmpiricalError("INVALID_ARGUMENT", "--all requires --global");
         const project = await EmpiricalProject.open(context.root);
         const report = await project.integrations();
         emit(report, context.json, () => renderIntegrationReport(
-          `Agent integrations refreshed (${report.created.length} created, ${report.updated.length} updated, ${report.preserved.length} preserved).`, report));
+          `Project runtime integration reconciled (${report.created.length} created, ${report.updated.length} updated, ${report.removed.length} obsolete removed, ${report.preserved.length} preserved).`, report));
       }
       return;
     }
@@ -338,6 +346,30 @@ async function main(): Promise<void> {
       emit(policy, context.json, () => `Project policy: ${policy.context.length} context entries, ${Object.keys(policy.phases).length} customized phases (${project.store.policyPath}).`);
       return;
     }
+    case "context": {
+      assertNoArgs(context.args, "context");
+      const project = await EmpiricalProject.open(context.root);
+      const report = await project.context();
+      emit(report, context.json, () => `Repository knowledge ${report.status}: ${report.files} files, digest ${report.digest}.\n${report.context.join("\n")}`);
+      return;
+    }
+    case "handoff": {
+      const agent = takeOption(context.args, "--agent") as AgentIntegrationId | undefined;
+      const approvalToken = takeOption(context.args, "--approval-token");
+      const approved = takeFlag(context.args, "--yes");
+      assertNoArgs(context.args, "handoff");
+      const project = await EmpiricalProject.openReadOnly(context.root);
+      if (!agent) {
+        if (approvalToken || approved) throw new EmpiricalError("INVALID_ARGUMENT", "--approval-token and --yes require --agent");
+        return emit(await project.handoff(), context.json, renderAgentHandoffOffer);
+      }
+      if (!["codex", "claude", "cursor", "gemini", "windsurf"].includes(agent)) {
+        throw new EmpiricalError("INVALID_ARGUMENT", `Unsupported agent '${agent}'`);
+      }
+      if (!approvalToken) throw new EmpiricalError("INVALID_ARGUMENT", "--agent requires --approval-token from the displayed proposal");
+      emit(await project.authorizeHandoff(agent, approvalToken, approved), context.json, renderAuthorizedHandoff);
+      return;
+    }
     case "update": {
       if (takeFlag(context.args, "--check")) {
         assertNoArgs(context.args, "update");
@@ -345,10 +377,8 @@ async function main(): Promise<void> {
         return;
       }
       assertNoArgs(context.args, "update");
-      const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-      const result = spawnSync(npm, ["install", "-g", "empirical-sdd@latest"], { stdio: "inherit" });
-      if (result.error || result.status !== 0) throw new EmpiricalError("UPDATE_FAILED", result.error?.message ?? `npm exited with ${String(result.status)}`);
-      console.log("Empirical was updated. Run empirical migrate inside repositories only when prompted.");
+      const report = updateEmpirical();
+      emit(report, context.json, () => "Empirical package updated and the one managed agent entrypoint was refreshed.");
       return;
     }
     default:
@@ -561,6 +591,7 @@ function renderExplore(value: unknown): string {
     ...packet.instructions.map((item) => `- ${item}`),
     `Questions:\n${packet.questions.map((item) => `- ${item}`).join("\n")}`,
     ...(packet.projectContext.length ? [`Project context:\n${packet.projectContext.map((item) => `- ${item}`).join("\n")}`] : []),
+    ...(packet.knowledgeContext.length ? [`Repository knowledge:\n${packet.knowledgeContext.map((item) => `- ${item}`).join("\n")}`] : []),
     ...(packet.capabilityContext.length ? [`Living capability context:\n${packet.capabilityContext.map((item) => `- ${item}`).join("\n")}`] : []),
     `Start when clear:\n- Fast: ${packet.next.fast}\n- Complex: ${packet.next.complex}`,
     "For the five-pass Socratic interview, use an interactive terminal or add --interactive.",
@@ -709,10 +740,14 @@ function emit(value: unknown, json: boolean, human: (value: unknown) => string):
 }
 
 function renderIntegrationReport(summary: string, report: IntegrationReport): string {
-  if (!report.entrypoints.length) return `${summary}\n\nAgent entrypoints were not installed.`;
-  const lines = [summary, "", report.scope === "global" ? "Installed global skills:" : "Imported project entrypoints:"];
+  if (!report.entrypoints.length) {
+    return report.scope === "global"
+      ? `${summary}\n\nNo supported agents were detected. Install an agent or run empirical install --all.`
+      : `${summary}\n\nNo project-local workflow skills are installed; the global Empirical entrypoint owns the UX.`;
+  }
+  const lines = [summary, "", "Installed Empirical entrypoints:"];
   for (const entry of report.entrypoints) {
-    lines.push(`- ${entry.agent} ${report.scope === "global" ? "global skills" : entry.kind === "skill" ? "project skills" : "slash commands"} (${entry.artifactRoot}): ${entry.invocations.join(", ")}`, `  Reload: ${entry.reload}`);
+    lines.push(`- ${entry.agent} (${entry.artifactRoot}): ${entry.invocations.join(", ")}`, `  Reload: ${entry.reload}`);
   }
   return lines.join("\n");
 }
@@ -722,12 +757,36 @@ function renderConfig(value: unknown): string {
   return `Empirical configuration saved.\nIsolation: ${config.isolation.mode}\nBase: ${config.isolation.baseBranch}\nWorktree path: ${config.isolation.worktreePath}\nBranch pattern: ${config.isolation.branchPattern}\nComplex decisions: ${config.decisions.complexRecords}`;
 }
 
+function renderAgentHandoffOffer(value: unknown): string {
+  const offer = value as AgentHandoffOffer;
+  const agents = offer.agents.length
+    ? offer.agents.map((agent) => [
+      `- ${agent.agent} (${agent.capability})`,
+      `  Command: ${agent.argv.map(shellDisplay).join(" ")}`,
+      `  Approval token: ${agent.approvalToken}`,
+    ].join("\n")).join("\n")
+    : "- No prompt-capable or workspace agent executable was detected.";
+  return [
+    `Empirical handoff · ${offer.feature}`,
+    `Specification: ${offer.specification}`,
+    "Choices: Continue here | Save for later | Continue in a detected agent",
+    agents,
+    "No process has been started. Display and explicitly approve one exact option before authorization.",
+  ].join("\n\n");
+}
+
+function renderAuthorizedHandoff(value: unknown): string {
+  const handoff = value as AuthorizedAgentHandoff;
+  return `Authorized ${handoff.agent} handoff for ${handoff.feature}.\nCwd: ${handoff.cwd}\nCommand: ${handoff.argv.map(shellDisplay).join(" ")}\nThe current host may now execute only this exact command.`;
+}
+
 function renderAction(value: unknown): string {
   const action = value as ActionPacket;
   const header = action.feature ? `${action.feature}: ${action.phase} (${action.profile}, ${action.status}, revision ${action.revision})` : `Empirical: ${action.phase}`;
   const progress = phaseProgress(action.profile, action.phase);
   const sections = [`Empirical${progress ? ` · ${progress}` : ""}`, header, action.instructions];
   if (action.projectContext.length) sections.push(`Project context:\n${action.projectContext.map((item) => `- ${item}`).join("\n")}`);
+  if (action.knowledgeContext.length) sections.push(`Repository knowledge:\n${action.knowledgeContext.map((item) => `- ${item}`).join("\n")}`);
   if (action.capabilityContext.length) sections.push(`Living capability context:\n${action.capabilityContext.map((item) => `- ${item}`).join("\n")}`);
   if (action.acceptanceCriteria.length) sections.push(`Acceptance criteria:\n${action.acceptanceCriteria.map((criterion) => `- ${criterion.id}: ${criterion.text}`).join("\n")}`);
   if (action.artifacts.length) sections.push(`Required artifacts:\n${action.artifacts.map((artifact) => `- ${artifact}`).join("\n")}`);
@@ -766,35 +825,17 @@ function printHelp(): void {
 
 Install once: npm install -g empirical-sdd
 
-Discover and start:
-  empirical init [--defaults]
-  empirical config
-  empirical explore "<vague problem>" [--interactive] [--agent codex|none]
-  empirical fast "<tiny request>"
-  empirical complex "<substantial or UI request>"
+Lifecycle:
+  empirical install [--all]   Install one Empirical entrypoint in detected agents
+  empirical update            Update the package and refresh installed entrypoints
 
-Continue and understand:
-  empirical loop
-  empirical explain
-  empirical complete --revision N --outcome passed --summary "..." [--evidence file.json]
-  empirical archive --revision N
-  empirical status | verify | retry --revision N
+Repository work happens inside your coding agent through its one Empirical
+entrypoint. It initializes the repository, builds compact context, clarifies
+vague work, chooses the internal workflow, resumes work, and offers explicit
+agent handoff when a specification is ready.
 
-Git isolation:
-  empirical worktree create "<request>" [--workflow fast|complex] [--type feature|fix|chore]
-
-Maintenance:
-  empirical integrate [--global]
-  empirical capabilities [name] | policy | doctor | migrate | mcp | update
-
-Configuration flags for init/config:
-  --isolation ask|off --base <ref|auto> --worktree-path <template>
-  --branch-pattern <template> --decisions required|off --defaults --interactive
-
-One checkout has at most one active feature. When unrelated work is requested,
-Empirical previews a real Git worktree and waits for explicit approval. Complex
-features keep concise evidence-backed decisions; empirical explain shows the
-state-machine rationale without exposing private chain-of-thought.`);
+Low-level CLI and MCP operations remain available for agent automation and
+existing scripts, but users do not need to select Explore, Fast, Complex, or Loop.`);
 }
 
 function printExploreHelp(): void {

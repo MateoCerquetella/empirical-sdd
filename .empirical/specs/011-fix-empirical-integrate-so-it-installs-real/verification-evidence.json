@@ -1,0 +1,44 @@
+[
+  {
+    "criterionId": "AC-1",
+    "kind": "test",
+    "passed": true,
+    "artifact": "tests/integrations.test.ts",
+    "summary": "Focused integration tests passed and verified that fresh initialization and project integration create all five managed entrypoints for all five supported agents."
+  },
+  {
+    "criterionId": "AC-2",
+    "kind": "test",
+    "passed": true,
+    "artifact": "tests/integrations.test.ts",
+    "summary": "Integration assertions verified the native invocation matrix, including Codex $ skills and slash-command surfaces only where supported."
+  },
+  {
+    "criterionId": "AC-3",
+    "kind": "test",
+    "passed": true,
+    "artifact": "tests/integrations.test.ts",
+    "summary": "Generated entrypoint contents retain the Socratic approval contract, Fast eligibility guard, Complex gates, and request-free Loop resume behavior."
+  },
+  {
+    "criterionId": "AC-4",
+    "kind": "test",
+    "passed": true,
+    "artifact": "tests/integrations.test.ts",
+    "summary": "Real human and JSON CLI subprocess tests passed and exposed equivalent per-agent invocation, location, and reload metadata."
+  },
+  {
+    "criterionId": "AC-5",
+    "kind": "test",
+    "passed": true,
+    "artifact": "tests/integrations.test.ts",
+    "summary": "Repeat refresh, unmanaged collision, direct symlink, parent symlink, and invalid-home tests passed without overwriting preserved user content."
+  },
+  {
+    "criterionId": "AC-6",
+    "kind": "test",
+    "passed": true,
+    "artifact": "README.md",
+    "summary": "Documentation and CLI output distinguish terminal commands, native slash commands, Codex $ skills, project integration, and global installation. The focused CLI and integration run passed 10 tests with 142 assertions."
+  }
+]

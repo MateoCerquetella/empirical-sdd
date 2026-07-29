@@ -2,7 +2,9 @@ import { mkdir, readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { basename, join, resolve } from "node:path";
 import { EmpiricalError } from "./errors.js";
+import { buildHandoffOption, detectSupportedAgents } from "./agents.js";
 import { installProjectIntegrations } from "./integrations.js";
+import { refreshRepositoryKnowledge, repositoryKnowledgePaths } from "./knowledge.js";
 import { ProjectStore, discoverProject, isFile } from "./storage.js";
 import { createDecisionTemplate, requireValidDecisions, validateDecisions } from "./decisions.js";
 import { createGitWorktree, featureSlug, proposeWorktree as buildWorktreeProposal } from "./worktrees.js";
@@ -19,6 +21,9 @@ import {
   type ActionPacket,
   type ActionRationale,
   type AdoptionOptions,
+  type AgentHandoffOffer,
+  type AgentIntegrationId,
+  type AuthorizedAgentHandoff,
   type ArchiveResult,
   type CapabilitySummary,
   type CompletionInput,
@@ -94,6 +99,7 @@ export class EmpiricalProject {
         ? emptyIntegrationReport()
         : await installProjectIntegrations(absoluteRoot);
       await store.migrateSchema();
+      await refreshRepositoryKnowledge(absoluteRoot);
       const active = await store.activeFeature();
       const project = new EmpiricalProject(active ? store.forFeature(active) : store);
       return { project, state: await project.store.loadState(), integrations };
@@ -112,6 +118,7 @@ export class EmpiricalProject {
     const integrations = options.integrations === false
       ? emptyIntegrationReport()
       : await installProjectIntegrations(absoluteRoot);
+    await refreshRepositoryKnowledge(absoluteRoot);
     return { project: new EmpiricalProject(store), state, integrations };
   }
 
@@ -126,6 +133,7 @@ export class EmpiricalProject {
         ? emptyIntegrationReport()
         : await installProjectIntegrations(absoluteRoot);
       await store.migrateSchema();
+      await refreshRepositoryKnowledge(absoluteRoot);
       const active = await store.activeFeature();
       const project = new EmpiricalProject(active ? store.forFeature(active) : store);
       return { project, state: await project.store.loadState(), integrations };
@@ -171,6 +179,7 @@ export class EmpiricalProject {
     const integrations = options.integrations === false
       ? emptyIntegrationReport()
       : await installProjectIntegrations(absoluteRoot);
+    await refreshRepositoryKnowledge(absoluteRoot);
     const project = new EmpiricalProject(feature ? store.forFeature(feature) : store);
     return { project, state, integrations };
   }
@@ -219,6 +228,7 @@ export class EmpiricalProject {
         "Which assumption, dependency, or risk could change the implementation approach?",
       ],
       projectContext: policy.context,
+      knowledgeContext: await existingKnowledgePaths(this.store.root),
       capabilityContext: capabilities.map((capability) => capability.path),
       next: {
         fast: `empirical fast ${JSON.stringify(cleanProblem)}`,
@@ -229,6 +239,70 @@ export class EmpiricalProject {
 
   async capabilities(): Promise<CapabilitySummary[]> {
     return listCapabilities(this.store);
+  }
+
+  async context() {
+    if (this.readOnly) {
+      throw new EmpiricalError("READ_ONLY", "Repository knowledge refresh requires a writable project");
+    }
+    return refreshRepositoryKnowledge(this.store.root);
+  }
+
+  async handoff(): Promise<AgentHandoffOffer> {
+    const state = await this.store.loadState(!this.readOnly);
+    if (!state.activeFeature || state.profile !== "complex" || ["idle", "specify", "done"].includes(state.phase)) {
+      throw new EmpiricalError(
+        "HANDOFF_NOT_READY",
+        "Agent handoff is available only after a Complex specification has passed",
+      );
+    }
+    const specification = this.store.specPath(state.activeFeature);
+    const specDigest = digest(await this.store.readSpec(state.activeFeature));
+    const agents = await detectSupportedAgents({ includeConfigured: false });
+    return {
+      kind: "agent_handoff_offer",
+      protocol: "empirical-sdd",
+      schemaVersion: SCHEMA_VERSION,
+      root: this.store.root,
+      feature: state.activeFeature,
+      specification,
+      choices: ["current", "save", "agent"],
+      agents: agents.map((agent) => buildHandoffOption({
+        root: this.store.root,
+        feature: state.activeFeature!,
+        specification,
+        specDigest,
+        agent,
+      })),
+      requiresApproval: true,
+    };
+  }
+
+  async authorizeHandoff(
+    agent: AgentIntegrationId,
+    approvalToken: string,
+    approved: boolean,
+  ): Promise<AuthorizedAgentHandoff> {
+    if (approved !== true) {
+      throw new EmpiricalError("HANDOFF_APPROVAL_REQUIRED", "Agent handoff requires explicit approval");
+    }
+    const offer = await this.handoff();
+    const option = offer.agents.find((candidate) => candidate.id === agent);
+    if (!option) throw new EmpiricalError("AGENT_NOT_DETECTED", `Agent ${agent} is not currently detected`);
+    if (option.approvalToken !== approvalToken) {
+      throw new EmpiricalError("STALE_HANDOFF_PROPOSAL", "The approved agent handoff changed; review a new proposal");
+    }
+    return {
+      kind: "authorized_agent_handoff",
+      protocol: "empirical-sdd",
+      schemaVersion: SCHEMA_VERSION,
+      root: offer.root,
+      feature: offer.feature,
+      agent,
+      cwd: option.cwd,
+      argv: [...option.argv],
+      prompt: option.prompt,
+    };
   }
 
   async capability(name: string): Promise<string | null> {
@@ -870,6 +944,7 @@ export class EmpiricalProject {
       state,
       criteria,
       policy,
+      await existingKnowledgePaths(this.store.root),
       capabilities.map((capability) => capability.path),
       artifacts,
       missingArtifacts,
@@ -1043,6 +1118,7 @@ function actionPacket(
   state: WorkflowState,
   criteria: Criterion[],
   policy: ProjectPolicy,
+  knowledgeContext: string[],
   capabilityContext: string[],
   artifacts: string[],
   missingArtifacts: string[],
@@ -1075,6 +1151,7 @@ function actionPacket(
     requiredEvidence: evidence,
     artifacts,
     projectContext: policy.context,
+    knowledgeContext,
     capabilityContext,
     completion: {
       available: completionAvailable,
@@ -1361,7 +1438,13 @@ function digest(contents: string): string {
 }
 
 function emptyIntegrationReport(): IntegrationReport {
-  return { scope: "project", created: [], updated: [], preserved: [], entrypoints: [] };
+  return { scope: "project", created: [], updated: [], removed: [], preserved: [], entrypoints: [] };
+}
+
+async function existingKnowledgePaths(root: string): Promise<string[]> {
+  const paths = repositoryKnowledgePaths();
+  const existing = await Promise.all(paths.map(async (path) => ({ path, exists: await isFile(join(root, path)) })));
+  return existing.filter((item) => item.exists).map((item) => item.path);
 }
 
 function assertWorkflow(profile: string): asserts profile is Workflow {

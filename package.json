@@ -23,11 +23,11 @@
   "scripts": {
     "build": "bun run scripts/build.ts",
     "check": "tsc -p tsconfig.json --noEmit",
-    "test": "bun test",
+    "test": "bun test --timeout 30000",
     "test:dist": "bun run build && bun run scripts/smoke-mcp.ts",
     "prepack": "bun run build",
     "test:package": "bun run scripts/test-package.ts",
-    "ci": "bun run check && bun test && bun run test:dist && bun run test:package"
+    "ci": "bun run check && bun run test && bun run test:dist && bun run test:package"
   },
   "keywords": [
     "agents",

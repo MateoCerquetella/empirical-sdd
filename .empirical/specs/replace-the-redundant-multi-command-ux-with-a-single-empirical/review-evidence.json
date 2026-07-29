@@ -1,0 +1,8 @@
+[
+  {
+    "criterionId": "all",
+    "kind": "review",
+    "passed": true,
+    "summary": "Reviewed the complete source, tests, generated skill, docs, package output, and removals against AC-1 through AC-12 and accepted decisions D-001 through D-005. One review gap—lazy rather than immediate Done selection cleanup—was corrected transactionally and covered with recovery, release, and ambiguity tests. No blocking correctness, security, compatibility, or decision-alignment findings remain; unmanaged content and symlink boundaries are preserved, handoff never launches directly, internal APIs remain available, and publication remains out of scope."
+  }
+]

@@ -1,477 +1,196 @@
-import { lstat, readFile } from "node:fs/promises";
+import { lstat, readFile, rm, rmdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { isFile, readJson, writeJsonAtomic, writeTextAtomic } from "./storage.js";
+import {
+  SUPPORTED_AGENTS,
+  detectSupportedAgents,
+  type SupportedAgentDefinition,
+} from "./agents.js";
 import { EmpiricalError } from "./errors.js";
-import type { AgentEntrypointReport, IntegrationReport } from "./types.js";
+import { isFile, readJson, writeJsonAtomic, writeTextAtomic } from "./storage.js";
+import type { IntegrationReport } from "./types.js";
 
 const START = "<!-- empirical-sdd:start -->";
 const END = "<!-- empirical-sdd:end -->";
 const MANAGED_FILE_MARKER = "empirical-sdd:managed-file";
-const SOCRATIC_AGENT_GUIDANCE = `For genuinely vague work, retrieve repository and living-spec context with empirical_explore or empirical explore "<problem>", then conduct the original five Socratic passes in the current conversation: problem/user, observable outcome, boundaries/non-goals, failure/risk, and verification. Ask one question at a time, add only a material follow-up, show the complete refined contract, and wait for explicit human approval before starting Fast or Complex. Do not merely repeat the packet's generic questions.`;
-const COMMAND_REFERENCE = `Command reference:
-- Socratic discovery: \`empirical explore "<idea>"\`
-- Socratic discovery, then launch Codex: \`empirical explore "<idea>" --agent codex\`
-- Direct tiny change: \`empirical fast "<request>"\`
-- Direct substantial or UI change: \`empirical complex "<request>"\`
-- Approved unrelated work: \`empirical worktree create "<request>" --workflow fast|complex\`
-- Resume active work: \`empirical loop\`
-- Explain state and accepted decisions: \`empirical explain\`
-
-The \`--agent codex\` form is a human terminal entrypoint. Agents must continue in
-their current runtime and use the MCP equivalents when available.`;
-
-const ENTRYPOINT_NAMES = [
-  "empirical",
+const OBSOLETE_ENTRYPOINTS = [
   "empirical-explore",
   "empirical-fast",
   "empirical-complex",
   "empirical-loop",
 ] as const;
 
-interface DedicatedEntrypoint {
-  name: Exclude<(typeof ENTRYPOINT_NAMES)[number], "empirical">;
-  description: string;
-  instructions: string;
-}
-
-const DEDICATED_ENTRYPOINTS: DedicatedEntrypoint[] = [
-  {
-    name: "empirical-explore",
-    description: "Conduct Empirical's five-pass Socratic discovery before starting work.",
-    instructions: `Treat the text attached to this invocation as the initial idea. If it is empty,
-ask for the idea first. Retrieve repository and living-spec context with
-empirical_explore or \`empirical explore "<idea>" --no-interview\`, then conduct
-the original five Socratic passes in this conversation: problem/user,
-observable outcome, boundaries/non-goals, failure/risk, and verification. Ask
-one question at a time and add only a material follow-up. Save or preserve the
-answers when the host supports it, show the complete refined request, and wait
-for explicit human approval. After approval, choose Fast only for explicit,
-tiny, localized, reversible, low-risk non-UI work; choose Complex otherwise.
-Start through empirical_fast or empirical_complex (CLI fallback: \`empirical
-fast "<request>"\` or \`empirical complex "<request>"\`) and consume every
-returned action until Done, Blocked, or awaiting human input.`,
-  },
-  {
-    name: "empirical-fast",
-    description: "Run an eligible tiny change through Empirical Fast.",
-    instructions: `Treat the text attached to this invocation as the requested change. Fast is
-allowed only when the behavior is explicit and the change is tiny, localized,
-reversible, low-risk, and non-UI. If any condition is false or unclear, use
-Empirical Complex instead and explain the routing. Otherwise start with
-empirical_fast or \`empirical fast "<request>"\`. Execute the returned action,
-provide its focused test and diff-review evidence, complete the exact revision,
-and consume the response until Done, Blocked, or awaiting human input.`,
-  },
-  {
-    name: "empirical-complex",
-    description: "Run a substantial or UI change through Empirical Complex.",
-    instructions: `Treat the text attached to this invocation as the requested change. Start with
-empirical_complex or \`empirical complex "<request>"\`. Execute the returned
-Specify, Design, Plan, Implement, Verify, Review, and Archive actions in order,
-complete each exact revision with all required evidence, and consume every
-response directly until Done, Blocked, or awaiting human input. Maintain the
-feature decision record and never weaken acceptance criteria or verification gates.`,
-  },
-  {
-    name: "empirical-loop",
-    description: "Resume the active Empirical workflow without starting new work.",
-    instructions: `Resume the active workflow with empirical_loop or \`empirical loop\`. Loop takes
-no new request or profile. Execute the exact current action, complete its
-revision with every required artifact and evidence
-item, and consume each response directly until Done, Blocked, or awaiting human
-input. Never replace the active feature with text attached to this invocation.`,
-  },
-];
-
-const PROJECT_ENTRYPOINT_REPORTS: AgentEntrypointReport[] = [
-  {
-    id: "codex",
-    agent: "Codex",
-    kind: "skill",
-    artifactRoot: ".agents/skills",
-    invocations: ENTRYPOINT_NAMES.map((name) => `$${name}`),
-    reload: "Restart or reopen Codex so it rescans project skills; invoke them with $.",
-  },
-  {
-    id: "claude",
-    agent: "Claude Code",
-    kind: "slash-command",
-    artifactRoot: ".claude/skills",
-    invocations: ENTRYPOINT_NAMES.map((name) => `/${name}`),
-    reload: "Restart Claude Code if .claude/skills was created after the session started.",
-  },
-  {
-    id: "cursor",
-    agent: "Cursor",
-    kind: "slash-command",
-    artifactRoot: ".cursor/commands",
-    invocations: ENTRYPOINT_NAMES.map((name) => `/${name}`),
-    reload: "Open a new chat or reload the workspace, then type / to discover commands.",
-  },
-  {
-    id: "gemini",
-    agent: "Gemini CLI",
-    kind: "slash-command",
-    artifactRoot: ".gemini/commands",
-    invocations: ENTRYPOINT_NAMES.map((name) => `/${name}`),
-    reload: "Run /commands reload, then /commands list.",
-  },
-  {
-    id: "windsurf",
-    agent: "Windsurf",
-    kind: "slash-command",
-    artifactRoot: ".windsurf/workflows",
-    invocations: ENTRYPOINT_NAMES.map((name) => `/${name}`),
-    reload: "Start a new Cascade session or reload the workspace, then type /.",
-  },
-];
-
-const GUIDANCE = `${START}
-## Empirical SDD
-
-Automatically use Empirical when the user asks to build, add, implement, change,
-fix, refactor, remove, migrate, upgrade, update tests, or continue repository
-work. The user does not need to mention Empirical.
-
-1. Use the current agent; never launch another AI runtime.
-2. ${SOCRATIC_AGENT_GUIDANCE}
-3. For concrete new work, choose Fast only when it is explicit, tiny, localized,
-   reversible, low-risk, and non-UI. Choose Complex for everything else.
-4. Start through \`empirical_fast\` or \`empirical_complex\`. Without MCP, run
-   \`empirical fast "<the user's request>"\` or
-   \`empirical complex "<the user's request>"\`.
-5. Resume active work through \`empirical_loop\` or \`empirical loop\`; loop
-   takes no request or profile.
-6. If unrelated work returns a worktree proposal, show its base, branch, path,
-   and command; wait for explicit human approval, then execute the returned
-   worktree creation operation. Execute each action and complete its exact revision
-   with all required evidence. Each completion response is already the next action; do not call
-   status, next, or loop redundantly.
-7. When Review returns Archive, apply its validated capability deltas with the
-   returned archive operation. Continue until Done, Blocked, or genuinely awaiting
-   human input. For Fast, trust the criterion in the returned packet, inspect only relevant project
-   files, combine the focused test and diff review, and use the returned
-   completion command. Do not reread Empirical internals or add redundant checks.
-
-${COMMAND_REFERENCE}
-
-Quick exists only for legacy compatibility. Do not select it for new work or
-add profile/JSON controls to the normal workflow.
-
-Do not invent workflow state or weaken verification evidence. The committed
-\`.empirical/\` directory is the source of truth.
-${END}`;
-
-const SKILL = `---
+export const SINGLE_AGENT_SKILL = `---
 name: empirical
-description: Automatically run this repository's Empirical workflow for requests to build, add, implement, change, fix, refactor, remove, migrate, upgrade, test, or continue code. Resume unfinished work; skip read-only explanation or inspection.
+description: Initialize, understand, start, or resume Empirical repository work through one safe agent-native workflow.
 ---
 
 <!-- ${MANAGED_FILE_MARKER} -->
-# Empirical workflow
-
-Use the current host agent to execute the work. Never launch another AI agent,
-daemon, or runtime.
-
-1. Treat the user's ordinary coding request as the workflow request. The user
-   does not choose a command or profile.
-2. ${SOCRATIC_AGENT_GUIDANCE}
-3. For concrete work, choose Fast only when the behavior is explicit and the change
-   is tiny, localized, reversible, low-risk, and non-UI. Choose Complex otherwise,
-   including UI, security, authentication, permissions, payments, destructive
-   operations, migrations, dependencies, public APIs, infrastructure,
-   architecture, or cross-cutting work.
-4. Start new work with \`empirical_fast\` or \`empirical_complex\`. If MCP is
-   unavailable, run \`empirical fast "<request>"\` or
-   \`empirical complex "<request>"\`.
-5. If work is already active, resume it with \`empirical_loop\` or
-   \`empirical loop\`. Loop takes no request or profile.
-6. If unrelated work returns a worktree proposal, show its base, branch, path,
-   and command, wait for explicit human approval, then call the returned creation
-   operation. Execute the action and complete the exact revision with every
-   required evidence item. For Fast, trust the generated criterion in the
-   packet, inspect only relevant project files, implement directly, combine the
-   focused test and diff review when practical, and use the returned completion
-   command. Do not reread Empirical state/spec files or add redundant checks.
-7. Treat each Fast, Complex, Complete, or Archive response as the next action.
-   After Review, archive validated deltas into living capability specifications.
-8. Stop only at \`done\`, \`blocked\`, or \`awaiting_human\`. Explain a blocker or
-   required decision clearly. Keep Fast updates and checks proportional.
-
-${COMMAND_REFERENCE}
-
-Quick exists only to resume legacy workflow state. Do not choose it for new
-work or add profile/JSON controls to the normal path.
-
-Never replace unrelated active work, invent state, or weaken acceptance criteria
-or evidence. The committed \`.empirical/\` directory is the source of truth.
-`;
-
-const CURSOR_COMMAND = `<!-- ${MANAGED_FILE_MARKER} -->
 # Empirical
 
-Run the request attached to this command through the repository's Empirical
-workflow. If there is no new request, resume the active feature.
+Use the current host agent. This is the only user-facing Empirical workflow
+entrypoint; never ask the user to invoke separate Explore, Fast, Complex, or
+Loop skills.
 
-Use the current Cursor agent. ${SOCRATIC_AGENT_GUIDANCE} For concrete work,
-choose Fast only for explicit, tiny,
-localized, reversible, low-risk non-UI changes and Complex otherwise. Start with
-\`empirical_fast\` or \`empirical_complex\`; fall back to
-\`empirical fast "<request>"\` or \`empirical complex "<request>"\`. Resume active
-work with \`empirical_loop\` or \`empirical loop\`. Execute
-each returned action, complete exact revisions with evidence, archive after Review, and consume the
-response directly as the next action. Never select legacy Quick for new work,
-add profile/JSON controls, or launch another AI runtime.
+1. If the repository is not initialized, inspect its manifests, documentation,
+   source and test layout; ask only first-run answers that materially change Git
+   isolation or decision policy; then pass the chosen isolation, base, worktree
+   path, branch pattern, and decision policy to empirical_init or the equivalent
+   internal empirical init flags. Do not install project-local workflow skills.
+2. Call empirical_context (CLI fallback: empirical context) on first use and
+   whenever it reports stale repository knowledge. Complete or refresh the
+   compact overview, architecture, commands, and conventions pages from actual
+   repository evidence. Retrieve only context relevant to the current action.
+3. If Empirical reports selected non-terminal work, call empirical_loop or
+   empirical loop with no request or profile and resume it. Never replace active
+   work with attached invocation text.
+4. For a genuinely vague new idea, call empirical_explore or empirical explore
+   "<idea>" --no-interview for context, then conduct five Socratic passes in the
+   current conversation: problem/user, observable outcome, boundaries/non-goals,
+   failure/risk, and verification. Ask one question at a time, add only a
+   material follow-up, show the complete refined contract, and wait for explicit
+   approval before creating workflow state.
+5. For concrete work, call empirical_fast only when the change is explicit,
+   tiny, localized, reversible, low-risk, and non-UI. Call empirical_complex for
+   everything else, including UI, architecture, public APIs, security,
+   permissions, payments, migrations, dependencies, infrastructure, or
+   cross-cutting work. CLI fallbacks are empirical fast and empirical complex;
+   these are internal operations, not additional user commands.
+6. If unrelated work returns a worktree proposal, show its exact base, commit,
+   branch, path, and command. Wait for explicit approval, then execute only the
+   approved worktree creation operation.
+7. Execute every returned action, complete its exact revision with every
+   required artifact and evidence item, and consume the completion response as
+   the next action. After Review, archive validated capability deltas. Stop only
+   at Done, Blocked, or genuinely awaiting human input.
+8. When a Complex Specify action has passed and the returned phase is Design,
+   call empirical_handoff (CLI fallback: empirical handoff) and offer exactly:
+   Continue here, Save for later, or Continue in one detected agent. Detection
+   and Save launch nothing. Before another runtime starts, display the selected
+   agent, capability, cwd, and exact argv; wait for explicit human approval;
+   revalidate the approval; then execute only the authorized argv through the
+   host's terminal/session facility. Workspace-only launchers open the approved
+   repository and must not be described as accepting a prompt.
 
-${COMMAND_REFERENCE}
+Do not invent state, weaken acceptance criteria, store private chain-of-thought,
+or expose credentials. Repository knowledge, specifications, decisions, and
+evidence under .empirical/ are the durable source of truth; checkout-local Git
+metadata selects which portable feature this checkout owns.
 `;
-
-const GEMINI_COMMAND = `# ${MANAGED_FILE_MARKER}
-description = "Start or resume Empirical and continue in the current agent until a terminal state."
-prompt = """
-Run the request attached to this command through the repository's Empirical workflow. If there is no new request, resume the active feature.
-
-Use the current Gemini agent. ${SOCRATIC_AGENT_GUIDANCE} For concrete work, choose Fast only for explicit, tiny, localized, reversible, low-risk non-UI changes and Complex otherwise. Start with empirical_fast or empirical_complex; fall back to empirical fast "<request>" or empirical complex "<request>". If unrelated work returns a worktree proposal, show it and wait for explicit approval before creation. Resume active work with empirical_loop or empirical loop. Complete exact revisions with evidence, archive after Review, and consume every response directly. Never select legacy Quick for new work, add profile/JSON controls, or launch another AI runtime.
-
-${COMMAND_REFERENCE}
-"""
-`;
-
-const WINDSURF_WORKFLOW = `<!-- ${MANAGED_FILE_MARKER} -->
-# Empirical
-
-Start or resume the repository's Empirical workflow for the current request.
-
-1. Use the current Cascade agent; never launch another AI runtime.
-2. ${SOCRATIC_AGENT_GUIDANCE}
-3. For concrete work, choose Fast only for explicit, tiny, localized, reversible,
-   low-risk non-UI changes and Complex otherwise.
-4. Start with \`empirical_fast\` or \`empirical_complex\`; fall back to
-   \`empirical fast "<request>"\` or \`empirical complex "<request>"\`.
-5. Resume active work with \`empirical_loop\` or \`empirical loop\`.
-6. If unrelated work returns a worktree proposal, show it and wait for explicit
-   approval before creation. Execute the action and complete its exact revision
-   with all required evidence.
-7. Archive validated capability deltas after Review and consume every response.
-8. Stop only at Done, Blocked, or awaiting human input.
-
-${COMMAND_REFERENCE}
-
-Never select legacy Quick for new work or add profile/JSON controls to the
-normal workflow.
-`;
-
-function renderAgentSkill(entrypoint: DedicatedEntrypoint): string {
-  return `---
-name: ${entrypoint.name}
-description: ${entrypoint.description}
----
-
-<!-- ${MANAGED_FILE_MARKER} -->
-# ${entrypoint.name}
-
-Use the current host agent; never launch another AI runtime.
-
-${entrypoint.instructions}
-`;
-}
-
-function renderCursorCommand(entrypoint: DedicatedEntrypoint): string {
-  return `<!-- ${MANAGED_FILE_MARKER} -->
-# ${entrypoint.name}
-
-Use the current Cursor agent; never launch another AI runtime.
-
-${entrypoint.instructions}
-`;
-}
-
-function renderGeminiCommand(entrypoint: DedicatedEntrypoint): string {
-  return `# ${MANAGED_FILE_MARKER}
-description = "${entrypoint.description}"
-prompt = """
-Use the current Gemini agent; never launch another AI runtime.
-
-${entrypoint.instructions}
-
-Invocation arguments:
-{{args}}
-"""
-`;
-}
-
-function renderWindsurfWorkflow(entrypoint: DedicatedEntrypoint): string {
-  return `<!-- ${MANAGED_FILE_MARKER} -->
-# ${entrypoint.name}
-
-Use the current Cascade agent; never launch another AI runtime.
-
-${entrypoint.instructions}
-`;
-}
-
-function projectEntrypointReports(): AgentEntrypointReport[] {
-  return PROJECT_ENTRYPOINT_REPORTS.map((entrypoint) => ({
-    ...entrypoint,
-    invocations: [...entrypoint.invocations],
-  }));
-}
 
 const MCP_SERVER = {
   command: "empirical",
   args: ["mcp"],
 };
 
+export interface InstallGlobalAgentSkillsOptions {
+  all?: boolean;
+  pathValue?: string;
+}
+
 export async function installProjectIntegrations(root: string): Promise<IntegrationReport> {
-  const report: IntegrationReport = {
-    scope: "project",
-    created: [],
-    updated: [],
-    preserved: [],
-    entrypoints: projectEntrypointReports(),
-  };
+  const report = emptyReport("project");
 
-  await mergeMarkdown(root, join(root, "AGENTS.md"), GUIDANCE, report);
-  await mergeMarkdown(root, join(root, "CLAUDE.md"), GUIDANCE, report);
-  await mergeMarkdown(root, join(root, "GEMINI.md"), GUIDANCE, report);
-
-  await writeManagedFile(root, join(root, ".agents", "skills", "empirical", "SKILL.md"), SKILL, report);
-  await writeManagedFile(root, join(root, ".claude", "skills", "empirical", "SKILL.md"), SKILL, report);
-  await writeManagedFile(root, join(root, ".cursor", "commands", "empirical.md"), CURSOR_COMMAND, report);
-  await writeManagedFile(root, join(root, ".gemini", "commands", "empirical.toml"), GEMINI_COMMAND, report);
-  await writeManagedFile(root, join(root, ".windsurf", "workflows", "empirical.md"), WINDSURF_WORKFLOW, report);
-
-  for (const entrypoint of DEDICATED_ENTRYPOINTS) {
-    await writeManagedFile(
-      root,
-      join(root, ".agents", "skills", entrypoint.name, "SKILL.md"),
-      renderAgentSkill(entrypoint),
-      report,
-    );
-    await writeManagedFile(
-      root,
-      join(root, ".claude", "skills", entrypoint.name, "SKILL.md"),
-      renderAgentSkill(entrypoint),
-      report,
-    );
-    await writeManagedFile(
-      root,
-      join(root, ".cursor", "commands", `${entrypoint.name}.md`),
-      renderCursorCommand(entrypoint),
-      report,
-    );
-    await writeManagedFile(
-      root,
-      join(root, ".gemini", "commands", `${entrypoint.name}.toml`),
-      renderGeminiCommand(entrypoint),
-      report,
-    );
-    await writeManagedFile(
-      root,
-      join(root, ".windsurf", "workflows", `${entrypoint.name}.md`),
-      renderWindsurfWorkflow(entrypoint),
-      report,
-    );
+  for (const filename of ["AGENTS.md", "CLAUDE.md", "GEMINI.md"]) {
+    await removeManagedMarkdownBlock(root, join(root, filename), report);
+  }
+  for (const path of projectSkillTargets(root)) {
+    await removeManagedFile(root, path, report);
   }
 
   await mergeMcpJson(root, join(root, ".mcp.json"), report);
   await mergeMcpJson(root, join(root, ".cursor", "mcp.json"), report);
   await mergeMcpJson(root, join(root, ".gemini", "settings.json"), report, { cwd: "." });
   await mergeCodexToml(root, join(root, ".codex", "config.toml"), report);
-
   return report;
 }
 
-const GLOBAL_AGENT_SKILL_ROOTS: Array<{
-  id: AgentEntrypointReport["id"];
-  agent: string;
-  segments: string[];
-  invocations: string[];
-  reload: string;
-}> = [
-  {
-    id: "codex",
-    agent: "Codex",
-    segments: [".codex", "skills"],
-    invocations: ENTRYPOINT_NAMES.map((name) => `$${name}`),
-    reload: "Restart or reopen Codex so it rescans user skills; invoke them with $.",
-  },
-  {
-    id: "claude",
-    agent: "Claude Code",
-    segments: [".claude", "skills"],
-    invocations: ENTRYPOINT_NAMES.map((name) => `/${name}`),
-    reload: "Restart Claude Code if the skills were installed during the current session.",
-  },
-  {
-    id: "cursor",
-    agent: "Cursor",
-    segments: [".cursor", "skills"],
-    invocations: [...ENTRYPOINT_NAMES],
-    reload: "Reload Cursor, open Agent chat, and ask normally; Cursor discovers the installed Agent Skills.",
-  },
-  {
-    id: "gemini",
-    agent: "Gemini CLI",
-    segments: [".gemini", "skills"],
-    invocations: [...ENTRYPOINT_NAMES],
-    reload: "Run /skills reload and /skills list; Gemini activates matching skills from your request.",
-  },
-  {
-    id: "windsurf",
-    agent: "Windsurf",
-    segments: [".codeium", "windsurf", "skills"],
-    invocations: ENTRYPOINT_NAMES.map((name) => `@${name}`),
-    reload: "Start a new Cascade session or reload Windsurf; invoke a skill with @.",
-  },
-];
-
-export async function installGlobalAgentSkills(homeRoot = homedir()): Promise<IntegrationReport> {
+export async function installGlobalAgentSkills(
+  homeRoot = homedir(),
+  options: InstallGlobalAgentSkillsOptions = {},
+): Promise<IntegrationReport> {
   const home = validateHomeRoot(homeRoot);
-  const report: IntegrationReport = {
-    scope: "global",
-    created: [],
-    updated: [],
-    preserved: [],
-    entrypoints: GLOBAL_AGENT_SKILL_ROOTS.map((agent) => ({
-      id: agent.id,
-      agent: agent.agent,
-      kind: "skill",
-      artifactRoot: join(home, ...agent.segments),
-      invocations: [...agent.invocations],
-      reload: agent.reload,
-    })),
-  };
-
-  for (const agent of GLOBAL_AGENT_SKILL_ROOTS) {
-    const skillRoot = join(home, ...agent.segments);
-    await writeManagedFile(
-      home,
-      join(skillRoot, "empirical", "SKILL.md"),
-      SKILL,
-      report,
-    );
-    for (const entrypoint of DEDICATED_ENTRYPOINTS) {
-      await writeManagedFile(
-        home,
-        join(skillRoot, entrypoint.name, "SKILL.md"),
-        renderAgentSkill(entrypoint),
-        report,
-      );
-    }
+  const detected = await detectSupportedAgents({
+    homeRoot: home,
+    ...(options.pathValue !== undefined ? { pathValue: options.pathValue } : {}),
+    ...(options.all !== undefined ? { includeAll: options.all } : {}),
+  });
+  const detectedIds = new Set(detected.map((agent) => agent.id));
+  for (const definition of SUPPORTED_AGENTS) {
+    if (await hasManagedGlobalTarget(home, definition)) detectedIds.add(definition.id);
   }
 
+  const selected = SUPPORTED_AGENTS.filter((definition) => detectedIds.has(definition.id));
+  const report = emptyReport("global");
+  report.entrypoints = selected.map((definition) => ({
+    id: definition.id,
+    agent: definition.agent,
+    kind: "skill",
+    artifactRoot: join(home, ...definition.skillSegments),
+    invocations: [definition.invocation],
+    reload: definition.reload,
+  }));
+
+  for (const definition of selected) {
+    const skillRoot = join(home, ...definition.skillSegments);
+    await writeManagedFile(home, join(skillRoot, "empirical", "SKILL.md"), SINGLE_AGENT_SKILL, report);
+    for (const obsolete of OBSOLETE_ENTRYPOINTS) {
+      await removeManagedFile(home, join(skillRoot, obsolete, "SKILL.md"), report);
+    }
+  }
   return report;
+}
+
+function emptyReport(scope: IntegrationReport["scope"]): IntegrationReport {
+  return { scope, created: [], updated: [], removed: [], preserved: [], entrypoints: [] };
+}
+
+function projectSkillTargets(root: string): string[] {
+  const names = ["empirical", ...OBSOLETE_ENTRYPOINTS];
+  return names.flatMap((name) => [
+    join(root, ".agents", "skills", name, "SKILL.md"),
+    join(root, ".claude", "skills", name, "SKILL.md"),
+    join(root, ".cursor", "commands", `${name}.md`),
+    join(root, ".gemini", "commands", `${name}.toml`),
+    join(root, ".windsurf", "workflows", `${name}.md`),
+  ]);
+}
+
+async function hasManagedGlobalTarget(home: string, definition: SupportedAgentDefinition): Promise<boolean> {
+  const root = join(home, ...definition.skillSegments);
+  for (const name of ["empirical", ...OBSOLETE_ENTRYPOINTS]) {
+    const path = join(root, name, "SKILL.md");
+    if (await isSafeRegularFile(home, path) && (await readFile(path, "utf8")).includes(MANAGED_FILE_MARKER)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function isSafeRegularFile(root: string, path: string): Promise<boolean> {
+  const rootPath = resolve(root);
+  const targetPath = resolve(path);
+  const label = relativeLabel(rootPath, targetPath);
+  if (!label || label === ".." || label.startsWith("../") || isAbsolute(label)) return false;
+  const segments = label.split("/");
+  let current = rootPath;
+  for (let index = 0; index < segments.length; index += 1) {
+    current = join(current, segments[index]!);
+    const details = await lstat(current).catch(() => null);
+    if (!details || details.isSymbolicLink()) return false;
+    if (index < segments.length - 1 && !details.isDirectory()) return false;
+    if (index === segments.length - 1) return details.isFile();
+  }
+  return false;
 }
 
 function validateHomeRoot(homeRoot: string): string {
   if (!homeRoot.trim()) {
-    throw new EmpiricalError("INVALID_ARGUMENT", "Global integration requires a user home directory");
+    throw new EmpiricalError("INVALID_ARGUMENT", "Global installation requires a user home directory");
   }
   const home = resolve(homeRoot);
   if (dirname(home) === home) {
-    throw new EmpiricalError("INVALID_ARGUMENT", "Global integration refuses a filesystem root as the user home");
+    throw new EmpiricalError("INVALID_ARGUMENT", "Global installation refuses a filesystem root as the user home");
   }
   return home;
 }
@@ -500,38 +219,54 @@ async function writeManagedFile(
   }
 }
 
-async function mergeMarkdown(
+async function removeManagedFile(root: string, path: string, report: IntegrationReport): Promise<void> {
+  if (await preserveUnsafeTarget(root, path, report)) return;
+  if (!(await isFile(path))) return;
+  const current = await readFile(path, "utf8");
+  if (!current.includes(MANAGED_FILE_MARKER)) {
+    report.preserved.push(`${relativeLabel(root, path)} (existing unmanaged file)`);
+    return;
+  }
+  await rm(path);
+  report.removed.push(relativeLabel(root, path));
+  await rmdir(dirname(path)).catch((error: NodeJS.ErrnoException) => {
+    if (!["ENOENT", "ENOTEMPTY", "EEXIST"].includes(error.code ?? "")) throw error;
+  });
+}
+
+async function removeManagedMarkdownBlock(
   root: string,
   path: string,
-  managed: string,
   report: IntegrationReport,
 ): Promise<void> {
   if (await preserveUnsafeTarget(root, path, report)) return;
-  if (!(await isFile(path))) {
-    await writeTextAtomic(path, `${managed}\n`);
-    report.created.push(relativeLabel(root, path));
-    return;
-  }
+  if (!(await isFile(path))) return;
   const current = await readFile(path, "utf8");
   const starts = markerIndexes(current, START);
   const ends = markerIndexes(current, END);
-  if (starts.length === 1 && ends.length === 1 && ends[0]! >= starts[0]!) {
-    const start = starts[0]!;
-    const end = ends[0]!;
-    const next = `${current.slice(0, start)}${managed}${current.slice(end + END.length)}`;
-    if (next !== current) {
-      await writeTextAtomic(path, next);
-      report.updated.push(relativeLabel(root, path));
-    }
-    return;
-  }
-  if (starts.length > 0 || ends.length > 0) {
+  if (starts.length === 0 && ends.length === 0) return;
+  if (starts.length !== 1 || ends.length !== 1 || ends[0]! < starts[0]!) {
     report.preserved.push(`${relativeLabel(root, path)} (unmatched Empirical marker)`);
     return;
   }
-  const separator = current.endsWith("\n") ? "\n" : "\n\n";
-  await writeTextAtomic(path, `${current}${separator}${managed}\n`);
-  report.updated.push(relativeLabel(root, path));
+  const [blockStart, blockEnd] = managedBlockBounds(current, starts[0]!, ends[0]! + END.length);
+  const next = `${current.slice(0, blockStart)}${current.slice(blockEnd)}`;
+  if (!next.trim()) {
+    await rm(path);
+    report.removed.push(relativeLabel(root, path));
+  } else {
+    await writeTextAtomic(path, next);
+    report.updated.push(relativeLabel(root, path));
+  }
+}
+
+function managedBlockBounds(contents: string, markerStart: number, markerEnd: number): [number, number] {
+  const lineStart = contents.lastIndexOf("\n", markerStart - 1) + 1;
+  const start = contents.slice(lineStart, markerStart).trim() ? markerStart : lineStart;
+  let end = markerEnd;
+  if (contents.startsWith("\r\n", end)) end += 2;
+  else if (contents.startsWith("\n", end)) end += 1;
+  return [start, end];
 }
 
 async function mergeMcpJson(
@@ -586,9 +321,7 @@ ${end}`;
   const starts = markerIndexes(current, start);
   const ends = markerIndexes(current, end);
   if (starts.length === 1 && ends.length === 1 && ends[0]! >= starts[0]!) {
-    const blockStart = starts[0]!;
-    const blockEnd = ends[0]!;
-    const next = `${current.slice(0, blockStart)}${block}${current.slice(blockEnd + end.length)}`;
+    const next = `${current.slice(0, starts[0]!)}${block}${current.slice(ends[0]! + end.length)}`;
     if (next !== current) {
       await writeTextAtomic(path, next);
       report.updated.push(relativeLabel(root, path));
@@ -639,9 +372,7 @@ async function preserveUnsafeTarget(
       return true;
     }
     if (index < segments.length - 1 && !details.isDirectory()) {
-      report.preserved.push(
-        `${label} (non-directory ancestor ${relativeLabel(rootPath, current)})`,
-      );
+      report.preserved.push(`${label} (non-directory ancestor ${relativeLabel(rootPath, current)})`);
       return true;
     }
     if (index === segments.length - 1 && !details.isFile()) {

@@ -16,7 +16,15 @@ one committed `.empirical/` model.
 - `src/specifications.ts` owns capability-delta parsing, validation,
   transactional projection, convergence, and rollback.
 - `src/discovery.ts` owns the five Socratic passes and durable approved briefs.
-- `src/integrations.ts` renders project and global native Agent Skills/commands.
+- `src/agents.ts` owns supported-agent detection, launch capability metadata,
+  approval-bound handoff options, and integrity tokens.
+- `src/checkouts.ts` owns checkout-local feature selection in per-worktree Git
+  metadata and cross-checkout claim discovery.
+- `src/knowledge.ts` owns the bounded, deterministic, secret-safe repository
+  inventory and compact Markdown context set.
+- `src/integrations.ts` installs one global Agent Skill per detected agent,
+  removes marker-owned legacy commands, and preserves project runtime bridges.
+- `src/lifecycle.ts` owns the package-update then integration-refresh sequence.
 - `src/cli.ts` and `src/mcp.ts` adapt the same core API; they do not implement a
   second workflow.
 
@@ -33,15 +41,34 @@ project
     └── evidence
 ```
 
-Each checkout discovers zero or one active feature. `waiting`,
-`awaiting_human`, and `blocked` states are resumable; `done` and idle states do
-not reserve a checkout. More than one resumable feature is rejected as an
-inconsistent repository.
+Each checkout selects zero or one active feature through
+`<absolute-git-dir>/empirical-sdd/active-feature`. `waiting`, `awaiting_human`,
+and `blocked` states are resumable; `done` and idle states do not reserve a
+checkout. Recovery ignores features claimed by another registered checkout and
+rejects multiple unclaimed candidates instead of guessing.
 
 Feature-local state prevents two branches created from the same base from
 colliding on a project-global state file. Git worktrees isolate the source tree
 and branch. Shared capability projection remains serialized by a project-level
 resource lock during Archive.
+
+## Agent experience and context
+
+The installed `empirical` skill is the only user-facing workflow entrypoint.
+It owns first-use initialization, progressive context retrieval, resume,
+Socratic discovery, internal workflow routing, exact transitions, and optional
+post-Specify handoff. The CLI and MCP expose the same lower-level operations as
+automation primitives.
+
+Repository knowledge is file-backed under `.empirical/context/`. The generated
+manifest includes only normalized paths, sizes, and content digests from a
+bounded Git-aware inventory. Agent-maintained topic pages are created once and
+preserved. No semantic index or external service participates.
+
+Handoff is proposal/authorization, not process execution. A proposal binds the
+approved spec digest, feature, target agent, launch capability, cwd, prompt, and
+argv into a token. Authorization re-derives all fields. The current host is the
+only component that may execute the exact approved argv.
 
 ## Transactions
 

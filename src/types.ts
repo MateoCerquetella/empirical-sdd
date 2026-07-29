@@ -133,6 +133,7 @@ export interface ActionPacket {
   requiredEvidence: EvidenceKind[];
   artifacts: string[];
   projectContext: string[];
+  knowledgeContext: string[];
   capabilityContext: string[];
   completion: {
     available: boolean;
@@ -228,6 +229,7 @@ export interface ExplorationPacket {
   instructions: string[];
   questions: string[];
   projectContext: string[];
+  knowledgeContext: string[];
   capabilityContext: string[];
   next: {
     fast: string;
@@ -292,6 +294,7 @@ export interface IntegrationReport {
   scope: "project" | "global";
   created: string[];
   updated: string[];
+  removed: string[];
   preserved: string[];
   entrypoints: AgentEntrypointReport[];
 }
@@ -305,6 +308,71 @@ export interface AgentEntrypointReport {
   artifactRoot: string;
   invocations: string[];
   reload: string;
+}
+
+export type AgentLaunchCapability = "prompt" | "workspace";
+
+export interface DetectedAgent {
+  id: AgentIntegrationId;
+  agent: string;
+  executable: string;
+  capability: AgentLaunchCapability;
+}
+
+export interface AgentHandoffOption extends DetectedAgent {
+  feature: string;
+  specification: string;
+  cwd: string;
+  prompt: string;
+  argv: string[];
+  approvalToken: string;
+}
+
+export interface AgentHandoffOffer {
+  kind: "agent_handoff_offer";
+  protocol: "empirical-sdd";
+  schemaVersion: typeof SCHEMA_VERSION;
+  root: string;
+  feature: string;
+  specification: string;
+  choices: ["current", "save", "agent"];
+  agents: AgentHandoffOption[];
+  requiresApproval: true;
+}
+
+export interface AuthorizedAgentHandoff {
+  kind: "authorized_agent_handoff";
+  protocol: "empirical-sdd";
+  schemaVersion: typeof SCHEMA_VERSION;
+  root: string;
+  feature: string;
+  agent: AgentIntegrationId;
+  cwd: string;
+  argv: string[];
+  prompt: string;
+}
+
+export interface RepositoryKnowledgeFile {
+  path: string;
+  size: number;
+  digest: string;
+}
+
+export interface RepositoryKnowledgeManifest {
+  schemaVersion: 1;
+  digest: string;
+  files: RepositoryKnowledgeFile[];
+  truncated: boolean;
+}
+
+export interface RepositoryKnowledgeReport {
+  root: string;
+  status: "created" | "refreshed" | "current";
+  digest: string;
+  files: number;
+  truncated: boolean;
+  manifest: string;
+  context: string[];
 }
 
 export interface InitOptions extends ProjectConfigurationInput {

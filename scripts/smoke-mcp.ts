@@ -39,6 +39,7 @@ try {
     "empirical_explore", "empirical_fast", "empirical_complex", "empirical_loop",
     "empirical_archive", "empirical_explain", "empirical_worktree_propose",
     "empirical_worktree_create", "empirical_configure", "empirical_capabilities",
+    "empirical_context", "empirical_handoff",
   ]) {
     if (!listed.includes(name)) throw new Error(`Bundled MCP omitted ${name}`);
   }
@@ -159,9 +160,12 @@ Run existing and new sign-in tests.
   const packageJson = JSON.parse(await readFile(resolve(import.meta.dir, "../package.json"), "utf8")) as { version: string };
   if (version.stdout.trim() !== packageJson.version || packageJson.version !== "0.20.0") throw new Error("Bundled/package version mismatch");
   const help = await runCli(root, ["help"]);
-  if (!help.stdout.includes("empirical explain") || !help.stdout.includes("empirical worktree create")) throw new Error("Bundled help omitted 0.20 UX");
+  if (!help.stdout.includes("empirical install") || !help.stdout.includes("empirical update")) throw new Error("Bundled help omitted lifecycle UX");
+  for (const hidden of ["empirical init", "empirical explore", "empirical fast", "empirical complex", "empirical loop"]) {
+    if (help.stdout.includes(hidden)) throw new Error(`Bundled help exposed internal operation ${hidden}`);
+  }
 
-  console.log("Bundled 0.20 Explore, Fast, Complex, decisions, Archive, Explain, worktree, CLI, and MCP smoke passed.");
+  console.log("Bundled 0.20 single-entrypoint help, internal workflow, context, handoff, worktree, CLI, and MCP smoke passed.");
 } finally {
   await client.close();
   await Promise.all([...createdWorktrees, root, complexRoot, gitRoot].map((path) => rm(path, { recursive: true, force: true })));

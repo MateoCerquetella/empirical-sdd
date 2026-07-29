@@ -29,6 +29,10 @@ Every current action is a structured `ActionPacket`:
   "requiredEvidence": [],
   "artifacts": [],
   "projectContext": [],
+  "knowledgeContext": [
+    ".empirical/context/index.md",
+    ".empirical/context/architecture.md"
+  ],
   "capabilityContext": [],
   "completion": {
     "available": true,
@@ -39,9 +43,21 @@ Every current action is a structured `ActionPacket`:
 }
 ```
 
-The packet is bound to the one active feature in its checkout. Mutations require
-the exact revision. A stale caller receives `STALE_REVISION` and cannot overwrite
-newer state.
+The packet is bound to the one active feature selected in checkout-local Git
+metadata. `knowledgeContext` supports progressive retrieval from the compact
+file-backed repository context. Mutations require the exact revision. A stale
+caller receives `STALE_REVISION` and cannot overwrite newer state.
+
+## Agent handoff
+
+After Complex Specify passes, the handoff proposal contains Continue, Save, and
+detected-agent choices. Each agent option classifies the executable as
+prompt-capable or workspace-only and includes the exact cwd, prompt, argv, and
+an approval token bound to the feature and approved specification digest.
+
+Authorization re-derives the option and rejects stale tokens. Neither proposal
+nor authorization starts a process; the current host may execute only an exact
+option that the human explicitly approved.
 
 ## Start result
 

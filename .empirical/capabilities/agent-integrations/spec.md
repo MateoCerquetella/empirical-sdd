@@ -10,60 +10,78 @@ agent's native extension mechanism.
 
 ### Requirement: Explicit global skill installation
 
-Empirical SHALL provide an explicit global integration operation that works
-without an initialized project and installs the Empirical, Explore, Fast,
-Complex, and Loop workflows into the native user-level skill directory of
-Codex, Claude Code, Cursor, Gemini CLI, and Windsurf.
+Empirical SHALL provide `empirical install` outside an initialized project. It
+MUST detect supported agents and install exactly one managed Empirical entrypoint
+for each detected or previously managed agent. The operation MUST NOT create
+project state or launch an agent. `integrate --global` MAY remain as a hidden
+compatibility alias.
 
-#### Scenario: A developer enables Empirical in every project
+#### Scenario: A developer installs Empirical for local agents
 
-- **GIVEN** the Empirical npm package is installed
-- **WHEN** the developer runs `empirical integrate --global` from any directory
-- **THEN** all five supported agents receive all five global skills
-- **AND** no project state or agent runtime is created
+- **GIVEN** the Empirical npm package and one or more supported agents are installed
+- **WHEN** the developer runs `empirical install`
+- **THEN** every detected agent receives one native global Empirical entrypoint
+- **AND** the report shows its exact invocation and reload guidance
 
 ### Requirement: Global integration preserves user configuration
 
-Global skill installation SHALL update only files that contain Empirical's
-managed marker and SHALL preserve unmanaged files, directories, and symbolic
-links while constraining every destination to the selected user home.
+Installation and update MUST write or remove only Empirical-managed targets,
+MUST preserve unmanaged files, directories, and symbolic links, and MUST
+constrain every destination to the selected user home. Obsolete managed
+dedicated entrypoints MUST be removed safely and repeatably.
 
-#### Scenario: A target skill already belongs to the user
+#### Scenario: An obsolete dedicated skill is managed by Empirical
 
-- **GIVEN** an unmanaged file, directory, or symbolic link exists at a global
-  skill target
-- **WHEN** global integration runs
-- **THEN** Empirical reports the target as preserved
-- **AND** the existing target remains unchanged
-
-#### Scenario: Empirical is upgraded
-
-- **GIVEN** an older Empirical-managed global skill is installed
-- **WHEN** global integration runs from a newer package
-- **THEN** the managed skill is refreshed atomically
-- **AND** a subsequent run converges without further changes
+- **WHEN** the single-entrypoint installer refreshes the agent
+- **THEN** the managed Explore, Fast, Complex, and Loop targets are removed
+- **AND** an unmanaged collision at the same path is preserved and reported
 
 ### Requirement: Global discovery guidance is agent-accurate
 
-Human and structured global integration reports SHALL identify each native
-global skill root and provide accurate discovery, invocation, or reload
-guidance without claiming that all supported agents expose project-defined slash
-commands.
+Human and structured installation reports MUST identify each native global
+skill root and provide accurate invocation and reload guidance without claiming
+that all agents expose slash commands or prompt-capable sessions.
 
 #### Scenario: Installation finishes
 
-- **WHEN** global integration reports success
-- **THEN** the developer can see where every agent's skills were installed
-- **AND** how that agent discovers or invokes Empirical workflows
+- **WHEN** global installation succeeds
+- **THEN** the developer sees one Empirical invocation for every installed target
+- **AND** the report distinguishes native skill syntax accurately
 
-### Requirement: Global integration is opt-in
+### Requirement: Native user-invocable workflow entrypoints
 
-Project initialization, adoption, and ordinary integration SHALL remain scoped
-to the current repository and SHALL NOT write global agent configuration unless
-the user explicitly selects global integration.
+The system SHALL expose one global Empirical entrypoint per supported agent.
+That entrypoint MUST initialize when needed, refresh repository context, route
+vague and concrete work, select Fast or Complex internally, resume active work,
+and preserve all workflow and evidence gates without requiring dedicated skills.
 
-#### Scenario: A repository is initialized normally
+#### Scenario: A request enters through a supported agent
 
-- **WHEN** the developer runs `empirical init`
-- **THEN** Empirical writes only repository-scoped state and integrations
-- **AND** user-level skill directories are unchanged
+- **WHEN** the user invokes the one Empirical entrypoint with a new request or no request
+- **THEN** the current agent initializes, routes, starts, or resumes as appropriate
+- **AND** the user is not asked to invoke Explore, Fast, Complex, or Loop separately
+
+### Requirement: Honest command discovery report
+
+Normal help and documentation MUST present `empirical install`, `empirical
+update`, and the one native in-agent invocation. Structured automation surfaces
+MAY continue to expose internal workflow operations and compatibility commands.
+
+#### Scenario: A developer asks for help
+
+- **WHEN** the developer runs `empirical --help`
+- **THEN** the primary terminal section contains only install and update
+- **AND** it directs feature work to the installed in-agent Empirical entrypoint
+
+### Requirement: Update converges package and integrations
+
+`empirical update` MUST install `empirical-sdd@latest` and invoke the newly
+installed CLI to refresh managed single-entrypoint integrations. It MUST report
+which stage failed and MUST NOT claim that integrations were refreshed when the
+second stage does not pass.
+
+#### Scenario: A developer updates Empirical
+
+- **WHEN** npm successfully installs the latest package
+- **THEN** the newly installed Empirical process runs its install operation
+- **AND** package version and managed entrypoints converge in one command

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -379,14 +380,60 @@ describe("Empirical 0.20 core", () => {
     expect(action(await reopened.fast("Start after terminal legacy state"))).toMatchObject({ revision: 1, phase: "implement" });
   });
 
-  test("agent integrations teach proposal approval and contain no normal workstream commands", async () => {
+  test("a process that first sees a non-Git project discovers checkout metadata after Git is initialized", async () => {
     const root = await temporaryProject();
-    await EmpiricalProject.initialize(root);
-    const skill = await readFile(join(root, ".agents/skills/empirical/SKILL.md"), "utf8");
-    expect(skill).toContain("worktree proposal");
-    expect(skill).toContain("explicit human approval");
-    expect(skill).toContain("empirical explain");
-    expect(skill).not.toContain("--workstream");
+    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
+    expect(await project.status()).toMatchObject({ phase: "idle" });
+    spawnSync("git", ["init", "-b", "main"], { cwd: root, encoding: "utf8", shell: false });
+    const started = action(await project.fast("Track work after Git initialization"));
+    const selection = join(root, ".git/empirical-sdd/active-feature");
+    expect(await readFile(selection, "utf8"))
+      .toBe(`${started.feature}\n`);
+    await rm(selection);
+    const recovered = await EmpiricalProject.open(root);
+    expect(await recovered.status()).toMatchObject({ activeFeature: started.feature });
+    expect(await readFile(selection, "utf8")).toBe(`${started.feature}\n`);
+    await recovered.complete({
+      revision: 1,
+      outcome: "passed",
+      summary: "Completed after recovery",
+      evidence: [
+        { criterionId: "AC-1", kind: "test", passed: true, summary: "Passed" },
+        { criterionId: "all", kind: "review", passed: true, summary: "Reviewed" },
+      ],
+    });
+    expect(await stat(selection).then(() => true, () => false)).toBe(false);
+  });
+
+  test("recovery rejects multiple unclaimed non-terminal feature histories", async () => {
+    const root = await temporaryProject();
+    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
+    const started = action(await project.fast("Create the first recoverable feature"));
+    const first = join(root, ".empirical/specs", started.feature!);
+    const secondFeature = "second-unclaimed-feature";
+    const second = join(root, ".empirical/specs", secondFeature);
+    await mkdir(second, { recursive: true });
+    const state = JSON.parse(await readFile(join(first, "state.json"), "utf8")) as WorkflowState;
+    await writeFile(join(second, "spec.md"), "# Second\n\n## Acceptance Criteria\n\n- [ ] [AC-1] Second is observable.\n", "utf8");
+    await writeFile(join(second, "state.json"), `${JSON.stringify({
+      ...state,
+      activeFeature: secondFeature,
+      request: "Create a second unclaimed feature",
+    })}\n`, "utf8");
+
+    await expect(EmpiricalProject.open(root)).rejects.toMatchObject({
+      code: "MULTIPLE_ACTIVE_FEATURES",
+      details: { features: [started.feature, secondFeature].sort() },
+    });
+  });
+
+  test("project initialization keeps runtime integration but installs no local workflow skill", async () => {
+    const root = await temporaryProject();
+    const { integrations } = await EmpiricalProject.initialize(root);
+    expect(integrations.entrypoints).toEqual([]);
+    expect(await readFile(join(root, ".mcp.json"), "utf8")).toContain("empirical");
+    await expect(readFile(join(root, ".agents/skills/empirical/SKILL.md"), "utf8"))
+      .rejects.toBeDefined();
   });
 
   test("v1 adoption preserves ai and stores active state inside the feature", async () => {

@@ -1,0 +1,74 @@
+[
+  {
+    "criterionId": "AC-1",
+    "kind": "test",
+    "passed": true,
+    "summary": "Isolated-home integration and CLI tests proved install works outside a repository, creates one entrypoint for each selected agent, reports invocation/reload metadata, and creates no project state."
+  },
+  {
+    "criterionId": "AC-2",
+    "kind": "test",
+    "passed": true,
+    "summary": "Migration fixtures removed marker-owned legacy skills while preserving unmanaged files, non-files, symbolic-link targets, and content outside the selected home."
+  },
+  {
+    "criterionId": "AC-3",
+    "kind": "test",
+    "passed": true,
+    "summary": "Lifecycle runner tests verified npm global update occurs before the new empirical install process and package versus integration failures remain stage-specific."
+  },
+  {
+    "criterionId": "AC-4",
+    "kind": "test",
+    "passed": true,
+    "summary": "Source and bundled CLI tests verified primary help exposes install/update only, README documents the one in-agent entrypoint, and MCP smoke retained all typed internal workflow operations."
+  },
+  {
+    "criterionId": "AC-5",
+    "kind": "test",
+    "passed": true,
+    "summary": "Initialization fixtures verified safe configuration, runtime MCP bridges, repository context creation, and zero project-local workflow entrypoints; the generated skill carries material first-run configuration fields."
+  },
+  {
+    "criterionId": "AC-6",
+    "kind": "test",
+    "passed": true,
+    "summary": "Knowledge tests verified deterministic byte-stable manifests, overview/architecture/commands/conventions pages, refresh on source change, topic preservation, secret exclusions, digest-only inventory, and packet context paths."
+  },
+  {
+    "criterionId": "AC-7",
+    "kind": "test",
+    "passed": true,
+    "summary": "The installed-skill contract and integration tests verified initialization, context, resume-first behavior, five Socratic passes for ambiguity, strict Fast eligibility, Complex fallback, and no separate installed workflow skills."
+  },
+  {
+    "criterionId": "AC-8",
+    "kind": "test",
+    "passed": true,
+    "summary": "Core handoff tests rejected pre-Specify use and verified the post-Specify offer contains current, save, and detected-agent choices without starting a process."
+  },
+  {
+    "criterionId": "AC-9",
+    "kind": "test",
+    "passed": true,
+    "summary": "Agent fixtures distinguished prompt and workspace capabilities, asserted exact cwd/argv/prompt fields, required explicit approval, authorized unchanged tokens, rejected stale spec-bound tokens, and observed no launch side effect."
+  },
+  {
+    "criterionId": "AC-10",
+    "kind": "test",
+    "passed": true,
+    "summary": "Real Git tests proved a linked worktree starts its intended feature when the committed base contains a blocked feature owned by the source checkout, while the source remains resumable and checkout claims do not collide."
+  },
+  {
+    "criterionId": "AC-11",
+    "kind": "test",
+    "passed": true,
+    "summary": "Repeated install, initialization, knowledge refresh, schema migration, discovery, unmanaged-content, whitespace-preservation, symlink, and non-Git-to-Git fixtures all converged safely."
+  },
+  {
+    "criterionId": "AC-12",
+    "kind": "test",
+    "passed": true,
+    "summary": "bun run ci passed: TypeScript check, 70 tests with 403 expectations, built CLI/MCP smoke including context and handoff, and npm dry-run for empirical-sdd@0.20.0 with 21 packaged files; git diff --check also passed."
+  }
+]

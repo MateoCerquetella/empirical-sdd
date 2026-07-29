@@ -1,82 +1,104 @@
 # Empirical SDD
 
-Empirical is a small, agent-neutral spec-driven development engine for Codex,
-Claude Code, Cursor, Gemini CLI, Windsurf, and any MCP client. It turns a coding
-request into an exact, resumable workflow with committed contracts, evidence,
-review, living capability specs, and safe Git worktree isolation.
+Empirical is an agent-neutral spec-driven development engine for Codex, Claude
+Code, Cursor, Gemini CLI, Windsurf, and MCP clients. It turns a coding request
+into an exact, resumable workflow with observable contracts, evidence, review,
+living capability specifications, and safe Git worktree isolation.
 
-Empirical `0.20.0` is an alpha release. It deliberately uses one active feature
-per checkout and real Git worktrees for parallel work.
+Empirical `0.20.0` is an alpha release. It uses one active feature per checkout
+and real Git worktrees for parallel work.
 
 ## Install
 
 ```bash
 npm install -g empirical-sdd
-cd your-repository
-empirical init
+empirical install
 ```
 
-The first interactive init asks once for:
+`empirical install` works from any directory. It detects supported local agents,
+installs exactly one global Empirical entrypoint for each, removes older
+Empirical-managed Explore/Fast/Complex/Loop skills, and prints how to reload and
+invoke each agent. It does not create repository state or launch an agent.
 
-- whether Empirical should offer isolation when another feature is active;
-- the detected or edited default Git base;
-- the sibling path template, defaulting to `../{repo}-{feature}`;
-- the branch pattern, defaulting to `{type}/{feature}`;
-- whether Complex features require evidence-backed decision records.
+Then open your repository in a coding agent and use its one Empirical entrypoint:
 
-Press Enter to accept each safe default. Edit the answers later with:
+| Agent | Invocation |
+| --- | --- |
+| Codex | `$empirical` |
+| Claude Code | `/empirical` |
+| Cursor Agent chat | `empirical` |
+| Gemini CLI | `empirical` |
+| Windsurf Cascade | `@empirical` |
+
+To upgrade both the package and installed entrypoints:
 
 ```bash
-empirical config
+empirical update
 ```
 
-Automation never waits for terminal input:
+These are the only normal terminal lifecycle commands. Repository setup and
+feature workflow operations happen inside the current coding agent.
 
-```bash
-empirical init --defaults
-empirical init --isolation ask --base main \
-  --worktree-path '../{repo}-{feature}' \
-  --branch-pattern '{type}/{feature}' \
-  --decisions required
-```
+## One entrypoint owns the workflow
 
-## The normal UX
+Ask the installed Empirical entrypoint for repository work in ordinary language.
+It deterministically:
 
-You can use Empirical directly in your agent after project or global skills are
-installed. The agent chooses the lane, executes the returned action, completes
-the exact revision, and consumes the next action until Done.
+1. initializes an uninitialized repository in the current runtime;
+2. builds or refreshes compact repository knowledge;
+3. resumes non-terminal work already owned by this checkout;
+4. uses the original five-pass Socratic interview only when the request is
+   genuinely vague;
+5. routes an approved, concrete request internally to Fast or Complex;
+6. executes exact revisions through evidence, review, and living-spec archive;
+7. offers an explicit agent handoff only after a Complex specification exists.
 
 ```text
-vague idea ──> five Socratic passes ──> approved refined contract
-                                             │
-concrete request ─────────────────────────────┤
-                                             ▼
-                           Fast or Complex exact workflow
-                                             │
-                           another feature already active?
-                              │ no                  │ yes
-                              ▼                     ▼
-                         work here         preview Git worktree
-                                                    │
-                                           explicit approval
-                                                    │
-                                                    ▼
-                                       create, start, show resume
+one Empirical invocation
+          │
+          ├─ repository uninitialized ──> first-run setup + compact context
+          ├─ active feature found ──────> resume exact revision
+          └─ new request
+                ├─ genuinely vague ────> five Socratic passes ──> approval
+                └─ concrete ───────────> internal Fast / Complex routing
+                                                         │
+                                      approved Complex spec exists?
+                                                         │
+                                  Continue here | Save | Continue in agent
 ```
 
-Fast is only for explicit, tiny, localized, reversible, low-risk non-UI work.
+Fast is only for explicit, tiny, localized, reversible, low-risk, non-UI work.
 Everything else—including UI, architecture, public APIs, security, migrations,
 and cross-cutting changes—uses Complex.
 
-## Socratic discovery is back
+## First use and repository knowledge
 
-For a genuinely vague idea:
+On first use, the agent initializes `.empirical/`. It applies safe defaults or
+asks only questions that materially change Git isolation or Complex decision
+policy. It does not install project-local workflow skills.
 
-```bash
-empirical explore "Build a cooperative browser puzzle with time loops"
+Initialization also creates a compact, committed context set:
+
+```text
+.empirical/context/
+├── manifest.json
+├── index.md
+├── overview.md
+├── architecture.md
+├── commands.md
+└── conventions.md
 ```
 
-Empirical asks one question at a time across five passes:
+The deterministic manifest contains bounded path, size, and content-digest
+metadata—not source contents. Dependency trees, build output, ignored files,
+secret-like paths, credentials, binary files, and large files are excluded.
+Topic pages are maintained from repository evidence and are not overwritten by
+a routine refresh. There are no embeddings, hosted services, or vector database.
+
+## Socratic discovery
+
+For a vague idea such as “make onboarding better,” Empirical asks one question
+at a time across five passes:
 
 1. primary user and observed problem;
 2. smallest observable outcome;
@@ -84,232 +106,103 @@ Empirical asks one question at a time across five passes:
 4. failures and solution-changing risks;
 5. concrete verification.
 
-It saves every answer under `.empirical/discoveries/`, shows the full refined
-contract, and waits for explicit approval before starting Fast or Complex.
+It adds only material follow-ups, saves the answers, presents the complete
+refined contract, and waits for explicit approval before creating workflow
+state. A concrete request does not pay this discovery cost.
 
-Use packet mode for an already-running agent:
+## Small feature demo
 
-```bash
-empirical explore "<idea>" --no-interview
-empirical explore "<idea>" --json
-```
+In your coding agent:
 
-`--agent codex` is an optional human terminal entrypoint after approval. Agent
-skills continue in their current runtime and never launch another AI.
+> `$empirical` Add a health command that prints `ok`.
 
-## Simple feature demo
-
-Request:
-
-```bash
-empirical fast "Add a health command that prints ok"
-```
-
-The response is the implementation action and exact completion command:
-
-```text
-Empirical · step 1/1
-
-add-a-health-command-that-prints-ok: implement (fast, waiting, revision 1)
-
-Fast lane: implement the generated observable criterion, run one focused test,
-review the diff, and complete revision 1.
-
-Complete with: empirical complete --revision 1 --outcome passed \
-  --summary "Added the health command" \
-  --test "health command test passed" \
-  --review "focused diff reviewed"
-```
-
-Fast writes everything below one feature directory:
+Empirical recognizes an explicit, localized, low-risk non-UI change and routes
+it internally to Fast. The agent inspects only relevant files, implements the
+generated observable criterion, runs one focused test, reviews the diff, and
+completes the exact revision. The durable result is:
 
 ```text
 .empirical/specs/add-a-health-command-that-prints-ok/
 ├── spec.md
 ├── state.json
 ├── events/
-└── evidence.json                  # after evidenced completion
+└── evidence.json
 ```
+
+You do not choose or invoke a separate Fast command.
 
 ## Complex feature demo
 
-Request:
+In your coding agent:
 
-```bash
-empirical complex "Add team invitations with expiration and revocation"
-```
+> `$empirical` Add team invitations with expiration, revocation, and audit
+> history. Existing members must keep access during rollout.
 
-The seven gates are:
+Empirical routes the request to Complex and drives seven gates:
 
-1. Specify: observable criteria, scope, risks, verification, capability deltas.
-2. Design: architecture plus accepted decisions.
-3. Plan: executable implementation sequence.
-4. Implement: code and focused checks.
-5. Verify: criterion-by-criterion evidence; real browser and screenshot for UI.
-6. Review: diff, criteria, and accepted-decision alignment.
-7. Archive: apply reviewed deltas to living capability specifications.
+1. Specify observable criteria, scope, risks, verification, and capability
+   deltas.
+2. Design the architecture and record accepted evidence-backed decisions.
+3. Plan an executable implementation sequence.
+4. Implement the approved contract.
+5. Verify every criterion; UI work requires real-browser evidence.
+6. Review the diff against criteria and accepted decisions.
+7. Archive reviewed deltas into living capability specifications.
 
-Each completion response is already the next action:
+After Specify passes, the agent offers:
 
-```bash
-empirical complete --revision 1 --outcome passed --summary "Specified invitations"
-# edit design.md and decisions.md
-empirical complete --revision 2 --outcome passed --summary "Designed invitation ownership"
-# continue with the exact commands returned by Empirical
-```
+- Continue here.
+- Save for later.
+- Continue in a detected agent.
 
-A material decision is concise and reviewable:
+For an external handoff, Empirical displays the target, whether it accepts a
+prompt or only a workspace, the exact working directory, and exact argument
+array. Detection and Save launch nothing. The command is revalidated and
+authorized only after you explicitly approve that exact option.
 
-```markdown
-## D-001: Own invitation expiry in the domain service
-
-Status: Accepted
-
-### Evidence
-- Existing invitation writes already pass through the domain service.
-
-### Options
-1. Expire in the request handler.
-2. Expire in the domain service.
-
-### Chosen approach
-Use the domain service so API and background jobs share one rule.
-
-### Trade-offs and risks
-The service gains time semantics; inject a clock for deterministic tests.
-
-### Verification
-Test API and background expiry against the same injected clock.
-```
-
-This is a visible decision trail, not persisted private chain-of-thought. Raw
-prompts, scratchpads, tokens, credentials, and secrets do not belong there.
-
-## Understand the next action
-
-```bash
-empirical explain
-empirical explain --json
-```
-
-Explain is read-only and reports:
-
-- current feature, phase, status, and revision;
-- why the state machine selected the next action;
-- required and missing context;
-- whether the gate says proceed or stop;
-- accepted decision summaries.
-
-MCP clients use `empirical_explain` and receive the same structured fields.
+Decision records store reviewable evidence, options, the selected approach,
+trade-offs, risks, and verification—not private chain-of-thought, prompts,
+scratchpads, tokens, or credentials.
 
 ## Parallel work uses Git worktrees
 
-If a different feature is active, Fast or Complex returns a proposal instead of
-overwriting state:
+If a different feature is active, the single entrypoint returns a read-only
+worktree proposal instead of overwriting state. It shows the base and immutable
+base commit, branch, sibling path, exact Git argument array, and approval token.
 
-```text
-Empirical needs an isolated Git worktree (approval required)
-Active feature: add-team-invitations
-New request: Fix password reset expiry
-Workflow/type: complex/fix
-Base: main
-Base commit: <approved-base-commit>
-Branch: fix/fix-password-reset-expiry
-Path: /projects/my-app-fix-password-reset-expiry
-Command: git worktree add -b fix/fix-password-reset-expiry ... <approved-base-commit>
-No mutation has occurred.
-```
+After explicit approval Empirical requires a clean source checkout, revalidates
+every field, rejects collisions, creates the linked checkout without force, and
+starts the exact request there. It never stashes, commits, moves local changes,
+deletes worktrees, or deletes branches.
 
-After approval Empirical:
+Active selection lives in checkout-local Git metadata while portable feature
+contracts remain committed under `.empirical/specs/`. A linked checkout therefore
+does not accidentally inherit a blocked feature owned by another checkout.
 
-1. requires the current checkout to be clean, including untracked files;
-2. resolves the selected base;
-3. rejects existing branches, paths, and registered checkout collisions;
-4. runs `git worktree add -b <branch> <path> <approved-base-commit>` without
-   `--force`, so the approved base cannot move before creation;
-5. initializes or migrates the new checkout;
-6. starts the exact request there;
-7. returns path, branch, base, feature, revision, and resume command.
+## Internal automation API
 
-Human terminal form:
+The TypeScript API, low-level CLI operations, and MCP tools remain stable for
+agent runtimes, scripts, tests, and migration compatibility. They include setup,
+context refresh, discovery, Fast/Complex start, resume, exact completion,
+verification, review, archive, status/explain, handoff, capability projection,
+and worktree proposal/creation. They are automation primitives, not additional
+user-facing workflow commands.
 
-```bash
-empirical worktree create "Fix password reset expiry" \
-  --workflow complex --type fix
-```
+The stdio MCP server exposes these groups:
 
-Use `--yes` only after reviewing the rendered proposal in automation. Empirical
-never stashes, commits, moves local changes, forces Git, deletes worktrees, or
-deletes branches.
+- setup/context: `empirical_init`, `empirical_adopt`, `empirical_configure`,
+  `empirical_context`;
+- routing/workflow: `empirical_explore`, `empirical_fast`,
+  `empirical_complex`, `empirical_loop`, `empirical_next`,
+  `empirical_complete`, `empirical_retry`, `empirical_verify`,
+  `empirical_archive`;
+- handoff/isolation: `empirical_handoff`, `empirical_worktree_propose`,
+  `empirical_worktree_create`;
+- understanding: `empirical_explain`, `empirical_status`,
+  `empirical_capabilities`, `empirical_policy`, `empirical_doctor`.
 
-## Agent skills and commands
-
-Project-local integrations are installed by `empirical init` and refreshed by:
-
-```bash
-empirical integrate
-```
-
-Install the five Empirical skills globally for every supported agent:
-
-```bash
-empirical integrate --global
-```
-
-The skills are `empirical`, `empirical-explore`, `empirical-fast`,
-`empirical-complex`, and `empirical-loop`. Native invocation depends on the
-agent: `$empirical` in Codex, `/empirical` in Claude Code, and the corresponding
-skill/command discovery UX in Cursor, Gemini CLI, and Windsurf.
-
-Generated guidance explicitly tells the current agent to conduct the Socratic
-passes, show a worktree proposal, wait for approval, execute creation, maintain
-Complex decisions, and consume exact revisions. It never starts another agent.
-
-## CLI reference
-
-```text
-empirical init [--defaults|--interactive]
-empirical config [--defaults|--interactive]
-empirical adopt
-empirical explore "<problem>" [--interactive] [--agent codex|none]
-empirical fast "<request>"
-empirical complex "<request>"
-empirical worktree create "<request>" [--workflow fast|complex]
-empirical loop
-empirical explain
-empirical status
-empirical complete --revision N --outcome <outcome> --summary "..."
-empirical verify
-empirical retry --revision N
-empirical archive --revision N
-empirical capabilities [name]
-empirical policy
-empirical integrate [--global]
-empirical doctor
-empirical migrate
-empirical mcp
-empirical update [--check]
-```
-
-Global options are `--root <path>` and `--json`. Legacy Quick can only be
-resumed from migrated state; it is never selected for new work.
-
-## MCP tools
-
-The server runs over stdio with `empirical mcp` and exposes:
-
-- discovery/setup: `empirical_explore`, `empirical_init`, `empirical_adopt`,
-  `empirical_configure`;
-- workflow: `empirical_fast`, `empirical_complex`, `empirical_loop`,
-  `empirical_next`, `empirical_complete`, `empirical_retry`,
-  `empirical_verify`, `empirical_archive`;
-- isolation: `empirical_worktree_propose`, `empirical_worktree_create`;
-- understanding: `empirical_explain`, `empirical_status`, `empirical_doctor`;
-- project context: `empirical_capabilities`, `empirical_policy`,
-  `empirical_integrate`, `empirical_migrate`.
-
-Only `empirical_worktree_create` performs the approved Git mutation. Proposal
-and Explain tools are annotated read-only.
+Only explicitly approved worktree creation mutates Git. Agent handoff returns an
+approval-bound command but never launches it itself.
 
 ## Committed layout
 
@@ -317,6 +210,7 @@ and Explain tools are annotated read-only.
 .empirical/
 ├── config.json
 ├── policy.json
+├── context/
 ├── capabilities/<capability>/spec.md
 ├── discoveries/<discovery>/
 │   ├── interview.json
@@ -333,34 +227,34 @@ and Explain tools are annotated read-only.
     └── evidence.json
 ```
 
-Feature state and journals are branch-local. Capability specs, configuration,
-and policy are project-wide committed contracts.
+Feature contracts, journals, context, capability specs, configuration, and
+policy are committed. The checkout's selected feature is stored in its own Git
+metadata and is not shared across linked worktrees.
 
-## Migration and the 0.20 reset
+## Migration and the 0.20 alpha
+
+Running the installer again is the migration: it removes only marker-owned old
+global and project-local Empirical workflow artifacts, preserves unmanaged
+content and existing runtime configuration, and converges without unnecessary
+second-run changes. Existing schema-4 projects and discovery records remain
+readable.
 
 Schema-1, schema-2, and schema-3 default root state migrates idempotently into
-the matching feature directory. Terminal root state does not reserve the
-checkout. Historical named parallel-state data is deliberately unsupported and
-is not merged; inspect it with the older package before upgrading if needed.
+the matching feature directory. Historical alternate parallel-state data is
+left untouched and unsupported.
 
-The public alpha version is reset to `0.20.0`. The old `2.0.0`, `2.2.0`,
-`2.3.0`, and `2.3.1` package versions are intentionally removed after 0.20.0 is
-published and verified. Removed npm version numbers cannot be reused.
-
-See [migration details](docs/migration-v1.md), the [protocol](docs/protocol.md),
-the [MCP guide](docs/mcp.md), and the [OpenSpec comparison](docs/openspec-comparison.md).
+See [migration details](docs/migration-v1.md), the [architecture](docs/architecture.md),
+the [MCP guide](docs/mcp.md), the [security model](docs/security.md), and the
+[OpenSpec comparison](docs/openspec-comparison.md).
 
 ## Development
 
 ```bash
 bun install
-bun run check
-bun test
-bun run test:dist
-npm pack --dry-run
+bun run ci
 ```
 
-Empirical targets Node.js 20+ at runtime. Bun is used only for development,
-tests, and building the published JavaScript package.
+Empirical targets Node.js 20+ at runtime. Bun is used for development, tests,
+and building the published JavaScript package.
 
 License: MIT.

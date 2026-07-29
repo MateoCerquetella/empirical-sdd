@@ -1,0 +1,9 @@
+[
+  {
+    "criterionId": "all",
+    "kind": "review",
+    "passed": true,
+    "artifact": "src/integrations.ts",
+    "summary": "Reviewed AC-1 through AC-6 against accepted decision D-001 and the current implementation. The typed catalog renders all native project entrypoints, reports agent-accurate invocation and reload metadata, preserves managed-file and symlink safety, and matches the documented CLI/agent distinction. The focused suite passed 10 tests with 142 assertions and git diff --check is clean."
+  }
+]

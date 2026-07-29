@@ -2,75 +2,60 @@
 
 ## First setup
 
+Install once from a terminal:
+
 ```bash
-cd my-repository
-empirical init
+npm install -g empirical-sdd
+empirical install
 ```
 
-Accept or edit the detected base, sibling checkout path, branch pattern, and
-Complex decision setting. `empirical config` changes them later.
+Open a repository in a detected coding agent, reload it as instructed by the
+installer, and invoke the one Empirical entrypoint. On first use the agent
+initializes `.empirical/`, asks only material repository-policy questions, and
+builds compact repository context. No project-local workflow command is added.
 
 ## Small feature
 
-```bash
-empirical fast "Add a hello command that prints hello"
-```
+Ask in agent chat:
 
-Implement the generated criterion, then use the exact returned command:
+> `$empirical` Add a hello command that prints `hello`.
 
-```bash
-empirical complete --revision 1 --outcome passed \
-  --summary "Added hello command" \
-  --test "hello command test passed" \
-  --review "focused diff reviewed"
-```
-
-Expected final status in that checkout:
-
-```text
-feature=add-a-hello-command-that-prints-hello phase=done status=done revision=2 profile=fast
-```
+The single entrypoint routes this eligible tiny change internally to Fast,
+implements it, runs a focused test, reviews the diff, and completes the exact
+revision. There is no separate Fast skill for you to invoke.
 
 ## Complex feature
 
-```bash
-empirical complex "Add expiring team invitations with revocation"
-```
+Ask in agent chat:
 
-At Specify, replace the spec placeholders with observable criteria and declare
-behavior deltas. At Design, complete both `design.md` and `decisions.md`. At
-Plan, write executable steps. Then implement, attach evidence, review against
-accepted decisions, and archive the validated deltas. Always use the exact
-completion command returned by the preceding action.
+> `$empirical` Add expiring team invitations with revocation and audit history.
 
-```bash
-empirical explain
-```
+The single entrypoint routes to Complex, produces an observable specification,
+design and accepted decisions, plans and implements the change, verifies every
+criterion, reviews the result, and archives validated behavior into living
+capability specs.
 
-Use Explain whenever the next step or gate is unclear.
+After the specification passes, choose one of:
+
+- Continue here.
+- Save for later.
+- Continue in a detected agent.
+
+The last choice shows an exact target, cwd, and command and requires explicit
+approval before the host agent starts anything.
 
 ## Unrelated work while active
 
-```bash
-empirical complex "Fix password reset expiry"
-```
+Ask the same entrypoint for a different feature. Empirical previews an isolated
+Git worktree with exact base commit, branch, path, and argv. After approval it
+creates and starts the request in the linked checkout. The original feature
+remains selected only in its original checkout.
 
-Empirical displays a read-only proposal such as:
-
-```text
-Base: main
-Base commit: <approved-base-commit>
-Branch: fix/fix-password-reset-expiry
-Path: ../my-repository-fix-password-reset-expiry
-Command: git worktree add -b fix/fix-password-reset-expiry ... <approved-base-commit>
-```
-
-Approve only after inspecting it. Empirical checks a clean source checkout,
-creates the branch and linked checkout without force, starts the exact request,
-and prints:
+## Upgrade
 
 ```bash
-cd "../my-repository-fix-password-reset-expiry" && empirical loop
+empirical update
 ```
 
-The original feature remains unchanged in its original checkout.
+This upgrades the package and refreshes the one global entrypoint per detected
+agent.

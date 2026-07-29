@@ -2,11 +2,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { EmpiricalProject } from "./core.js";
-import { asErrorMessage } from "./errors.js";
-import { PRODUCT_VERSION, type Evidence } from "./types.js";
+import { EmpiricalError, asErrorMessage } from "./errors.js";
+import { PRODUCT_VERSION, type AgentIntegrationId, type Evidence } from "./types.js";
 
 const profileSchema = z.enum(["fast", "complex"]);
 const changeTypeSchema = z.enum(["feature", "fix", "chore"]);
+const agentSchema = z.enum(["codex", "claude", "cursor", "gemini", "windsurf"]);
 const evidenceSchema = z.object({
   criterionId: z.string().min(1),
   kind: z.enum(["test", "browser", "screenshot", "review", "human"]),
@@ -27,7 +28,7 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     { name: "empirical-sdd", version: PRODUCT_VERSION },
     {
       instructions:
-        "Automatically use Empirical for repository-changing work. For genuinely vague work, call empirical_explore and conduct the original five Socratic passes in the current conversation, one question at a time; present the refined contract and wait for explicit approval. Choose empirical_fast only for explicit, tiny, localized, reversible, low-risk non-UI work; otherwise choose empirical_complex. One checkout has one active feature. If Fast or Complex returns worktree_proposal, show it, wait for explicit approval, then call empirical_worktree_create with approved true. Execute each exact action and complete its revision until done, blocked, or awaiting human input. Use empirical_explain for a concise evidence-backed decision trail, never private chain-of-thought. The current host agent performs all work; Empirical never launches another runtime.",
+        "Use one Empirical workflow entrypoint for repository-changing work. Initialize with empirical_init when needed, refresh compact repository knowledge with empirical_context, resume selected work with empirical_loop, use empirical_explore only for genuine ambiguity, and choose empirical_fast only for explicit tiny localized reversible low-risk non-UI work; use empirical_complex otherwise. Complete exact actions and archive reviewed deltas. After Complex Specify passes, empirical_handoff may offer current, save, or a detected-agent proposal; never start another runtime without explicit approval of the exact target and command.",
     },
   );
 
@@ -55,7 +56,36 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
       decisions: { ...(decisions ? { complexRecords: decisions } : {}) },
       setupComplete: true,
     });
-    return { state: initialized.state, config: await initialized.project.config(), integrations: initialized.integrations, next: await initialized.project.next() };
+    return { state: initialized.state, config: await initialized.project.config(), integrations: initialized.integrations, knowledge: await initialized.project.context(), next: await initialized.project.next() };
+  }));
+
+  server.registerTool("empirical_context", {
+    title: "Refresh repository knowledge",
+    description: "Create or refresh bounded file-backed repository context without embeddings or network access.",
+    inputSchema: { root: z.string().optional() },
+    annotations: { destructiveHint: false, idempotentHint: true },
+  }, async ({ root }) => toolResult(async () => (await EmpiricalProject.open(root ?? defaultRoot)).context()));
+
+  server.registerTool("empirical_handoff", {
+    title: "Offer or authorize agent handoff",
+    description: "After Complex Specify passes, return current/save/detected-agent choices or revalidate one explicitly approved exact target. This tool never launches a process.",
+    inputSchema: {
+      root: z.string().optional(),
+      agent: agentSchema.optional(),
+      approvalToken: z.string().length(64).optional(),
+      approved: z.literal(true).optional(),
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  }, async ({ root, agent, approvalToken, approved }) => toolResult(async () => {
+    const project = await EmpiricalProject.openReadOnly(root ?? defaultRoot);
+    if (!agent) return project.handoff();
+    if (!approvalToken || approved !== true) {
+      throw new EmpiricalError(
+        "HANDOFF_APPROVAL_REQUIRED",
+        "Agent handoff authorization requires approvalToken and approved: true",
+      );
+    }
+    return project.authorizeHandoff(agent as AgentIntegrationId, approvalToken, approved);
   }));
 
   server.registerTool("empirical_configure", {

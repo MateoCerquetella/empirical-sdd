@@ -123,6 +123,48 @@ describe("Git worktree isolation", () => {
     expect(await project.status()).toMatchObject({ activeFeature: "keep-the-current-feature-active", revision: 1 });
   });
 
+  test("a linked worktree does not inherit a committed blocked feature owned by its source checkout", async () => {
+    const root = await mkdtemp(join(tmpdir(), "empirical-worktree-blocked-base-"));
+    directories.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.name", "Empirical Test"]);
+    git(root, ["config", "user.email", "empirical@example.test"]);
+    await writeFile(join(root, "README.md"), "# Fixture\n", "utf8");
+    const { project } = await EmpiricalProject.initialize(root, { integrations: false, setupComplete: true });
+    const existing = await project.complex("Keep a historical feature blocked");
+    if (existing.kind !== "action") throw new Error("Expected action");
+    await project.complete({ revision: 1, outcome: "blocked", summary: "Awaiting an external decision" });
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "commit blocked feature on base"]);
+
+    const request = "Start clean work in a linked checkout";
+    const proposed = proposal(await project.fast(request));
+    directories.push(proposed.path);
+    const handoff = await project.createWorktree({
+      request,
+      workflow: proposed.workflow,
+      changeType: proposed.changeType,
+      feature: proposed.feature,
+      branch: proposed.branch,
+      path: proposed.path,
+      base: proposed.base,
+      baseCommit: proposed.baseCommit,
+      activeFeature: proposed.activeFeature,
+      approvalToken: proposed.approvalToken,
+      approved: true,
+    });
+
+    expect(handoff).toMatchObject({
+      feature: "start-clean-work-in-a-linked-checkout",
+      revision: 1,
+      action: { phase: "implement", status: "waiting" },
+    });
+    expect(await EmpiricalProject.open(proposed.path).then((linked) => linked.status()))
+      .toMatchObject({ activeFeature: "start-clean-work-in-a-linked-checkout", phase: "implement" });
+    expect(await project.status())
+      .toMatchObject({ activeFeature: "keep-a-historical-feature-blocked", status: "blocked" });
+  });
+
   test("branch and path collisions are rejected without force or workflow mutation", async () => {
     const { root, project } = await repository();
     git(root, ["add", "."]);
