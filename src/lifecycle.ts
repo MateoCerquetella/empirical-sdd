@@ -18,7 +18,7 @@ export function updateEmpirical(runner: LifecycleRunner = runInherited): UpdateR
   const empirical = process.platform === "win32" ? "empirical.cmd" : "empirical";
   const packageResult = runner(npm, ["install", "-g", "empirical-sdd@latest"]);
   assertStage(packageResult, "UPDATE_PACKAGE_FAILED", "npm package update");
-  const integrationResult = runner(empirical, ["install"]);
+  const integrationResult = runner(empirical, ["install", "--yes"]);
   assertStage(integrationResult, "UPDATE_INTEGRATIONS_FAILED", "agent integration refresh");
   return { package: "updated", integrations: "refreshed" };
 }

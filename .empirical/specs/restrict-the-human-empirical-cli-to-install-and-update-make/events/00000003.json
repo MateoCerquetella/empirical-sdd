@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 3,
+  "previousRevision": 2,
+  "actor": "agent",
+  "summary": "Designed strict public/private command dispatch, a dependency-free keyboard selector, exact target reconciliation, non-interactive update preservation, and compatibility migration",
+  "createdAt": "2026-07-29T20:37:01.746Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 3,
+    "activeFeature": "restrict-the-human-empirical-cli-to-install-and-update-make",
+    "request": "Restrict the human Empirical CLI to install and update, make install an interactive multi-agent selector modeled on npx skills with explicit non-interactive agent flags, keep workflow operations available only through MCP and the TypeScript API, and update README to exactly match the current commands",
+    "profile": "complex",
+    "phase": "plan",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Designed strict public/private command dispatch, a dependency-free keyboard selector, exact target reconciliation, non-interactive update preservation, and compatibility migration",
+    "implementationActor": null,
+    "specDigest": "31eb901828fad83236982530644418d744a9f5346b6e9b2bd7a8d68a4469f52b",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "f346fb4b0d00c743169abe35ad7a955afaa0716f125a88b79c808f5ac1b4d848",
+    "evidence": [],
+    "updatedAt": "2026-07-29T20:37:01.746Z"
+  }
+}

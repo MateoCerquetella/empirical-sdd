@@ -147,6 +147,7 @@ describe("living capability specifications", () => {
       process.execPath,
       "run",
       resolve(import.meta.dir, "../src/cli.ts"),
+      "__internal",
       "explore",
       "Make report sharing easier",
       "--root",

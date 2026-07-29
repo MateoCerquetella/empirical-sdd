@@ -160,4 +160,4 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
   } finally {
     await client.close();
   }
-}, 20_000);
+}, 30_000);

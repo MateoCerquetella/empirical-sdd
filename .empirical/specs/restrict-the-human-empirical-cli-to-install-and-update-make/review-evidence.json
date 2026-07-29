@@ -1,0 +1,8 @@
+[
+  {
+    "criterionId": "all",
+    "kind": "review",
+    "passed": true,
+    "summary": "Reviewed the complete diff against AC-1 through AC-9 and accepted decisions D-001 through D-004. Public routing is enforced before project access; selector state and terminal cleanup are bounded; reconciliation deletes only marker-owned files inside the validated home; update is staged; workflow compatibility remains MCP-first/private; docs match the public source surface. No blocking correctness, safety, compatibility, or documentation findings remain."
+  }
+]

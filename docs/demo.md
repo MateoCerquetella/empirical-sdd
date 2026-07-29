@@ -9,8 +9,10 @@ npm install -g empirical-sdd
 empirical install
 ```
 
-Open a repository in a detected coding agent, reload it as instructed by the
-installer, and invoke the one Empirical entrypoint. On first use the agent
+Select agents with the arrow keys and Space, then press Enter. Detected and
+previously installed agents start selected. Open a repository in one selected
+coding agent, reload it as instructed by the installer, and invoke the one
+Empirical entrypoint. On first use the agent
 initializes `.empirical/`, asks only material repository-policy questions, and
 builds compact repository context. No project-local workflow command is added.
 
@@ -57,5 +59,6 @@ remains selected only in its original checkout.
 empirical update
 ```
 
-This upgrades the package and refreshes the one global entrypoint per detected
-agent.
+This upgrades the package and non-interactively refreshes detected and already
+managed agent entrypoints. The only other public terminal command is
+`empirical install`.

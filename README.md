@@ -15,25 +15,28 @@ npm install -g empirical-sdd
 empirical install
 ```
 
-The registry command installs the version currently published under npm's
-`latest` tag. It does not install newer commits from a local checkout. To test
-an unreleased Empirical build, run this from the Empirical repository instead:
+`empirical install` opens a multi-select list of every supported coding agent.
+Detected agents and existing Empirical installations are labeled and selected
+by default. Use the arrow keys to move, Space to select, `a` to toggle all, and
+Enter to install.
+
+The selection is exact: Empirical installs one global entrypoint in every
+selected agent and removes only Empirical-managed entrypoints from agents you
+deselect. Unmanaged files are never overwritten or deleted. The installer works
+from any directory and neither creates repository state nor launches an agent.
+
+For scripts and unattended setup, choose agents explicitly:
 
 ```bash
-npm uninstall -g empirical-sdd
-npm install -g .
-empirical install
+# Exact selection; repeat -a/--agent
+empirical install --agent codex --agent cursor
+
+# Every supported agent
+empirical install --all
+
+# Detected agents plus existing managed installations
+empirical install --yes
 ```
-
-If `empirical install` reports `UNKNOWN_COMMAND`, an older published build is
-still installed. Do not reinstall `empirical-sdd@latest` until the release that
-contains this command has been published; install from the local checkout as
-shown above.
-
-`empirical install` works from any directory. It detects supported local agents,
-installs exactly one global Empirical entrypoint for each, removes older
-Empirical-managed Explore/Fast/Complex/Loop skills, and prints how to reload and
-invoke each agent. It does not create repository state or launch an agent.
 
 Then open your repository in a coding agent and use its one Empirical entrypoint:
 
@@ -51,8 +54,10 @@ To upgrade both the package and installed entrypoints:
 empirical update
 ```
 
-These are the only normal terminal lifecycle commands. Repository setup and
-feature workflow operations happen inside the current coding agent.
+`empirical install` and `empirical update` are the entire public terminal CLI.
+Repository setup and feature work happen inside the current coding agent; old
+terminal verbs such as `init`, `config`, `explore`, `fast`, `complex`, and
+`loop` are rejected.
 
 ## One entrypoint owns the workflow
 
@@ -196,12 +201,11 @@ does not accidentally inherit a blocked feature owned by another checkout.
 
 ## Internal automation API
 
-The TypeScript API, low-level CLI operations, and MCP tools remain stable for
-agent runtimes, scripts, tests, and migration compatibility. They include setup,
-context refresh, discovery, Fast/Complex start, resume, exact completion,
-verification, review, archive, status/explain, handoff, capability projection,
-and worktree proposal/creation. They are automation primitives, not additional
-user-facing workflow commands.
+The TypeScript API and MCP tools remain available for agent runtimes and
+programmatic integrations. They include setup, context refresh, discovery,
+Fast/Complex routing, resume, exact completion, verification, review, archive,
+status/explain, handoff, capability projection, and worktree proposal/creation.
+They are automation primitives, not additional user-facing terminal commands.
 
 The stdio MCP server exposes these groups:
 

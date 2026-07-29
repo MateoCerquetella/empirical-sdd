@@ -1,0 +1,56 @@
+[
+  {
+    "criterionId": "AC-1",
+    "kind": "test",
+    "passed": true,
+    "summary": "CLI help/no-argument routing tests and built smoke confirm the public help lists only Install and Update plus their installer flags."
+  },
+  {
+    "criterionId": "AC-2",
+    "kind": "test",
+    "passed": true,
+    "summary": "Public-routing tests reject Init, Config, Explore, Fast, Complex, and Loop with UNKNOWN_COMMAND; private CLI calls and the complete MCP suite pass."
+  },
+  {
+    "criterionId": "AC-3",
+    "kind": "test",
+    "passed": true,
+    "summary": "Selector reducer/render tests pass, and a real PTY run displayed all five agents with detected/installed badges and preselection; toggling All off then pressing Enter displayed the required empty-selection error without installing."
+  },
+  {
+    "criterionId": "AC-4",
+    "kind": "test",
+    "passed": true,
+    "summary": "Non-TTY install fails with AGENT_SELECTION_REQUIRED, while repeatable -a/--agent and --all isolated-home tests select exact agent sets; lifecycle coverage exercises --yes."
+  },
+  {
+    "criterionId": "AC-5",
+    "kind": "test",
+    "passed": true,
+    "summary": "Isolated-home reconciliation tests cover exact selected writes, deselected managed removal, convergence, unmanaged collisions, directories, symlink ancestors, and root-boundary validation."
+  },
+  {
+    "criterionId": "AC-6",
+    "kind": "test",
+    "passed": true,
+    "summary": "Lifecycle tests confirm npm update runs before empirical install --yes and that package and integration stage failures remain distinct."
+  },
+  {
+    "criterionId": "AC-7",
+    "kind": "test",
+    "passed": true,
+    "summary": "Generated-skill integration tests and source audit confirm MCP tool names remain primary and every CLI fallback uses the private __internal namespace."
+  },
+  {
+    "criterionId": "AC-8",
+    "kind": "test",
+    "passed": true,
+    "summary": "README and documentation audit found only Install and Update as normal user terminal commands and documents selector controls, automation flags, agent invocations, MCP workflow ownership, and update behavior."
+  },
+  {
+    "criterionId": "AC-9",
+    "kind": "test",
+    "passed": true,
+    "summary": "TypeScript check, full Bun suite, built CLI/MCP smoke, and npm package dry-run all pass."
+  }
+]

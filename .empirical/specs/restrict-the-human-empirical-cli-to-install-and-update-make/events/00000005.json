@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 5,
+  "previousRevision": 4,
+  "actor": "agent",
+  "summary": "Restricted the public terminal CLI to Install and Update, added an interactive detected/managed multi-agent selector with exact automation flags and safe reconciliation, moved workflow fallbacks into the private namespace, made Update refresh non-interactively, migrated tests and package smoke, and rewrote README and supporting docs to match the source.",
+  "createdAt": "2026-07-29T20:52:18.503Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 5,
+    "activeFeature": "restrict-the-human-empirical-cli-to-install-and-update-make",
+    "request": "Restrict the human Empirical CLI to install and update, make install an interactive multi-agent selector modeled on npx skills with explicit non-interactive agent flags, keep workflow operations available only through MCP and the TypeScript API, and update README to exactly match the current commands",
+    "profile": "complex",
+    "phase": "verify",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Restricted the public terminal CLI to Install and Update, added an interactive detected/managed multi-agent selector with exact automation flags and safe reconciliation, moved workflow fallbacks into the private namespace, made Update refresh non-interactively, migrated tests and package smoke, and rewrote README and supporting docs to match the source.",
+    "implementationActor": "agent",
+    "specDigest": "31eb901828fad83236982530644418d744a9f5346b6e9b2bd7a8d68a4469f52b",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "f346fb4b0d00c743169abe35ad7a955afaa0716f125a88b79c808f5ac1b4d848",
+    "evidence": [],
+    "updatedAt": "2026-07-29T20:52:18.503Z"
+  }
+}

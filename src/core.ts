@@ -107,7 +107,7 @@ export class EmpiricalProject {
     if (await isFile(join(absoluteRoot, "ai", "STATE.md"))) {
       throw new EmpiricalError(
         "LEGACY_PROJECT",
-        "An Empirical v1 ai/ workspace already exists; run empirical adopt",
+        "An Empirical v1 ai/ workspace already exists; use the Empirical agent entrypoint to adopt it",
       );
     }
     const profile = options.profile ?? "complex";
@@ -142,7 +142,7 @@ export class EmpiricalProject {
     if (!(await isFile(legacyStatePath))) {
       throw new EmpiricalError(
         "LEGACY_NOT_FOUND",
-        "No ai/STATE.md was found; use empirical init for a new repository",
+        "No ai/STATE.md was found; use the Empirical agent entrypoint for a new repository",
       );
     }
     const legacy = await readFile(legacyStatePath, "utf8");
@@ -231,8 +231,8 @@ export class EmpiricalProject {
       knowledgeContext: await existingKnowledgePaths(this.store.root),
       capabilityContext: capabilities.map((capability) => capability.path),
       next: {
-        fast: `empirical fast ${JSON.stringify(cleanProblem)}`,
-        complex: `empirical complex ${JSON.stringify(cleanProblem)}`,
+        fast: `empirical __internal fast ${JSON.stringify(cleanProblem)}`,
+        complex: `empirical __internal complex ${JSON.stringify(cleanProblem)}`,
       },
     };
   }
@@ -377,7 +377,7 @@ export class EmpiricalProject {
     if (arguments.length > 0) {
       throw new EmpiricalError(
         "INVALID_ARGUMENT",
-        "Loop only resumes current work; start new work with empirical fast or empirical complex",
+        "Loop only resumes current work; start new work through empirical_fast or empirical_complex",
       );
     }
     return this.next();
@@ -528,7 +528,7 @@ export class EmpiricalProject {
         feature: result.feature!,
         revision: result.revision,
         workflow: proposal.workflow,
-        resume: `cd ${JSON.stringify(proposal.path)} && empirical loop`,
+        resume: `cd ${JSON.stringify(proposal.path)} && empirical __internal loop`,
         action: result,
       };
     } catch (error) {
@@ -587,13 +587,13 @@ export class EmpiricalProject {
         throw new EmpiricalError("NO_ACTIVE_PHASE", "There is no active phase to complete");
       }
       if (current.phase === "archive") {
-        throw new EmpiricalError("ARCHIVE_REQUIRED", "Use empirical archive for the reviewed revision");
+        throw new EmpiricalError("ARCHIVE_REQUIRED", "Use empirical_archive for the reviewed revision");
       }
       if (current.status === "blocked") {
-        throw new EmpiricalError("WORKFLOW_BLOCKED", "Resolve the blocker and run empirical retry");
+        throw new EmpiricalError("WORKFLOW_BLOCKED", "Resolve the blocker and call empirical_retry");
       }
       if (current.status === "awaiting_human") {
-        throw new EmpiricalError("AWAITING_HUMAN", "Run empirical retry after the decision is provided");
+        throw new EmpiricalError("AWAITING_HUMAN", "Call empirical_retry after the decision is provided");
       }
       const specBefore = await this.store.readSpec(current.activeFeature);
       const specBeforeDigest = digest(specBefore);
@@ -1158,8 +1158,8 @@ function actionPacket(
       mcpTool: archive ? "empirical_archive" : "empirical_complete",
       cli: completionAvailable
         ? archive
-          ? `empirical archive --revision ${state.revision}`
-          : `empirical complete --revision ${state.revision} --outcome passed --summary "<what you did>"${fastCliEvidence ?? (evidence.length > 0 ? " --evidence <evidence.json>" : "")}`
+          ? `empirical __internal archive --revision ${state.revision}`
+          : `empirical __internal complete --revision ${state.revision} --outcome passed --summary "<what you did>"${fastCliEvidence ?? (evidence.length > 0 ? " --evidence <evidence.json>" : "")}`
         : "",
       requiredFields: completionAvailable
         ? archive
@@ -1235,7 +1235,7 @@ function assertStartAction(
 function instructionsFor(state: WorkflowState, policy: ProjectPolicy): string {
   if (state.status === "blocked") return appendPolicy(`Stop. Resolve this blocker before retrying: ${state.message ?? "unknown"}`, state, policy);
   if (state.status === "awaiting_human") return appendPolicy(`Stop and ask the user: ${state.message ?? "a decision is required"}`, state, policy);
-  if (state.phase === "idle") return appendPolicy("No feature is active. Explore genuinely vague work first; otherwise start it with empirical_fast or empirical_complex. Use empirical loop only to resume current work.", state, policy);
+  if (state.phase === "idle") return appendPolicy("No feature is active. Explore genuinely vague work first; otherwise start it with empirical_fast or empirical_complex. Use empirical_loop only to resume current work.", state, policy);
   if (state.phase === "done") return appendPolicy("The feature passed verification, review, and required capability archive. Report completion; delivery is manual.", state, policy);
   const feature = state.activeFeature ?? "current feature";
   const instructions: Record<Exclude<Phase, "idle" | "done">, string> = {

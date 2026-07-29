@@ -1,12 +1,11 @@
-# Agent Integrations Specification
+# Agent Integrations
 
 ## Purpose
 
-Make Empirical workflows discoverable and safely invocable either from one
-repository or globally across a developer's projects using each supported
-agent's native extension mechanism.
+Make Empirical's human CLI minimal and make agent selection explicit without
+removing the internal workflow engine used by installed agents.
 
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Explicit global skill installation
 
@@ -42,17 +41,18 @@ MUST be removed safely and repeatably.
 - **THEN** its marker-owned Empirical skills are removed
 - **AND** unmanaged content at any corresponding path is preserved and reported
 
-### Requirement: Global discovery guidance is agent-accurate
+### Requirement: Honest command discovery report
 
-Human and structured installation reports MUST identify each native global
-skill root and provide accurate invocation and reload guidance without claiming
-that all agents expose slash commands or prompt-capable sessions.
+Normal help and README MUST present only `empirical install`, `empirical
+update`, and native in-agent invocation. Direct state-machine verbs MUST be
+rejected as human commands. MCP, the TypeScript API, and a private internal CLI
+transport MAY retain workflow operations for installed agents and compatibility.
 
-#### Scenario: Installation finishes
+#### Scenario: A developer asks for help or invokes a removed verb
 
-- **WHEN** global installation succeeds
-- **THEN** the developer sees one Empirical invocation for every installed target
-- **AND** the report distinguishes native skill syntax accurately
+- **WHEN** the developer runs `empirical`, `empirical --help`, or `empirical init`
+- **THEN** help exposes only Install and Update
+- **AND** the removed direct verb cannot start or mutate workflow state
 
 ### Requirement: Native user-invocable workflow entrypoints
 
@@ -66,19 +66,6 @@ and hand off without asking the user to invoke state-machine commands.
 - **WHEN** the user invokes the one Empirical skill
 - **THEN** the current agent performs all required internal workflow operations
 - **AND** normal terminal commands remain limited to Install and Update
-
-### Requirement: Honest command discovery report
-
-Normal help and README MUST present only `empirical install`, `empirical
-update`, and native in-agent invocation. Direct state-machine verbs MUST be
-rejected as human commands. MCP, the TypeScript API, and a private internal CLI
-transport MAY retain workflow operations for installed agents and compatibility.
-
-#### Scenario: A developer asks for help or invokes a removed verb
-
-- **WHEN** the developer runs `empirical`, `empirical --help`, or `empirical init`
-- **THEN** help exposes only Install and Update
-- **AND** the removed direct verb cannot start or mutate workflow state
 
 ### Requirement: Update converges package and integrations
 

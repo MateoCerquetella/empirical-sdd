@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 4,
+  "previousRevision": 3,
+  "actor": "agent",
+  "summary": "Planned selector state and TTY adapter, exact integration reconciliation, strict private dispatch, lifecycle migration, documentation alignment, and full distribution verification",
+  "createdAt": "2026-07-29T20:38:19.697Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 4,
+    "activeFeature": "restrict-the-human-empirical-cli-to-install-and-update-make",
+    "request": "Restrict the human Empirical CLI to install and update, make install an interactive multi-agent selector modeled on npx skills with explicit non-interactive agent flags, keep workflow operations available only through MCP and the TypeScript API, and update README to exactly match the current commands",
+    "profile": "complex",
+    "phase": "implement",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Planned selector state and TTY adapter, exact integration reconciliation, strict private dispatch, lifecycle migration, documentation alignment, and full distribution verification",
+    "implementationActor": null,
+    "specDigest": "31eb901828fad83236982530644418d744a9f5346b6e9b2bd7a8d68a4469f52b",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "f346fb4b0d00c743169abe35ad7a955afaa0716f125a88b79c808f5ac1b4d848",
+    "evidence": [],
+    "updatedAt": "2026-07-29T20:38:19.697Z"
+  }
+}

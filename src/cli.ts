@@ -17,9 +17,11 @@ import {
   type SocraticAnswer,
 } from "./discovery.js";
 import { EmpiricalError, asErrorMessage } from "./errors.js";
-import { installGlobalAgentSkills } from "./integrations.js";
+import { SUPPORTED_AGENTS, detectSupportedAgents } from "./agents.js";
+import { installGlobalAgentSkills, managedGlobalAgentIds } from "./integrations.js";
 import { updateEmpirical } from "./lifecycle.js";
 import { runMcpServer } from "./mcp.js";
+import { selectAgentsInteractive, type AgentSelectorItem } from "./selector.js";
 import { detectBase } from "./worktrees.js";
 import {
   PRODUCT_VERSION,
@@ -46,19 +48,73 @@ interface CliContext {
 
 async function main(): Promise<void> {
   const context = parseGlobals(process.argv.slice(2));
-  const command = context.args.shift();
+  let command = context.args.shift();
   if (!command) return printHelp();
   if (["help", "--help", "-h"].includes(command)) return printHelp();
   if (["version", "--version", "-v"].includes(command)) return void console.log(PRODUCT_VERSION);
   if (command === "mcp") return runMcpServer(context.root);
+  const internal = command === "__internal";
+  if (internal) {
+    command = context.args.shift();
+    if (!command) throw new EmpiricalError("INVALID_ARGUMENT", "The private automation namespace requires an operation");
+  } else if (command !== "install" && command !== "update") {
+    throw new EmpiricalError(
+      "UNKNOWN_COMMAND",
+      `Unknown public command '${command}'. Use empirical install or empirical update; repository workflows run inside the installed agent entrypoint.`,
+    );
+  }
 
   switch (command) {
     case "install": {
       const all = takeFlag(context.args, "--all");
+      const yes = takeFlag(context.args, "--yes") || takeFlag(context.args, "-y");
+      const requested = takeOptions(context.args, ["--agent", "-a"]);
+      if ([all, yes, requested.length > 0].filter(Boolean).length > 1) {
+        throw new EmpiricalError("INVALID_ARGUMENT", "Choose only one of --agent, --all, or --yes");
+      }
       assertNoArgs(context.args, "install");
-      const report = await installGlobalAgentSkills(homedir(), { all });
+      const supportedIds = new Set(SUPPORTED_AGENTS.map((agent) => agent.id));
+      const invalid = requested.find((id) => !supportedIds.has(id as AgentIntegrationId));
+      if (invalid) throw new EmpiricalError("INVALID_ARGUMENT", `Unsupported agent '${invalid}'`);
+      const home = homedir();
+      const detectedIds = new Set((await detectSupportedAgents({ homeRoot: home })).map((agent) => agent.id));
+      const managedIds = new Set(await managedGlobalAgentIds(home));
+      let agents: AgentIntegrationId[];
+      if (requested.length > 0) {
+        agents = [...new Set(requested)] as AgentIntegrationId[];
+      } else if (all) {
+        agents = SUPPORTED_AGENTS.map((agent) => agent.id);
+      } else if (yes) {
+        agents = SUPPORTED_AGENTS
+          .filter((agent) => detectedIds.has(agent.id) || managedIds.has(agent.id))
+          .map((agent) => agent.id);
+        if (agents.length === 0) {
+          throw new EmpiricalError("AGENT_SELECTION_REQUIRED", "No detected or previously installed agents. Use empirical install --agent <name> or --all.");
+        }
+      } else {
+        if (context.json || !process.stdin.isTTY || !process.stdout.isTTY) {
+          throw new EmpiricalError(
+            "AGENT_SELECTION_REQUIRED",
+            "Interactive selection requires a terminal. Use --agent <name> (repeatable), --all, or --yes.",
+          );
+        }
+        const items: AgentSelectorItem[] = SUPPORTED_AGENTS.map((agent) => ({
+          id: agent.id,
+          label: agent.agent,
+          detected: detectedIds.has(agent.id),
+          managed: managedIds.has(agent.id),
+        }));
+        try {
+          agents = await selectAgentsInteractive(items, SUPPORTED_AGENTS
+            .filter((agent) => detectedIds.has(agent.id) || managedIds.has(agent.id))
+            .map((agent) => agent.id));
+        } catch (error) {
+          throw new EmpiricalError("INSTALL_CANCELLED", asErrorMessage(error));
+        }
+      }
+      const report = await installGlobalAgentSkills(home, { agents });
       emit(report, context.json, () => renderIntegrationReport(
-        `Empirical installed one entrypoint per agent (${report.created.length} created, ${report.updated.length} updated, ${report.removed.length} obsolete removed, ${report.preserved.length} preserved).`,
+        `Empirical reconciled ${agents.length} selected agent${agents.length === 1 ? "" : "s"} (${report.created.length} created, ${report.updated.length} updated, ${report.removed.length} removed, ${report.preserved.length} preserved).`,
         report,
       ));
       return;
@@ -186,7 +242,7 @@ async function main(): Promise<void> {
     case "worktree": {
       const operation = context.args.shift();
       if (operation !== "create") {
-        throw new EmpiricalError("INVALID_ARGUMENT", "Use empirical worktree create \"<request>\"");
+        throw new EmpiricalError("INVALID_ARGUMENT", "Use empirical __internal worktree create \"<request>\"");
       }
       const yes = takeFlag(context.args, "--yes");
       const workflow = (takeOption(context.args, "--workflow") ?? "complex") as Workflow;
@@ -629,7 +685,7 @@ function launchCodexRuntime(root: string, record: DiscoveryRecord): void {
   const handoff = record.handoff!;
   const request = [
     `Resume the active Empirical workflow for feature ${handoff.feature}.`,
-    "Run empirical loop once, execute the exact action, complete every revision with required evidence, and continue until Done, Blocked, or genuinely awaiting human input.",
+    "Call empirical_loop once, execute the exact action, complete every revision with required evidence, and continue until Done, Blocked, or genuinely awaiting human input.",
     `Use .empirical/discoveries/${record.id}/brief.md as the approved product contract.`,
   ].join(" ");
   console.log("\nLaunching Codex with the approved workflow handoff...");
@@ -722,6 +778,20 @@ function takeOption(args: string[], name: string): string | undefined {
   if (!value || value.startsWith("--")) throw new EmpiricalError("INVALID_ARGUMENT", `${name} requires a value`);
   args.splice(index, 2);
   return value;
+}
+
+function takeOptions(args: string[], names: string[]): string[] {
+  const values: string[] = [];
+  while (true) {
+    const indexes = names.map((name) => args.indexOf(name)).filter((index) => index >= 0);
+    if (indexes.length === 0) return values;
+    const index = Math.min(...indexes);
+    const name = args[index]!;
+    const value = args[index + 1];
+    if (!value || value.startsWith("-")) throw new EmpiricalError("INVALID_ARGUMENT", `${name} requires a value`);
+    values.push(value);
+    args.splice(index, 2);
+  }
 }
 
 function takeFlag(args: string[], name: string): boolean {
@@ -826,24 +896,26 @@ function printHelp(): void {
 Install once: npm install -g empirical-sdd
 
 Lifecycle:
-  empirical install [--all]   Install one Empirical entrypoint in detected agents
-  empirical update            Update the package and refresh installed entrypoints
+  empirical install            Choose agents in an interactive selector
+  empirical update             Update the package and refresh installed entrypoints
+
+Installer automation:
+  empirical install --agent codex --agent cursor
+  empirical install --all
+  empirical install --yes
 
 Repository work happens inside your coding agent through its one Empirical
 entrypoint. It initializes the repository, builds compact context, clarifies
 vague work, chooses the internal workflow, resumes work, and offers explicit
-agent handoff when a specification is ready.
-
-Low-level CLI and MCP operations remain available for agent automation and
-existing scripts, but users do not need to select Explore, Fast, Complex, or Loop.`);
+agent handoff when a specification is ready.`);
 }
 
 function printExploreHelp(): void {
   console.log(`Conduct the original five-pass Socratic discovery before state is created.
 
-  empirical explore "<vague problem>"
-  empirical explore "<vague problem>" --agent codex
-  empirical explore "<vague problem>" --json
+  empirical __internal explore "<vague problem>"
+  empirical __internal explore "<vague problem>" --agent codex
+  empirical __internal explore "<vague problem>" --json
 
 The interview asks problem/user, observable outcome, boundaries/non-goals,
 failure/risk, and verification one question at a time, saves answers, presents
@@ -854,10 +926,10 @@ function printCompleteHelp(): void {
   console.log(`Complete the current exact revision.
 
 Fast:
-  empirical complete --revision N --outcome passed --summary "<change>" --test "<result>" --review "<diff review>"
+  empirical __internal complete --revision N --outcome passed --summary "<change>" --test "<result>" --review "<diff review>"
 
 Complex evidence phases:
-  empirical complete --revision N --outcome passed --summary "<result>" --evidence <evidence.json>
+  empirical __internal complete --revision N --outcome passed --summary "<result>" --evidence <evidence.json>
 
 Use --input <file|-> for a complete structured result document.`);
 }

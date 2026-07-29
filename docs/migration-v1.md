@@ -2,20 +2,14 @@
 
 ## Empirical v1 (`ai/`)
 
-```bash
-empirical adopt
-```
-
-Adoption reads `ai/STATE.md`, copies the current spec when available, writes
+Invoke the installed Empirical entrypoint in the repository. Adoption reads
+`ai/STATE.md`, copies the current spec when available, writes
 schema-4 configuration and feature-local state, and leaves `ai/` untouched.
 
 ## Earlier npm alpha schemas
 
-```bash
-empirical migrate
-```
-
-Schema-1, schema-2, and schema-3 default state at `.empirical/state.json` and
+Invoke the installed Empirical entrypoint after upgrading. Schema-1, schema-2,
+and schema-3 default state at `.empirical/state.json` and
 its root journal are normalized and copied to:
 
 ```text

@@ -19,7 +19,8 @@ const transport = new StdioClientTransport({
 const client = new Client({ name: "empirical-dist-smoke", version: "1.0.0" });
 
 async function runCli(directory: string, args: string[]) {
-  const child = Bun.spawn(["node", cli, ...args, "--root", directory], { stdout: "pipe", stderr: "pipe" });
+  const publicCommand = ["help", "--help", "-h", "--version", "-v", "install", "update"].includes(args[0] ?? "");
+  const child = Bun.spawn(["node", cli, ...(publicCommand ? args : ["__internal", ...args]), "--root", directory], { stdout: "pipe", stderr: "pipe" });
   const [stdout, stderr, code] = await Promise.all([
     new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited,
   ]);
@@ -158,7 +159,9 @@ Run existing and new sign-in tests.
 
   const version = await runCli(root, ["--version"]);
   const packageJson = JSON.parse(await readFile(resolve(import.meta.dir, "../package.json"), "utf8")) as { version: string };
-  if (version.stdout.trim() !== packageJson.version || packageJson.version !== "0.20.0") throw new Error("Bundled/package version mismatch");
+  if (version.stdout.trim() !== packageJson.version || packageJson.version !== "0.20.0") {
+    throw new Error(`Bundled/package version mismatch: cli=${JSON.stringify(version.stdout.trim())} package=${JSON.stringify(packageJson.version)} stderr=${JSON.stringify(version.stderr)}`);
+  }
   const help = await runCli(root, ["help"]);
   if (!help.stdout.includes("empirical install") || !help.stdout.includes("empirical update")) throw new Error("Bundled help omitted lifecycle UX");
   for (const hidden of ["empirical init", "empirical explore", "empirical fast", "empirical complex", "empirical loop"]) {

@@ -6,6 +6,7 @@ import { join, parse } from "node:path";
 import { EmpiricalProject } from "../src/core.js";
 import { EmpiricalError } from "../src/errors.js";
 import { installGlobalAgentSkills } from "../src/integrations.js";
+import type { IntegrationReport } from "../src/types.js";
 
 const directories: string[] = [];
 const obsoleteSkillNames = [
@@ -109,6 +110,8 @@ describe("agent integrations", () => {
       expect(contents).toContain("five Socratic passes");
       expect(contents).toContain("call empirical_fast only when");
       expect(contents).toContain("Continue here, Save for later");
+      expect(contents).toContain("empirical __internal loop");
+      expect(contents).not.toMatch(/empirical (?:init|explore|fast|complex|loop|complete|archive|context|handoff)(?:\s|$)/);
       for (const obsolete of obsoleteSkillNames) {
         await expect(readFile(join(home, ...segments, obsolete, "SKILL.md"), "utf8"))
           .rejects.toBeDefined();
@@ -149,6 +152,27 @@ describe("agent integrations", () => {
       ".gemini/skills/empirical-loop/SKILL.md (existing non-file)",
     );
     expect((await lstat(nonFile)).isDirectory()).toBe(true);
+  });
+
+  test("an explicit selection installs selected agents and removes only deselected managed skills", async () => {
+    const home = await temporaryDirectory("empirical-global-selection-");
+    await installGlobalAgentSkills(home, { all: true, pathValue: "" });
+    const unmanaged = join(home, ".claude", "skills", "my-skill", "SKILL.md");
+    await mkdir(join(unmanaged, ".."), { recursive: true });
+    await writeFile(unmanaged, "# Mine\n", "utf8");
+
+    const report = await installGlobalAgentSkills(home, { agents: ["codex", "cursor"], pathValue: "" });
+    expect(report.entrypoints.map((entrypoint) => entrypoint.id)).toEqual(["codex", "cursor"]);
+    expect(report.removed).toEqual(expect.arrayContaining([
+      ".claude/skills/empirical/SKILL.md",
+      ".gemini/skills/empirical/SKILL.md",
+      ".codeium/windsurf/skills/empirical/SKILL.md",
+    ]));
+    expect(await readFile(unmanaged, "utf8")).toBe("# Mine\n");
+    expect(await readFile(join(home, ".codex", "skills", "empirical", "SKILL.md"), "utf8"))
+      .toContain("name: empirical");
+    await expect(readFile(join(home, ".claude", "skills", "empirical", "SKILL.md"), "utf8"))
+      .rejects.toBeDefined();
   });
 
   test("global refresh does not follow skill or parent-directory symbolic links", async () => {
@@ -193,7 +217,7 @@ describe("agent integrations", () => {
     });
     expect(human.status).toBe(0);
     expect(human.stderr).toBe("");
-    expect(human.stdout).toContain("one entrypoint per agent (5 created");
+    expect(human.stdout).toContain("reconciled 5 selected agents (5 created");
     expect(human.stdout).toContain("Installed Empirical entrypoints:");
     expect(human.stdout).toContain(`Codex (${join(home, ".codex", "skills")}): $empirical`);
     expect(human.stdout).toContain("Windsurf");
@@ -214,14 +238,68 @@ describe("agent integrations", () => {
   });
 
   test("primary help exposes only install and update as normal terminal commands", () => {
-    const cwd = spawnSync(process.execPath, [join(import.meta.dir, "..", "src", "cli.ts"), "help"], {
+    const cli = join(import.meta.dir, "..", "src", "cli.ts");
+    const cwd = spawnSync(process.execPath, [cli, "help"], {
       encoding: "utf8",
     });
     expect(cwd.status).toBe(0);
     expect(cwd.stdout).toContain("empirical install");
     expect(cwd.stdout).toContain("empirical update");
-    expect(cwd.stdout).not.toContain("empirical fast");
-    expect(cwd.stdout).not.toContain("empirical complex");
-    expect(cwd.stdout).not.toContain("empirical loop");
+    for (const hidden of [
+      "init", "config", "explore", "fast", "complex", "loop", "complete",
+      "archive", "status", "integrate", "doctor", "migrate",
+    ]) expect(cwd.stdout).not.toContain(`empirical ${hidden}`);
+    const empty = spawnSync(process.execPath, [cli], { encoding: "utf8" });
+    expect(empty.status).toBe(0);
+    expect(empty.stdout).toBe(cwd.stdout);
+  });
+
+  test("public workflow verbs are rejected before project discovery", () => {
+    const cli = join(import.meta.dir, "..", "src", "cli.ts");
+    for (const command of ["init", "config", "explore", "fast", "complex", "loop"]) {
+      const result = spawnSync(process.execPath, [cli, command], { encoding: "utf8" });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("UNKNOWN_COMMAND");
+      expect(result.stderr).toContain("empirical install or empirical update");
+    }
+  });
+
+  test("non-interactive install requires an explicit selection", async () => {
+    const home = await temporaryDirectory("empirical-global-no-tty-");
+    const cli = join(import.meta.dir, "..", "src", "cli.ts");
+    const result = spawnSync(process.execPath, [cli, "install"], {
+      encoding: "utf8",
+      env: { ...process.env, HOME: home, USERPROFILE: home, PATH: "" },
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("AGENT_SELECTION_REQUIRED");
+    expect(result.stderr).toContain("--agent <name>");
+  });
+
+  test("repeatable agent flags install the exact selection", async () => {
+    const home = await temporaryDirectory("empirical-global-flags-");
+    const cli = join(import.meta.dir, "..", "src", "cli.ts");
+    const result = spawnSync(process.execPath, [
+      cli, "install", "-a", "codex", "--agent", "gemini", "--json",
+    ], {
+      encoding: "utf8",
+      env: { ...process.env, HOME: home, USERPROFILE: home, PATH: "" },
+    });
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout) as Awaited<ReturnType<typeof installGlobalAgentSkills>>;
+    expect(report.entrypoints.map((entrypoint) => entrypoint.id)).toEqual(["codex", "gemini"]);
+  });
+
+  test("yes mode preserves detected agents without prompting", async () => {
+    const home = await temporaryDirectory("empirical-global-yes-");
+    await mkdir(join(home, ".codex"), { recursive: true });
+    const cli = join(import.meta.dir, "..", "src", "cli.ts");
+    const result = spawnSync(process.execPath, [cli, "install", "--yes", "--json"], {
+      encoding: "utf8",
+      env: { ...process.env, HOME: home, USERPROFILE: home, PATH: "" },
+    });
+    expect(result.status).toBe(0);
+    expect((JSON.parse(result.stdout) as IntegrationReport).entrypoints.map((entrypoint) => entrypoint.id))
+      .toEqual(["codex"]);
   });
 });

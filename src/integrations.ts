@@ -8,7 +8,7 @@ import {
 } from "./agents.js";
 import { EmpiricalError } from "./errors.js";
 import { isFile, readJson, writeJsonAtomic, writeTextAtomic } from "./storage.js";
-import type { IntegrationReport } from "./types.js";
+import type { AgentIntegrationId, IntegrationReport } from "./types.js";
 
 const START = "<!-- empirical-sdd:start -->";
 const END = "<!-- empirical-sdd:end -->";
@@ -35,16 +35,16 @@ Loop skills.
 1. If the repository is not initialized, inspect its manifests, documentation,
    source and test layout; ask only first-run answers that materially change Git
    isolation or decision policy; then pass the chosen isolation, base, worktree
-   path, branch pattern, and decision policy to empirical_init or the equivalent
-   internal empirical init flags. Do not install project-local workflow skills.
-2. Call empirical_context (CLI fallback: empirical context) on first use and
+   path, branch pattern, and decision policy to empirical_init (private CLI
+   fallback: empirical __internal init). Do not install project-local workflow skills.
+2. Call empirical_context (CLI fallback: empirical __internal context) on first use and
    whenever it reports stale repository knowledge. Complete or refresh the
    compact overview, architecture, commands, and conventions pages from actual
    repository evidence. Retrieve only context relevant to the current action.
 3. If Empirical reports selected non-terminal work, call empirical_loop or
-   empirical loop with no request or profile and resume it. Never replace active
+   empirical __internal loop with no request or profile and resume it. Never replace active
    work with attached invocation text.
-4. For a genuinely vague new idea, call empirical_explore or empirical explore
+4. For a genuinely vague new idea, call empirical_explore or empirical __internal explore
    "<idea>" --no-interview for context, then conduct five Socratic passes in the
    current conversation: problem/user, observable outcome, boundaries/non-goals,
    failure/risk, and verification. Ask one question at a time, add only a
@@ -54,7 +54,7 @@ Loop skills.
    tiny, localized, reversible, low-risk, and non-UI. Call empirical_complex for
    everything else, including UI, architecture, public APIs, security,
    permissions, payments, migrations, dependencies, infrastructure, or
-   cross-cutting work. CLI fallbacks are empirical fast and empirical complex;
+   cross-cutting work. CLI fallbacks are empirical __internal fast and empirical __internal complex;
    these are internal operations, not additional user commands.
 6. If unrelated work returns a worktree proposal, show its exact base, commit,
    branch, path, and command. Wait for explicit approval, then execute only the
@@ -64,7 +64,7 @@ Loop skills.
    the next action. After Review, archive validated capability deltas. Stop only
    at Done, Blocked, or genuinely awaiting human input.
 8. When a Complex Specify action has passed and the returned phase is Design,
-   call empirical_handoff (CLI fallback: empirical handoff) and offer exactly:
+   call empirical_handoff (CLI fallback: empirical __internal handoff) and offer exactly:
    Continue here, Save for later, or Continue in one detected agent. Detection
    and Save launch nothing. Before another runtime starts, display the selected
    agent, capability, cwd, and exact argv; wait for explicit human approval;
@@ -85,7 +85,17 @@ const MCP_SERVER = {
 
 export interface InstallGlobalAgentSkillsOptions {
   all?: boolean;
+  agents?: AgentIntegrationId[];
   pathValue?: string;
+}
+
+export async function managedGlobalAgentIds(homeRoot = homedir()): Promise<AgentIntegrationId[]> {
+  const home = validateHomeRoot(homeRoot);
+  const managed: AgentIntegrationId[] = [];
+  for (const definition of SUPPORTED_AGENTS) {
+    if (await hasManagedGlobalTarget(home, definition)) managed.push(definition.id);
+  }
+  return managed;
 }
 
 export async function installProjectIntegrations(root: string): Promise<IntegrationReport> {
@@ -110,17 +120,28 @@ export async function installGlobalAgentSkills(
   options: InstallGlobalAgentSkillsOptions = {},
 ): Promise<IntegrationReport> {
   const home = validateHomeRoot(homeRoot);
+  if (options.all && options.agents) {
+    throw new EmpiricalError("INVALID_ARGUMENT", "Choose either all agents or explicit agents, not both");
+  }
   const detected = await detectSupportedAgents({
     homeRoot: home,
     ...(options.pathValue !== undefined ? { pathValue: options.pathValue } : {}),
     ...(options.all !== undefined ? { includeAll: options.all } : {}),
   });
   const detectedIds = new Set(detected.map((agent) => agent.id));
-  for (const definition of SUPPORTED_AGENTS) {
-    if (await hasManagedGlobalTarget(home, definition)) detectedIds.add(definition.id);
-  }
+  for (const id of await managedGlobalAgentIds(home)) detectedIds.add(id);
 
-  const selected = SUPPORTED_AGENTS.filter((definition) => detectedIds.has(definition.id));
+  const requestedIds = options.agents
+    ? new Set(options.agents)
+    : options.all
+      ? new Set(SUPPORTED_AGENTS.map((definition) => definition.id))
+      : detectedIds;
+  for (const id of requestedIds) {
+    if (!SUPPORTED_AGENTS.some((definition) => definition.id === id)) {
+      throw new EmpiricalError("INVALID_ARGUMENT", `Unsupported agent '${id}'`);
+    }
+  }
+  const selected = SUPPORTED_AGENTS.filter((definition) => requestedIds.has(definition.id));
   const report = emptyReport("global");
   report.entrypoints = selected.map((definition) => ({
     id: definition.id,
@@ -131,9 +152,13 @@ export async function installGlobalAgentSkills(
     reload: definition.reload,
   }));
 
-  for (const definition of selected) {
+  for (const definition of SUPPORTED_AGENTS) {
     const skillRoot = join(home, ...definition.skillSegments);
-    await writeManagedFile(home, join(skillRoot, "empirical", "SKILL.md"), SINGLE_AGENT_SKILL, report);
+    if (requestedIds.has(definition.id)) {
+      await writeManagedFile(home, join(skillRoot, "empirical", "SKILL.md"), SINGLE_AGENT_SKILL, report);
+    } else if (options.agents || options.all) {
+      await removeManagedFile(home, join(skillRoot, "empirical", "SKILL.md"), report);
+    }
     for (const obsolete of OBSOLETE_ENTRYPOINTS) {
       await removeManagedFile(home, join(skillRoot, obsolete, "SKILL.md"), report);
     }

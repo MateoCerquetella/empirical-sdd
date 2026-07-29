@@ -11,7 +11,7 @@ describe("package lifecycle", () => {
     expect(updateEmpirical(runner)).toEqual({ package: "updated", integrations: "refreshed" });
     expect(calls).toEqual([
       [process.platform === "win32" ? "npm.cmd" : "npm", ["install", "-g", "empirical-sdd@latest"]],
-      [process.platform === "win32" ? "empirical.cmd" : "empirical", ["install"]],
+      [process.platform === "win32" ? "empirical.cmd" : "empirical", ["install", "--yes"]],
     ]);
   });
 

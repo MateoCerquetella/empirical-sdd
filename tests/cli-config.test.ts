@@ -23,12 +23,14 @@ async function run(args: string[], input = "") {
   return { stdout, stderr, exitCode };
 }
 
+const internal = (args: string[]): string[] => ["__internal", ...args];
+
 describe("first-run configuration CLI", () => {
   test("forced interactive init asks once and persists every answer", async () => {
     const directory = await root();
-    const first = await run([
+    const first = await run(internal([
       "init", "--interactive", "--no-integrations", "--root", directory,
-    ], "off\nmain\n../{repo}-sandbox-{feature}\n{type}/team-{feature}\nrequired\n");
+    ]), "off\nmain\n../{repo}-sandbox-{feature}\n{type}/team-{feature}\nrequired\n");
     expect(first.exitCode).toBe(0);
     expect(first.stderr).toBe("");
     expect(first.stdout).toContain("Empirical first-run setup");
@@ -45,25 +47,25 @@ describe("first-run configuration CLI", () => {
       decisions: { complexRecords: "required" },
     });
 
-    const second = await run(["init", "--interactive", "--no-integrations", "--root", directory]);
+    const second = await run(internal(["init", "--interactive", "--no-integrations", "--root", directory]));
     expect(second.exitCode).toBe(0);
     expect(second.stdout).not.toContain("Empirical first-run setup");
   });
 
   test("non-interactive init uses safe defaults and explicit flags can replace them", async () => {
     const directory = await root();
-    const initialized = await run(["init", "--defaults", "--no-integrations", "--json", "--root", directory]);
+    const initialized = await run(internal(["init", "--defaults", "--no-integrations", "--json", "--root", directory]));
     expect(initialized.exitCode).toBe(0);
     expect(JSON.parse(initialized.stdout).config).toMatchObject({
       setupComplete: true,
       isolation: { mode: "ask", baseBranch: "auto", worktreePath: "../{repo}-{feature}", branchPattern: "{type}/{feature}" },
       decisions: { complexRecords: "required" },
     });
-    const configured = await run([
+    const configured = await run(internal([
       "config", "--isolation", "off", "--base", "develop",
       "--worktree-path", "../alt-{feature}", "--branch-pattern", "{type}/alt-{feature}",
       "--decisions", "off", "--json", "--root", directory,
-    ]);
+    ]));
     expect(configured.exitCode).toBe(0);
     expect(JSON.parse(configured.stdout)).toMatchObject({
       isolation: { mode: "off", baseBranch: "develop", worktreePath: "../alt-{feature}", branchPattern: "{type}/alt-{feature}" },
@@ -73,8 +75,8 @@ describe("first-run configuration CLI", () => {
 
   test("legacy workstream flags and commands are rejected", async () => {
     const directory = await root();
-    await run(["init", "--defaults", "--no-integrations", "--root", directory]);
-    const flag = await run(["status", "--workstream", "legacy", "--root", directory]);
+    await run(internal(["init", "--defaults", "--no-integrations", "--root", directory]));
+    const flag = await run(internal(["status", "--workstream", "legacy", "--root", directory]));
     expect(flag.exitCode).toBe(1);
     expect(flag.stderr).toContain("INVALID_ARGUMENT");
     const command = await run(["workstream", "list", "--root", directory]);
@@ -84,10 +86,10 @@ describe("first-run configuration CLI", () => {
 
   test("Explain has matching human and JSON surfaces", async () => {
     const directory = await root();
-    await run(["init", "--defaults", "--no-integrations", "--root", directory]);
-    await run(["fast", "Add one explainable command", "--root", directory]);
-    const human = await run(["explain", "--root", directory]);
-    const json = await run(["explain", "--json", "--root", directory]);
+    await run(internal(["init", "--defaults", "--no-integrations", "--root", directory]));
+    await run(internal(["fast", "Add one explainable command", "--root", directory]));
+    const human = await run(internal(["explain", "--root", directory]));
+    const json = await run(internal(["explain", "--json", "--root", directory]));
     expect(human.exitCode).toBe(0);
     expect(human.stdout).toContain("Empirical Explain");
     expect(human.stdout).toContain("Gate: proceed");

@@ -37,7 +37,7 @@ Every current action is a structured `ActionPacket`:
   "completion": {
     "available": true,
     "mcpTool": "empirical_complete",
-    "cli": "empirical complete --revision 2 ...",
+    "cli": "empirical __internal complete --revision 2 ...",
     "requiredFields": ["revision", "outcome", "summary"]
   }
 }

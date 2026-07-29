@@ -22,8 +22,9 @@ one committed `.empirical/` model.
   metadata and cross-checkout claim discovery.
 - `src/knowledge.ts` owns the bounded, deterministic, secret-safe repository
   inventory and compact Markdown context set.
-- `src/integrations.ts` installs one global Agent Skill per detected agent,
+- `src/integrations.ts` reconciles the installer's exact agent selection,
   removes marker-owned legacy commands, and preserves project runtime bridges.
+- `src/selector.ts` owns the dependency-free interactive multi-agent selector.
 - `src/lifecycle.ts` owns the package-update then integration-refresh sequence.
 - `src/cli.ts` and `src/mcp.ts` adapt the same core API; they do not implement a
   second workflow.
@@ -57,8 +58,8 @@ resource lock during Archive.
 The installed `empirical` skill is the only user-facing workflow entrypoint.
 It owns first-use initialization, progressive context retrieval, resume,
 Socratic discovery, internal workflow routing, exact transitions, and optional
-post-Specify handoff. The CLI and MCP expose the same lower-level operations as
-automation primitives.
+post-Specify handoff. The public CLI exposes only installation and update; MCP
+and the TypeScript API expose workflow operations as automation primitives.
 
 Repository knowledge is file-backed under `.empirical/context/`. The generated
 manifest includes only normalized paths, sizes, and content digests from a
