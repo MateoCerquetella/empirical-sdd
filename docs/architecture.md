@@ -40,15 +40,16 @@ upgrades them non-destructively on migration or the next state mutation.
 
 ## Cooperative execution loop
 
-The CLI and MCP server coordinate state; they do not run a coding model. The
-current host agent edits files, runs tests, uses a browser when required, and
-submits evidence.
+The CLI and MCP server coordinate state; they do not embed a coding model. The
+interactive Explore flow may explicitly launch an installed Codex runtime after
+an approved workflow is created. Otherwise the current host agent edits files,
+runs tests, uses a browser when required, and submits evidence.
 
 ```text
 ordinary user request
          |
-  vague? -- yes --> empirical_explore -- refine --+
-         \ no                                  |
+  vague? -- yes --> Socratic interview ---------+
+         \ no       five passes + approval     |
           +-------------------------------------+
                          |
                 project skill chooses

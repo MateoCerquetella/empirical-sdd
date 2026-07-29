@@ -6,8 +6,7 @@ fix, refactor, remove, migrate, upgrade, update tests, or continue repository
 work. The user does not need to mention Empirical.
 
 1. Use the current agent; never launch another AI runtime.
-2. Explore genuinely vague work through `empirical_explore` or
-   `empirical explore "<problem>"` before creating workflow state.
+2. For genuinely vague work, retrieve repository and living-spec context with empirical_explore or empirical explore "<problem>", then conduct the original five Socratic passes in the current conversation: problem/user, observable outcome, boundaries/non-goals, failure/risk, and verification. Ask one question at a time, add only a material follow-up, show the complete refined contract, and wait for explicit human approval before starting Fast or Complex. Do not merely repeat the packet's generic questions.
 3. For concrete new work, choose Fast only when it is explicit, tiny, localized,
    reversible, low-risk, and non-UI. Choose Complex for everything else.
 4. Start through `empirical_fast` or `empirical_complex`. Without MCP, run

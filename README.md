@@ -1,7 +1,7 @@
 # Empirical SDD
 
 One npm package that gives any terminal-capable coding agent the same resumable,
-evidence-backed development workflow—with read-only discovery, parallel
+evidence-backed development workflow—with Socratic discovery, parallel
 workstreams, and living capability specifications.
 
 ```bash
@@ -60,9 +60,21 @@ tiny, localized, reversible, low-risk non-UI changes; the skill chooses Complex
 for everything else. To resume existing work, the agent calls `empirical loop`
 without a request.
 
-When a request is genuinely vague, the agent can first call `empirical explore`.
-Explore returns focused discovery questions and existing capability context but
-does not create a feature or revision. It is not an extra phase for concrete work.
+When a request is genuinely vague, `empirical explore "<idea>"` restores the
+original five-pass Socratic interview in an interactive terminal. It asks one
+question at a time about the problem/user, observable outcome, boundaries,
+failure/risk, and verification; saves every answer under
+`.empirical/discoveries/`; shows the refined brief for approval; and then starts
+Fast or Complex directly. It can optionally launch Codex after workflow creation:
+
+```bash
+empirical explore "Build a browser puzzle game" --agent codex
+```
+
+Inside an existing agent, the generated skill conducts the same interview in the
+current conversation. JSON, MCP, TypeScript, non-TTY, and `--no-interview` keep a
+pure read-only Explore packet for automation. Discovery is not an extra phase for
+requests that are already concrete.
 
 | Agent | Automatic project integration | Manual fallback |
 |---|---|---|
@@ -224,7 +236,8 @@ Normal users and generated agent guidance do not need any of them.
 ```text
 empirical init
 empirical adopt
-empirical explore "<vague problem>"
+empirical explore "<vague problem>" [--interactive] [--agent codex|none]
+empirical explore "<vague problem>" --json|--no-interview
 empirical fast "<request>"
 empirical complex "<request>"
 empirical loop

@@ -20,7 +20,7 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     {
       instructions:
         "Automatically use Empirical for repository-changing work. For new work choose "
-        + "empirical_explore first only when the problem is genuinely vague and needs investigation. Choose "
+        + "empirical_explore first only when the problem is genuinely vague and needs investigation. After Explore, conduct the original five Socratic passes in the current conversation—problem/user, observable outcome, boundaries/non-goals, failure/risk, and verification—one question at a time. Add only material follow-ups, present the refined contract, and wait for explicit human approval before choosing a workflow. Choose "
         + "empirical_fast only when the request is explicit, tiny, localized, reversible, "
         + "low-risk, and non-UI; otherwise choose empirical_complex. Use empirical_loop only "
         + "to resume work that is already active. Preserve the explicit workstream in every action. "
@@ -34,7 +34,7 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     "empirical_explore",
     {
       title: "Explore a vague problem",
-      description: "Return read-only discovery guidance before choosing Fast or Complex. Never creates workflow state or launches an AI.",
+      description: "Return read-only context for the current agent to conduct a five-pass Socratic interview before choosing Fast or Complex. Never creates workflow state or launches another AI.",
       inputSchema: {
         root: z.string().optional(),
         workstream: z.string().optional(),

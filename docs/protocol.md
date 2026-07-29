@@ -65,9 +65,17 @@ repair budget blocks the workflow.
 
 ## Start and resume semantics
 
-`empirical explore "<problem>"` / `empirical_explore` is a pure discovery
-operation. It returns questions, project context, living-spec context, and
-suggested Fast/Complex next calls without creating a feature, event, or revision.
+`empirical explore "<problem>"` in an interactive terminal conducts a persisted
+five-pass Socratic interview. It asks one question at a time, saves draft and
+approved answers, requires approval, and can start Fast or Complex directly.
+`--agent codex` optionally launches Codex only after exact workflow creation.
+
+`empirical explore --json`, `empirical explore --no-interview`, non-TTY CLI,
+`empirical_explore`, and the TypeScript `explore()` method remain pure discovery
+packets. They return questions, project context, living-spec context, and suggested
+Fast/Complex calls without creating discovery, feature, event, or revision state.
+The current host agent uses that packet to conduct the same five passes in its
+conversation and waits for human approval before starting work.
 
 `empirical fast "<request>"` / `empirical_fast` and
 `empirical complex "<request>"` / `empirical_complex` create new work and return

@@ -4,8 +4,7 @@
 Start or resume the repository's Empirical workflow for the current request.
 
 1. Use the current Cascade agent; never launch another AI runtime.
-2. Explore vague problems with `empirical_explore` or
-   `empirical explore "<problem>"` before starting workflow state.
+2. For genuinely vague work, retrieve repository and living-spec context with empirical_explore or empirical explore "<problem>", then conduct the original five Socratic passes in the current conversation: problem/user, observable outcome, boundaries/non-goals, failure/risk, and verification. Ask one question at a time, add only a material follow-up, show the complete refined contract, and wait for explicit human approval before starting Fast or Complex. Do not merely repeat the packet's generic questions.
 3. For concrete work, choose Fast only for explicit, tiny, localized, reversible,
    low-risk non-UI changes and Complex otherwise.
 4. Start with `empirical_fast` or `empirical_complex`; fall back to

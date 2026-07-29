@@ -11,8 +11,7 @@ daemon, or runtime.
 
 1. Treat the user's ordinary coding request as the workflow request. The user
    does not choose a command or profile.
-2. Explore genuinely vague problems with `empirical_explore` or
-   `empirical explore "<problem>"` before starting workflow state.
+2. For genuinely vague work, retrieve repository and living-spec context with empirical_explore or empirical explore "<problem>", then conduct the original five Socratic passes in the current conversation: problem/user, observable outcome, boundaries/non-goals, failure/risk, and verification. Ask one question at a time, add only a material follow-up, show the complete refined contract, and wait for explicit human approval before starting Fast or Complex. Do not merely repeat the packet's generic questions.
 3. For concrete work, choose Fast only when the behavior is explicit and the change
    is tiny, localized, reversible, low-risk, and non-UI. Choose Complex otherwise,
    including UI, security, authentication, permissions, payments, destructive

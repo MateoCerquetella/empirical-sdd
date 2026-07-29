@@ -13,7 +13,7 @@ CLI, MCP, and TypeScript.
 
 | Product quality | OpenSpec strength | Empirical 2.2 adaptation |
 |---|---|---|
-| Vague-problem discovery | Explore before formalizing a change | Pure `explore` packet; zero features, events, or revisions |
+| Vague-problem discovery | Explore before formalizing a change | Persisted five-pass terminal interview plus pure agent/API packets |
 | Proposed behavior | Delta specs grouped by capability | OpenSpec-compatible ADDED/MODIFIED/REMOVED requirement subset with scenarios |
 | Current behavior | Living specs after archive | Canonical `.empirical/capabilities/<name>/spec.md` contracts |
 | Safe completion | Archive closes a planned change | Review must pass first; Archive is exact-revisioned, atomic, rollback-capable, and idempotent |
@@ -27,9 +27,11 @@ CLI, MCP, and TypeScript.
 
 ### Explore without ceremony
 
-`empirical explore "<problem>"` gives the current agent a compact discovery
-contract and relevant living-spec context. It is deliberately pure. Once the ask
-is concrete, the normal skill starts Fast or Complex directly.
+`empirical explore "<problem>"` now conducts the original persisted five-pass
+Socratic interview in an interactive terminal, requires approval, and hands the
+refined request directly to Fast or Complex. Agent/API automation retains a pure
+context packet, and generated skills conduct the same one-question-at-a-time
+interview in the existing host conversation.
 
 ### Deltas plus living behavioral truth
 
@@ -57,7 +59,7 @@ evidence, review, delta, or archive validation.
 - Users do not need to learn an artifact command graph for ordinary coding requests.
 - Fast stays a one-revision lane for truly tiny work; it does not require delta files.
 - Complex retains enforced implementation, verification, review, and repair phases.
-- Empirical does not launch or choose an AI runtime, host a dashboard, or automate Git delivery.
+- Empirical does not embed or choose an AI runtime, host a dashboard, or automate Git delivery; an approved terminal interview can explicitly launch installed Codex when requested.
 
 ## Practical verdict
 

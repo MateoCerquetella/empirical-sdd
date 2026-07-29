@@ -158,8 +158,17 @@ feature plans.
 If a later agent session needs to continue that active workflow, it calls
 `empirical_loop()` or runs `empirical loop` with no request.
 
-If the initial request is genuinely vague, the agent can call
-`empirical_explore(problem="...")` first. Explore asks only scope-changing
-questions and creates no feature or revision. If unrelated work is already active,
-the agent creates a named workstream and preserves the explicit workstream from
-every returned packet.
+If the initial request is genuinely vague, run the restored terminal interview:
+
+```bash
+empirical explore "Build a cooperative browser puzzle" --agent codex
+```
+
+Empirical asks the original five Socratic passes one question at a time, adds only
+material follow-ups, persists every answer under `.empirical/discoveries/`, and
+shows the refined contract for approval. Only after approval does it start Fast or
+Complex; `--agent codex` then launches Codex against that exact active workflow.
+Inside an already-open agent, `empirical_explore(problem="...")` remains a pure
+context packet and the generated skill conducts the same interview in the current
+conversation. If unrelated work is already active, the agent creates a named
+workstream and preserves the explicit workstream from every returned packet.
