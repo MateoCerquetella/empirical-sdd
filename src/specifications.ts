@@ -45,7 +45,7 @@ export async function loadCapabilityDeltas(
     const capability = entry.name.slice(0, -3);
     assertCapabilityId(capability);
     const path = join(directory, entry.name);
-    deltas.push(parseCapabilityDelta(capability, await readFile(path, "utf8"), relative(store.root, path)));
+    deltas.push(parseCapabilityDelta(capability, await readFile(path, "utf8"), portableRelative(store.root, path)));
   }
   return deltas;
 }
@@ -98,7 +98,7 @@ export async function validateFeatureDeltas(
         valid: false,
         capabilities: [],
         operations: 0,
-        issues: [`Create at least one ${relative(store.root, store.deltaDirectory(feature))}/<capability>.md delta`],
+        issues: [`Create at least one ${portableRelative(store.root, store.deltaDirectory(feature))}/<capability>.md delta`],
         digest: null,
       };
     }
@@ -191,11 +191,15 @@ export async function listCapabilities(store: ProjectStore): Promise<CapabilityS
     const contents = await readFile(path, "utf8");
     summaries.push({
       name,
-      path: relative(store.root, path),
+      path: portableRelative(store.root, path),
       requirements: requirementBlocks(contents).length,
     });
   }
   return summaries;
+}
+
+function portableRelative(from: string, to: string): string {
+  return relative(from, to).replaceAll("\\", "/");
 }
 
 async function buildProjections(
