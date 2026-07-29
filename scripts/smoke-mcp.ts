@@ -159,7 +159,7 @@ Run existing and new sign-in tests.
 
   const version = await runCli(root, ["--version"]);
   const packageJson = JSON.parse(await readFile(resolve(import.meta.dir, "../package.json"), "utf8")) as { version: string };
-  if (version.stdout.trim() !== packageJson.version || packageJson.version !== "0.20.0") {
+  if (version.stdout.trim() !== packageJson.version || packageJson.version !== "0.20.1") {
     throw new Error(`Bundled/package version mismatch: cli=${JSON.stringify(version.stdout.trim())} package=${JSON.stringify(packageJson.version)} stderr=${JSON.stringify(version.stderr)}`);
   }
   const help = await runCli(root, ["help"]);

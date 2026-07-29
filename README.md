@@ -5,7 +5,7 @@ Code, Cursor, Gemini CLI, Windsurf, and MCP clients. It turns a coding request
 into an exact, resumable workflow with observable contracts, evidence, review,
 living capability specifications, and safe Git worktree isolation.
 
-Empirical `0.20.0` is an alpha release. It uses one active feature per checkout
+Empirical `0.20.1` is an alpha release. It uses one active feature per checkout
 and real Git worktrees for parallel work.
 
 ## Install

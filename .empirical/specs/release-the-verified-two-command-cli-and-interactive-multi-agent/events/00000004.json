@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 4,
+  "previousRevision": 3,
+  "actor": "agent",
+  "summary": "Planned the exact version edits, reference audit, full release checks, stable release commit, guarded one-time npm publication, registry polling, isolated consumer verification, and capability archive.",
+  "createdAt": "2026-07-29T21:06:04.156Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 4,
+    "activeFeature": "release-the-verified-two-command-cli-and-interactive-multi-agent",
+    "request": "Release the verified two-command CLI and interactive multi-agent installer as empirical-sdd 0.20.1, publish it to npm under latest, and verify the registry tarball and clean consumer installation.",
+    "profile": "complex",
+    "phase": "implement",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Planned the exact version edits, reference audit, full release checks, stable release commit, guarded one-time npm publication, registry polling, isolated consumer verification, and capability archive.",
+    "implementationActor": null,
+    "specDigest": "eed69220fb429426299e6685ece37a0a689f3b1b7b3e400ba2c7f05e9849ef26",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "de24432112a35062f184227a2828a145c5b8940439dc1a52b2c928a78baf6c3a",
+    "evidence": [],
+    "updatedAt": "2026-07-29T21:06:04.156Z"
+  }
+}

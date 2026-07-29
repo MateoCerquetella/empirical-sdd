@@ -1,5 +1,5 @@
 export const SCHEMA_VERSION = 4 as const;
-export const PRODUCT_VERSION = "0.20.0";
+export const PRODUCT_VERSION = "0.20.1";
 export const POLICY_SCHEMA_VERSION = 1 as const;
 
 export type Workflow = "fast" | "complex";

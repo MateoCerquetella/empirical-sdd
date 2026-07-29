@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 5,
+  "previousRevision": 4,
+  "actor": "agent",
+  "summary": "Synchronized package, runtime, README, repository convention, core assertion, and built smoke version surfaces to 0.20.1 while retaining historical 0.20.0 migration records; focused typecheck, core tests, build, and packaged version check pass.",
+  "createdAt": "2026-07-29T21:07:14.634Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 5,
+    "activeFeature": "release-the-verified-two-command-cli-and-interactive-multi-agent",
+    "request": "Release the verified two-command CLI and interactive multi-agent installer as empirical-sdd 0.20.1, publish it to npm under latest, and verify the registry tarball and clean consumer installation.",
+    "profile": "complex",
+    "phase": "verify",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Synchronized package, runtime, README, repository convention, core assertion, and built smoke version surfaces to 0.20.1 while retaining historical 0.20.0 migration records; focused typecheck, core tests, build, and packaged version check pass.",
+    "implementationActor": "agent",
+    "specDigest": "eed69220fb429426299e6685ece37a0a689f3b1b7b3e400ba2c7f05e9849ef26",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "de24432112a35062f184227a2828a145c5b8940439dc1a52b2c928a78baf6c3a",
+    "evidence": [],
+    "updatedAt": "2026-07-29T21:07:14.634Z"
+  }
+}
