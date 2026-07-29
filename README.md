@@ -15,6 +15,21 @@ npm install -g empirical-sdd
 empirical install
 ```
 
+The registry command installs the version currently published under npm's
+`latest` tag. It does not install newer commits from a local checkout. To test
+an unreleased Empirical build, run this from the Empirical repository instead:
+
+```bash
+npm uninstall -g empirical-sdd
+npm install -g .
+empirical install
+```
+
+If `empirical install` reports `UNKNOWN_COMMAND`, an older published build is
+still installed. Do not reinstall `empirical-sdd@latest` until the release that
+contains this command has been published; install from the local checkout as
+shown above.
+
 `empirical install` works from any directory. It detects supported local agents,
 installs exactly one global Empirical entrypoint for each, removes older
 Empirical-managed Explore/Fast/Complex/Loop skills, and prints how to reload and

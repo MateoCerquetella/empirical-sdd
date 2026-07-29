@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 4,
+  "revision": 2,
+  "previousRevision": 1,
+  "actor": "agent",
+  "summary": "Documented the correct local reinstall path and the npm latest version caveat",
+  "createdAt": "2026-07-29T20:25:18.540Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 2,
+    "activeFeature": "clarify-readme-reinstall-instructions-so-local-unreleased-builds-are-ins",
+    "request": "Clarify README reinstall instructions so local unreleased builds are installed from the repository instead of npm latest",
+    "profile": "fast",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Documented the correct local reinstall path and the npm latest version caveat",
+    "implementationActor": "agent",
+    "specDigest": "ed7d57f55ea4bbc0d6cd1587c05c679356396409fb31907449b11784b1f7d8b8",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "evidence": [
+      {
+        "criterionId": "AC-1",
+        "kind": "test",
+        "passed": true,
+        "summary": "README contains npm uninstall -g empirical-sdd, npm install -g ., and UNKNOWN_COMMAND recovery guidance"
+      },
+      {
+        "criterionId": "all",
+        "kind": "review",
+        "passed": true,
+        "summary": "Focused README diff reviewed; instructions distinguish published and unreleased builds"
+      }
+    ],
+    "updatedAt": "2026-07-29T20:25:18.540Z"
+  }
+}
