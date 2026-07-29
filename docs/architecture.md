@@ -21,8 +21,8 @@ Codex / Claude / Gemini / Cursor / Windsurf / other agents
 - `src/cli.ts` is the global `empirical` executable.
 - `src/mcp.ts` exposes the same operations as stdio MCP tools.
 - `src/integrations.ts` safely adds discovery instructions, project skills,
-  native manual commands, and project-scoped MCP configuration without
-  replacing unmanaged content.
+  native manual commands, and project-scoped MCP configuration, plus explicit
+  user-level Agent Skills, without replacing unmanaged content.
 - `src/storage.ts` provides atomic JSON projection, append-only transition
   events, workstream-scoped state, shared-resource locking, recovery, rollback
   effects, and optimistic revisions.
@@ -115,8 +115,11 @@ command; action packets always preserve immutable workstream identity.
    `empirical complex "<request>"` fallbacks for any terminal-capable agent,
    plus `empirical explore` for genuine ambiguity and `empirical loop` for resume.
 
-The integrations are committed project files. Empirical installs no lifecycle
-hooks and writes no skills or commands into a developer's home directory.
+Normal initialization and integration produce committed project files.
+`empirical integrate --global` is a separate opt-in branch that works without a
+project and writes the five managed workflow skills into Codex, Claude Code,
+Cursor, Gemini CLI, and Windsurf's native user skill roots. It does not create
+workflow state, global MCP configuration, lifecycle hooks, or an agent runtime.
 
 The low-level start operation and machine-readable JSON remain programmatic
 integration surfaces, but neither is part of normal agent use. Legacy profile

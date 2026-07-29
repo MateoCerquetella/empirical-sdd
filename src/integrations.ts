@@ -1,7 +1,9 @@
-import { readFile } from "node:fs/promises";
-import { join, relative } from "node:path";
-import { isFile, isSymbolicLink, readJson, writeJsonAtomic, writeTextAtomic } from "./storage.js";
-import type { IntegrationReport } from "./types.js";
+import { lstat, readFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { isFile, readJson, writeJsonAtomic, writeTextAtomic } from "./storage.js";
+import { EmpiricalError } from "./errors.js";
+import type { AgentEntrypointReport, IntegrationReport } from "./types.js";
 
 const START = "<!-- empirical-sdd:start -->";
 const END = "<!-- empirical-sdd:end -->";
@@ -17,6 +19,112 @@ const COMMAND_REFERENCE = `Command reference:
 
 The \`--agent codex\` form is a human terminal entrypoint. Agents must continue in
 their current runtime and use the MCP equivalents when available.`;
+
+const ENTRYPOINT_NAMES = [
+  "empirical",
+  "empirical-explore",
+  "empirical-fast",
+  "empirical-complex",
+  "empirical-loop",
+] as const;
+
+interface DedicatedEntrypoint {
+  name: Exclude<(typeof ENTRYPOINT_NAMES)[number], "empirical">;
+  description: string;
+  instructions: string;
+}
+
+const DEDICATED_ENTRYPOINTS: DedicatedEntrypoint[] = [
+  {
+    name: "empirical-explore",
+    description: "Conduct Empirical's five-pass Socratic discovery before starting work.",
+    instructions: `Treat the text attached to this invocation as the initial idea. If it is empty,
+ask for the idea first. Retrieve repository and living-spec context with
+empirical_explore or \`empirical explore "<idea>" --no-interview\`, then conduct
+the original five Socratic passes in this conversation: problem/user,
+observable outcome, boundaries/non-goals, failure/risk, and verification. Ask
+one question at a time and add only a material follow-up. Save or preserve the
+answers when the host supports it, show the complete refined request, and wait
+for explicit human approval. After approval, choose Fast only for explicit,
+tiny, localized, reversible, low-risk non-UI work; choose Complex otherwise.
+Start through empirical_fast or empirical_complex (CLI fallback: \`empirical
+fast "<request>"\` or \`empirical complex "<request>"\`) and consume every
+returned action until Done, Blocked, or awaiting human input.`,
+  },
+  {
+    name: "empirical-fast",
+    description: "Run an eligible tiny change through Empirical Fast.",
+    instructions: `Treat the text attached to this invocation as the requested change. Fast is
+allowed only when the behavior is explicit and the change is tiny, localized,
+reversible, low-risk, and non-UI. If any condition is false or unclear, use
+Empirical Complex instead and explain the routing. Otherwise start with
+empirical_fast or \`empirical fast "<request>"\`. Execute the returned action,
+provide its focused test and diff-review evidence, complete the exact revision,
+and consume the response until Done, Blocked, or awaiting human input.`,
+  },
+  {
+    name: "empirical-complex",
+    description: "Run a substantial or UI change through Empirical Complex.",
+    instructions: `Treat the text attached to this invocation as the requested change. Start with
+empirical_complex or \`empirical complex "<request>"\`. Execute the returned
+Specify, Design, Plan, Implement, Verify, Review, and Archive actions in order,
+complete each exact revision with all required evidence, and consume every
+response directly until Done, Blocked, or awaiting human input. Preserve the
+packet workstream and never weaken acceptance criteria or verification gates.`,
+  },
+  {
+    name: "empirical-loop",
+    description: "Resume the active Empirical workflow without starting new work.",
+    instructions: `Resume the active workflow with empirical_loop or \`empirical loop\`. Loop takes
+no new request or profile. Preserve the returned workstream, execute the exact
+current action, complete its revision with every required artifact and evidence
+item, and consume each response directly until Done, Blocked, or awaiting human
+input. Never replace the active feature with text attached to this invocation.`,
+  },
+];
+
+const PROJECT_ENTRYPOINT_REPORTS: AgentEntrypointReport[] = [
+  {
+    id: "codex",
+    agent: "Codex",
+    kind: "skill",
+    artifactRoot: ".agents/skills",
+    invocations: ENTRYPOINT_NAMES.map((name) => `$${name}`),
+    reload: "Restart or reopen Codex so it rescans project skills; invoke them with $.",
+  },
+  {
+    id: "claude",
+    agent: "Claude Code",
+    kind: "slash-command",
+    artifactRoot: ".claude/skills",
+    invocations: ENTRYPOINT_NAMES.map((name) => `/${name}`),
+    reload: "Restart Claude Code if .claude/skills was created after the session started.",
+  },
+  {
+    id: "cursor",
+    agent: "Cursor",
+    kind: "slash-command",
+    artifactRoot: ".cursor/commands",
+    invocations: ENTRYPOINT_NAMES.map((name) => `/${name}`),
+    reload: "Open a new chat or reload the workspace, then type / to discover commands.",
+  },
+  {
+    id: "gemini",
+    agent: "Gemini CLI",
+    kind: "slash-command",
+    artifactRoot: ".gemini/commands",
+    invocations: ENTRYPOINT_NAMES.map((name) => `/${name}`),
+    reload: "Run /commands reload, then /commands list.",
+  },
+  {
+    id: "windsurf",
+    agent: "Windsurf",
+    kind: "slash-command",
+    artifactRoot: ".windsurf/workflows",
+    invocations: ENTRYPOINT_NAMES.map((name) => `/${name}`),
+    reload: "Start a new Cascade session or reload the workspace, then type /.",
+  },
+];
 
 const GUIDANCE = `${START}
 ## Empirical SDD
@@ -150,13 +258,75 @@ Never select legacy Quick for new work or add profile/JSON controls to the
 normal workflow.
 `;
 
+function renderAgentSkill(entrypoint: DedicatedEntrypoint): string {
+  return `---
+name: ${entrypoint.name}
+description: ${entrypoint.description}
+---
+
+<!-- ${MANAGED_FILE_MARKER} -->
+# ${entrypoint.name}
+
+Use the current host agent; never launch another AI runtime.
+
+${entrypoint.instructions}
+`;
+}
+
+function renderCursorCommand(entrypoint: DedicatedEntrypoint): string {
+  return `<!-- ${MANAGED_FILE_MARKER} -->
+# ${entrypoint.name}
+
+Use the current Cursor agent; never launch another AI runtime.
+
+${entrypoint.instructions}
+`;
+}
+
+function renderGeminiCommand(entrypoint: DedicatedEntrypoint): string {
+  return `# ${MANAGED_FILE_MARKER}
+description = "${entrypoint.description}"
+prompt = """
+Use the current Gemini agent; never launch another AI runtime.
+
+${entrypoint.instructions}
+
+Invocation arguments:
+{{args}}
+"""
+`;
+}
+
+function renderWindsurfWorkflow(entrypoint: DedicatedEntrypoint): string {
+  return `<!-- ${MANAGED_FILE_MARKER} -->
+# ${entrypoint.name}
+
+Use the current Cascade agent; never launch another AI runtime.
+
+${entrypoint.instructions}
+`;
+}
+
+function projectEntrypointReports(): AgentEntrypointReport[] {
+  return PROJECT_ENTRYPOINT_REPORTS.map((entrypoint) => ({
+    ...entrypoint,
+    invocations: [...entrypoint.invocations],
+  }));
+}
+
 const MCP_SERVER = {
   command: "empirical",
   args: ["mcp"],
 };
 
 export async function installProjectIntegrations(root: string): Promise<IntegrationReport> {
-  const report: IntegrationReport = { created: [], updated: [], preserved: [] };
+  const report: IntegrationReport = {
+    scope: "project",
+    created: [],
+    updated: [],
+    preserved: [],
+    entrypoints: projectEntrypointReports(),
+  };
 
   await mergeMarkdown(root, join(root, "AGENTS.md"), GUIDANCE, report);
   await mergeMarkdown(root, join(root, "CLAUDE.md"), GUIDANCE, report);
@@ -168,6 +338,39 @@ export async function installProjectIntegrations(root: string): Promise<Integrat
   await writeManagedFile(root, join(root, ".gemini", "commands", "empirical.toml"), GEMINI_COMMAND, report);
   await writeManagedFile(root, join(root, ".windsurf", "workflows", "empirical.md"), WINDSURF_WORKFLOW, report);
 
+  for (const entrypoint of DEDICATED_ENTRYPOINTS) {
+    await writeManagedFile(
+      root,
+      join(root, ".agents", "skills", entrypoint.name, "SKILL.md"),
+      renderAgentSkill(entrypoint),
+      report,
+    );
+    await writeManagedFile(
+      root,
+      join(root, ".claude", "skills", entrypoint.name, "SKILL.md"),
+      renderAgentSkill(entrypoint),
+      report,
+    );
+    await writeManagedFile(
+      root,
+      join(root, ".cursor", "commands", `${entrypoint.name}.md`),
+      renderCursorCommand(entrypoint),
+      report,
+    );
+    await writeManagedFile(
+      root,
+      join(root, ".gemini", "commands", `${entrypoint.name}.toml`),
+      renderGeminiCommand(entrypoint),
+      report,
+    );
+    await writeManagedFile(
+      root,
+      join(root, ".windsurf", "workflows", `${entrypoint.name}.md`),
+      renderWindsurfWorkflow(entrypoint),
+      report,
+    );
+  }
+
   await mergeMcpJson(root, join(root, ".mcp.json"), report);
   await mergeMcpJson(root, join(root, ".cursor", "mcp.json"), report);
   await mergeMcpJson(root, join(root, ".gemini", "settings.json"), report, { cwd: "." });
@@ -176,13 +379,106 @@ export async function installProjectIntegrations(root: string): Promise<Integrat
   return report;
 }
 
+const GLOBAL_AGENT_SKILL_ROOTS: Array<{
+  id: AgentEntrypointReport["id"];
+  agent: string;
+  segments: string[];
+  invocations: string[];
+  reload: string;
+}> = [
+  {
+    id: "codex",
+    agent: "Codex",
+    segments: [".codex", "skills"],
+    invocations: ENTRYPOINT_NAMES.map((name) => `$${name}`),
+    reload: "Restart or reopen Codex so it rescans user skills; invoke them with $.",
+  },
+  {
+    id: "claude",
+    agent: "Claude Code",
+    segments: [".claude", "skills"],
+    invocations: ENTRYPOINT_NAMES.map((name) => `/${name}`),
+    reload: "Restart Claude Code if the skills were installed during the current session.",
+  },
+  {
+    id: "cursor",
+    agent: "Cursor",
+    segments: [".cursor", "skills"],
+    invocations: [...ENTRYPOINT_NAMES],
+    reload: "Reload Cursor, open Agent chat, and ask normally; Cursor discovers the installed Agent Skills.",
+  },
+  {
+    id: "gemini",
+    agent: "Gemini CLI",
+    segments: [".gemini", "skills"],
+    invocations: [...ENTRYPOINT_NAMES],
+    reload: "Run /skills reload and /skills list; Gemini activates matching skills from your request.",
+  },
+  {
+    id: "windsurf",
+    agent: "Windsurf",
+    segments: [".codeium", "windsurf", "skills"],
+    invocations: ENTRYPOINT_NAMES.map((name) => `@${name}`),
+    reload: "Start a new Cascade session or reload Windsurf; invoke a skill with @.",
+  },
+];
+
+export async function installGlobalAgentSkills(homeRoot = homedir()): Promise<IntegrationReport> {
+  const home = validateHomeRoot(homeRoot);
+  const report: IntegrationReport = {
+    scope: "global",
+    created: [],
+    updated: [],
+    preserved: [],
+    entrypoints: GLOBAL_AGENT_SKILL_ROOTS.map((agent) => ({
+      id: agent.id,
+      agent: agent.agent,
+      kind: "skill",
+      artifactRoot: join(home, ...agent.segments),
+      invocations: [...agent.invocations],
+      reload: agent.reload,
+    })),
+  };
+
+  for (const agent of GLOBAL_AGENT_SKILL_ROOTS) {
+    const skillRoot = join(home, ...agent.segments);
+    await writeManagedFile(
+      home,
+      join(skillRoot, "empirical", "SKILL.md"),
+      SKILL,
+      report,
+    );
+    for (const entrypoint of DEDICATED_ENTRYPOINTS) {
+      await writeManagedFile(
+        home,
+        join(skillRoot, entrypoint.name, "SKILL.md"),
+        renderAgentSkill(entrypoint),
+        report,
+      );
+    }
+  }
+
+  return report;
+}
+
+function validateHomeRoot(homeRoot: string): string {
+  if (!homeRoot.trim()) {
+    throw new EmpiricalError("INVALID_ARGUMENT", "Global integration requires a user home directory");
+  }
+  const home = resolve(homeRoot);
+  if (dirname(home) === home) {
+    throw new EmpiricalError("INVALID_ARGUMENT", "Global integration refuses a filesystem root as the user home");
+  }
+  return home;
+}
+
 async function writeManagedFile(
   root: string,
   path: string,
   managed: string,
   report: IntegrationReport,
 ): Promise<void> {
-  if (await preserveSymbolicLink(root, path, report)) return;
+  if (await preserveUnsafeTarget(root, path, report)) return;
   const desired = managed.endsWith("\n") ? managed : `${managed}\n`;
   if (!(await isFile(path))) {
     await writeTextAtomic(path, desired);
@@ -206,7 +502,7 @@ async function mergeMarkdown(
   managed: string,
   report: IntegrationReport,
 ): Promise<void> {
-  if (await preserveSymbolicLink(root, path, report)) return;
+  if (await preserveUnsafeTarget(root, path, report)) return;
   if (!(await isFile(path))) {
     await writeTextAtomic(path, `${managed}\n`);
     report.created.push(relativeLabel(root, path));
@@ -240,7 +536,7 @@ async function mergeMcpJson(
   report: IntegrationReport,
   extra: Record<string, unknown> = {},
 ): Promise<void> {
-  if (await preserveSymbolicLink(root, path, report)) return;
+  if (await preserveUnsafeTarget(root, path, report)) return;
   let document: Record<string, unknown> = {};
   const existed = await isFile(path);
   if (existed) {
@@ -269,7 +565,7 @@ async function mergeMcpJson(
 }
 
 async function mergeCodexToml(root: string, path: string, report: IntegrationReport): Promise<void> {
-  if (await preserveSymbolicLink(root, path, report)) return;
+  if (await preserveUnsafeTarget(root, path, report)) return;
   const start = "# empirical-sdd:mcp:start";
   const end = "# empirical-sdd:mcp:end";
   const block = `${start}
@@ -308,14 +604,52 @@ ${end}`;
   report.updated.push(relativeLabel(root, path));
 }
 
-async function preserveSymbolicLink(
+async function preserveUnsafeTarget(
   root: string,
   path: string,
   report: IntegrationReport,
 ): Promise<boolean> {
-  if (!(await isSymbolicLink(path))) return false;
-  report.preserved.push(`${relativeLabel(root, path)} (symbolic link)`);
-  return true;
+  const rootPath = resolve(root);
+  const targetPath = resolve(path);
+  const label = relativeLabel(rootPath, targetPath);
+  if (!label || label === ".." || label.startsWith("../") || isAbsolute(label)) {
+    throw new EmpiricalError("INVALID_ARGUMENT", `Integration target escapes its root: ${path}`);
+  }
+
+  const segments = label.split("/");
+  let current = rootPath;
+  for (let index = 0; index < segments.length; index += 1) {
+    current = join(current, segments[index]!);
+    let details;
+    try {
+      details = await lstat(current);
+    } catch (error) {
+      if (isMissingPathError(error)) return false;
+      throw error;
+    }
+    if (details.isSymbolicLink()) {
+      const suffix = index === segments.length - 1
+        ? "symbolic link"
+        : `symbolic link ancestor ${relativeLabel(rootPath, current)}`;
+      report.preserved.push(`${label} (${suffix})`);
+      return true;
+    }
+    if (index < segments.length - 1 && !details.isDirectory()) {
+      report.preserved.push(
+        `${label} (non-directory ancestor ${relativeLabel(rootPath, current)})`,
+      );
+      return true;
+    }
+    if (index === segments.length - 1 && !details.isFile()) {
+      report.preserved.push(`${label} (existing non-file)`);
+      return true;
+    }
+  }
+  return false;
+}
+
+function isMissingPathError(error: unknown): boolean {
+  return error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

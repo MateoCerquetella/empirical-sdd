@@ -95,4 +95,8 @@ Project MCP configurations are code execution requests. Hosts may require the
 developer to trust the repository before starting the server. That approval is
 intentional and must not be bypassed.
 
+`empirical_integrate` remains project-scoped. Global skills are deliberately a
+human terminal operation, `empirical integrate --global`; the MCP server cannot
+turn that durable user-level mutation on implicitly.
+
 No integration uses a lifecycle or session-start hook.

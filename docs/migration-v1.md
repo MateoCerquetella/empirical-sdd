@@ -22,7 +22,12 @@ low-risk non-UI change and `empirical complex "<request>"` for everything else.
 
 Adoption also installs the same repository-local skills and manual command
 fallbacks as `empirical init`. It does not install lifecycle hooks or write
-agent integrations into a developer's home directory.
+agent integrations into a developer's home directory. Global Agent Skills are
+a separate opt-in operation that can be run before or after adoption:
+
+```bash
+empirical integrate --global
+```
 
 ## Protocol schema 1 or 2
 

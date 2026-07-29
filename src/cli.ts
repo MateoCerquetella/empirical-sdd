@@ -16,12 +16,14 @@ import {
   type SocraticAnswer,
 } from "./discovery.js";
 import { EmpiricalError, asErrorMessage } from "./errors.js";
+import { installGlobalAgentSkills } from "./integrations.js";
 import { runMcpServer } from "./mcp.js";
 import {
   PRODUCT_VERSION,
   type CompletionInput,
   type Evidence,
   type ExplorationPacket,
+  type IntegrationReport,
   type Workflow,
 } from "./types.js";
 
@@ -73,7 +75,10 @@ async function main(): Promise<void> {
       emit(
         { state: result.state, integrations: result.integrations, next: await result.project.next() },
         context.json,
-        () => `Empirical is ready in ${result.project.store.root}. Reopen your agent once, then ask for the change normally.`,
+        () => renderIntegrationReport(
+          `Empirical is ready in ${result.project.store.root}.`,
+          result.integrations,
+        ),
       );
       return;
     }
@@ -86,7 +91,10 @@ async function main(): Promise<void> {
       emit(
         { state: result.state, integrations: result.integrations, next: await result.project.next() },
         context.json,
-        () => "Empirical v1 was adopted without deleting ai/. The new source of truth is .empirical/.",
+        () => renderIntegrationReport(
+          "Empirical v1 was adopted without deleting ai/. The new source of truth is .empirical/.",
+          result.integrations,
+        ),
       );
       return;
     }
@@ -248,9 +256,27 @@ async function main(): Promise<void> {
       return;
     }
     case "integrate": {
+      const global = takeFlag(context.args, "--global");
+      if (context.args.length > 0) {
+        throw new EmpiricalError(
+          "INVALID_ARGUMENT",
+          `Unknown integrate arguments: ${context.args.join(" ")}`,
+        );
+      }
+      if (global) {
+        const report = await installGlobalAgentSkills();
+        emit(report, context.json, () => renderIntegrationReport(
+          `Global Agent Skills installed (${report.created.length} created, ${report.updated.length} updated, ${report.preserved.length} preserved).`,
+          report,
+        ));
+        return;
+      }
       const project = await EmpiricalProject.open(context.root, context.workstream);
       const report = await project.integrations();
-      emit(report, context.json, () => `Agent discovery refreshed (${report.created.length} created, ${report.updated.length} updated, ${report.preserved.length} preserved).`);
+      emit(report, context.json, () => renderIntegrationReport(
+        `Agent integrations refreshed (${report.created.length} created, ${report.updated.length} updated, ${report.preserved.length} preserved).`,
+        report,
+      ));
       return;
     }
     case "doctor": {
@@ -638,6 +664,26 @@ function emit(value: unknown, json: boolean, human: (value: unknown) => string):
   console.log(json ? JSON.stringify(value, null, 2) : human(value));
 }
 
+function renderIntegrationReport(summary: string, report: IntegrationReport): string {
+  if (report.entrypoints.length === 0) {
+    return `${summary}\n\nAgent entrypoints were not installed.`;
+  }
+  const global = report.scope === "global";
+  const lines = [summary, "", global ? "Installed global skills:" : "Imported project entrypoints:"];
+  for (const entrypoint of report.entrypoints) {
+    const kind = global
+      ? "global skills"
+      : entrypoint.kind === "skill"
+        ? "project skills"
+        : "slash commands";
+    lines.push(
+      `- ${entrypoint.agent} ${kind} (${entrypoint.artifactRoot}): ${entrypoint.invocations.join(", ")}`,
+      `  Reload: ${entrypoint.reload}`,
+    );
+  }
+  return lines.join("\n");
+}
+
 function renderAction(value: unknown): string {
   const action = value as Awaited<ReturnType<EmpiricalProject["next"]>>;
   const header = action.feature
@@ -730,12 +776,16 @@ Usage:
 
   Project maintenance
   empirical integrate
+  empirical integrate --global
   empirical doctor
   empirical migrate
   empirical mcp
   empirical update [--check]
 
 Use --workstream <name> to address an independently revisioned workstream.
+Use integrate --global once to install or refresh all five workflows in the
+user-level Agent Skills directories for Codex, Claude Code, Cursor, Gemini CLI,
+and Windsurf; ordinary integrate remains scoped to the current project.
 Explore conducts a persisted five-pass Socratic interview in an interactive terminal.
 Use --json or --no-interview for its pure read-only packet. Fast and Complex are
 the SDD workflows. Loop only resumes current state; it never chooses or starts work.

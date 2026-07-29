@@ -24,9 +24,14 @@
 - Initialization updates only marked instruction blocks, Empirical-managed
   project skills and commands, and the named `empirical` MCP entry. Existing
   unmanaged or conflicting entries are preserved and reported.
-- Skills, commands, state, and supported MCP settings remain repository-local.
-  Empirical does not install lifecycle hooks or write agent integrations into
-  a developer's home directory.
+- Initialization, adoption, ordinary integration, skills, commands, state, and
+  supported MCP settings remain repository-local. Empirical does not install
+  lifecycle hooks or silently write a developer's home directory.
+- The explicit `empirical integrate --global` operation writes only marked
+  `SKILL.md` copies below the documented native user skill roots. It validates
+  root containment, refuses a filesystem-root home, writes atomically, follows
+  no symbolic link in a target path, and preserves unmanaged or non-file
+  collisions. It does not write global MCP settings or workflow state.
 - Workflow completion does not commit, push, open pull requests, deploy, or
   release. Delivery remains under the agent host and developer's normal
   approval policy.

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 3,
+  "revision": 5,
+  "previousRevision": 4,
+  "actor": "agent",
+  "summary": "Implemented empirical integrate --global, shared five-workflow generators, all five native global skill roots, scoped reports and accurate invocation guidance, atomic containment and symlink-safe preservation, project-local command improvements, exported API, documentation, and 57 passing tests plus packed-package smoke.",
+  "createdAt": "2026-07-29T16:15:14.910Z",
+  "state": {
+    "schemaVersion": 3,
+    "revision": 5,
+    "activeFeature": "012-add-empirical-integrate-global-so-one-command",
+    "request": "Add empirical integrate --global so one command installs the five Empirical workflow skills globally for Codex, Claude Code, Cursor, Gemini CLI, and Windsurf using each agent's native user-level skills directory. It must work outside an initialized project, preserve unmanaged files, update Empirical-managed files safely, report exact installed paths and agent-specific invocation syntax, keep project-local integrate behavior, document install/update usage, and ship as npm patch 2.3.1.",
+    "profile": "complex",
+    "phase": "verify",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Implemented empirical integrate --global, shared five-workflow generators, all five native global skill roots, scoped reports and accurate invocation guidance, atomic containment and symlink-safe preservation, project-local command improvements, exported API, documentation, and 57 passing tests plus packed-package smoke.",
+    "implementationActor": "agent",
+    "specDigest": "606bff8aa7f814e1f7c70ab5549f1035d8e469305e51145e89f5eb09269ad6a7",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "91cbfb7d98d224f59c8808a1f2f9c6150772b5d3fbcad5609dd351b240cc3e35",
+    "evidence": [],
+    "updatedAt": "2026-07-29T16:15:14.910Z"
+  }
+}

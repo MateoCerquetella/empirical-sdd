@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 3,
+  "revision": 0,
+  "previousRevision": -1,
+  "actor": "empirical-workstream",
+  "summary": "Initialized global-agent-skills",
+  "createdAt": "2026-07-29T16:06:03.320Z",
+  "state": {
+    "schemaVersion": 3,
+    "revision": 0,
+    "activeFeature": null,
+    "request": null,
+    "profile": "complex",
+    "phase": "idle",
+    "status": "idle",
+    "repairAttempts": 0,
+    "message": null,
+    "implementationActor": null,
+    "specDigest": null,
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "evidence": [],
+    "updatedAt": "2026-07-29T16:06:03.320Z"
+  }
+}

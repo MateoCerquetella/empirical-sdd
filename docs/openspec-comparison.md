@@ -11,7 +11,7 @@ CLI, MCP, and TypeScript.
 
 ## At a glance
 
-| Product quality | OpenSpec strength | Empirical 2.2 adaptation |
+| Product quality | OpenSpec strength | Empirical 2.3 adaptation |
 |---|---|---|
 | Vague-problem discovery | Explore before formalizing a change | Persisted five-pass terminal interview plus pure agent/API packets |
 | Proposed behavior | Delta specs grouped by capability | OpenSpec-compatible ADDED/MODIFIED/REMOVED requirement subset with scenarios |
@@ -19,7 +19,7 @@ CLI, MCP, and TypeScript.
 | Safe completion | Archive closes a planned change | Review must pass first; Archive is exact-revisioned, atomic, rollback-capable, and idempotent |
 | Parallel change work | Multiple change directories | Independent named workstream state, journals, revisions, packet binding, and shared-resource locks |
 | Project customization | Project context and artifact rules | Committed policy context plus additive per-phase guidance that cannot disable gates |
-| Agent ergonomics | Slash-command workflow | Ordinary requests still activate Empirical automatically; CLI commands remain fallbacks |
+| Agent ergonomics | Slash-command workflow | Ordinary requests activate Empirical automatically; optional global Agent Skills cover five hosts; CLI commands remain fallbacks |
 | Execution assurance | Primarily planning and specification | Acceptance criteria, real evidence, UI browser/screenshots, review, retry, stale-client rejection |
 | Portability | Node-based CLI and agent integrations | One npm package; Node 20 runtime; no Rust, daemon, database, API key, or OpenSpec runtime dependency |
 

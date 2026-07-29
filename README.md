@@ -25,10 +25,11 @@ Add dark mode.
 ```
 
 That is the normal user experience: no special prefix and no per-agent command
-installation. Restart the agent once after the first `empirical init` so it can
-load the new project configuration. There is no Rust toolchain, daemon, GUI,
-database, IDE plug-in, mandatory MCP server, lifecycle hook, or home-directory
-integration.
+installation is required. Restart the agent once after the first `empirical
+init` so it can load the new project configuration. Developers who want the
+same workflows available in every repository can explicitly install global
+Agent Skills with `empirical integrate --global`. There is no Rust toolchain,
+daemon, GUI, database, IDE plug-in, mandatory MCP server, or lifecycle hook.
 
 For a complete run with real commands and output, see the
 [hello-command demo](https://github.com/MateoCerquetella/empirical-sdd/blob/main/docs/demo.md).
@@ -76,19 +77,43 @@ current conversation. JSON, MCP, TypeScript, non-TTY, and `--no-interview` keep 
 pure read-only Explore packet for automation. Discovery is not an extra phase for
 requests that are already concrete.
 
-| Agent | Automatic project integration | Manual fallback |
+| Agent | Automatic project integration | Project invocation |
 |---|---|---|
-| Codex | `AGENTS.md` and `.agents/skills/empirical/SKILL.md` | `$empirical` |
-| Claude Code | `CLAUDE.md` and `.claude/skills/empirical/SKILL.md` | `/empirical` |
-| Gemini CLI | `GEMINI.md` and project MCP | `/empirical` |
-| Cursor | `AGENTS.md` and project MCP | `/empirical` |
-| Windsurf | `AGENTS.md` and the shared project skill | `@empirical` or `/empirical` |
+| Codex | `AGENTS.md` and `.agents/skills/<workflow>/SKILL.md` | `$empirical*` |
+| Claude Code | `CLAUDE.md` and `.claude/skills/<workflow>/SKILL.md` | `/empirical*` |
+| Gemini CLI | `GEMINI.md`, project MCP, and `.gemini/commands/` | `/empirical*` |
+| Cursor | `AGENTS.md`, project MCP, and `.cursor/commands/` | `/empirical*` |
+| Windsurf | `AGENTS.md`, shared skills, and `.windsurf/workflows/` | `/empirical*` |
 | Other terminal agents | Managed repository guidance when supported | `empirical fast` or `empirical complex` |
 
 Cursor, Gemini, and Windsurf receive their native command files under
 `.cursor/commands/`, `.gemini/commands/`, and `.windsurf/workflows/`. All of
 these files stay inside the repository. Commit them so coworkers receive the
 same behavior when they clone the project.
+
+## Install workflows globally
+
+To make all five workflows available in every repository for every supported
+agent, run this once from any directory:
+
+```bash
+empirical integrate --global
+```
+
+This is explicit and independent of `empirical init`. It installs managed,
+portable Agent Skill copies without changing project state:
+
+| Agent | Global skill root | How to use it |
+|---|---|---|
+| Codex | `~/.codex/skills` | `$empirical`, `$empirical-explore`, `$empirical-fast`, `$empirical-complex`, `$empirical-loop` |
+| Claude Code | `~/.claude/skills` | the matching `/empirical*` commands |
+| Cursor | `~/.cursor/skills` | reload Cursor and ask normally; Agent chat discovers matching skills |
+| Gemini CLI | `~/.gemini/skills` | run `/skills reload`; matching skills activate from requests |
+| Windsurf | `~/.codeium/windsurf/skills` | the matching `@empirical*` skills |
+
+Run the same command after updating Empirical. Managed skill files refresh;
+unmanaged files, directories, and symbolic links at conflicting targets are
+preserved and reported. Ordinary `empirical integrate` remains repository-local.
 
 ## Simple workflow
 
@@ -253,6 +278,7 @@ empirical workstream select <name>
 empirical capabilities [name]
 empirical policy
 empirical integrate
+empirical integrate --global
 empirical doctor
 empirical migrate
 empirical mcp
@@ -296,7 +322,10 @@ stdio and is started on demand by the host. It is not a daemon.
 Tools and IDEs can embed the exact same engine:
 
 ```ts
-import { EmpiricalProject } from "empirical-sdd";
+import { EmpiricalProject, installGlobalAgentSkills } from "empirical-sdd";
+
+// Optional: install all workflows into this user's native agent skill roots.
+await installGlobalAgentSkills();
 
 const project = await EmpiricalProject.open(process.cwd(), "billing");
 const action = await project.complex("Add invoice retries");
@@ -328,14 +357,16 @@ evidence, and adopted `ai/` content stay in place.
 
 ```bash
 empirical update
+empirical integrate --global
 empirical integrate
 ```
 
-The first command installs the latest public npm package. The second refreshes
-managed project skills, commands, guidance, and MCP configuration without
-replacing unmanaged files. The current engine reads existing schema-1 and
-schema-2 state; mutations upgrade it safely. You can perform that non-destructive
-schema stamp explicitly before more work begins:
+The first command installs the latest public npm package. The optional second
+command refreshes global Agent Skills for every supported agent. The third
+refreshes managed skills, commands, guidance, and MCP configuration in the
+current project. Neither refresh replaces unmanaged files. The current engine
+reads existing schema-1 and schema-2 state; mutations upgrade it safely. You can
+perform that non-destructive schema stamp explicitly before more work begins:
 
 ```bash
 empirical migrate

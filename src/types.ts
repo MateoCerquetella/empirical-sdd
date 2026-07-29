@@ -1,5 +1,5 @@
 export const SCHEMA_VERSION = 3 as const;
-export const PRODUCT_VERSION = "2.3.0";
+export const PRODUCT_VERSION = "2.3.1";
 export const WORKSTREAM_SCHEMA_VERSION = 1 as const;
 export const POLICY_SCHEMA_VERSION = 1 as const;
 
@@ -203,9 +203,22 @@ export interface TransitionEvent {
 }
 
 export interface IntegrationReport {
+  scope: "project" | "global";
   created: string[];
   updated: string[];
   preserved: string[];
+  entrypoints: AgentEntrypointReport[];
+}
+
+export type AgentIntegrationId = "codex" | "claude" | "cursor" | "gemini" | "windsurf";
+
+export interface AgentEntrypointReport {
+  id: AgentIntegrationId;
+  agent: string;
+  kind: "skill" | "slash-command";
+  artifactRoot: string;
+  invocations: string[];
+  reload: string;
 }
 
 export interface InitOptions {

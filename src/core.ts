@@ -1182,7 +1182,7 @@ function digest(contents: string): string {
 }
 
 function emptyIntegrationReport(): IntegrationReport {
-  return { created: [], updated: [], preserved: [] };
+  return { scope: "project", created: [], updated: [], preserved: [], entrypoints: [] };
 }
 
 function assertWorkflow(profile: string): asserts profile is Workflow {
