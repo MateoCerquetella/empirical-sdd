@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { EmpiricalProject } from "../src/core.js";
 import { parseCriteria } from "../src/core.js";
 import { EmpiricalError } from "../src/errors.js";
+import { isRetryableLockOpenError } from "../src/storage.js";
 
 const directories: string[] = [];
 
@@ -725,6 +726,15 @@ describe("Empirical core", () => {
     await second;
 
     expect(currentOwnerStillLocked).toBe(true);
+  });
+
+  test("lock acquisition retries only expected contention and Windows sharing violations", () => {
+    expect(isRetryableLockOpenError({ code: "EEXIST" }, "linux")).toBe(true);
+    expect(isRetryableLockOpenError({ code: "EPERM" }, "win32")).toBe(true);
+    expect(isRetryableLockOpenError({ code: "EACCES" }, "win32")).toBe(true);
+    expect(isRetryableLockOpenError({ code: "EPERM" }, "linux")).toBe(false);
+    expect(isRetryableLockOpenError({ code: "EACCES" }, "darwin")).toBe(false);
+    expect(isRetryableLockOpenError({ code: "ENOENT" }, "win32")).toBe(false);
   });
 
   test("concurrent clients recover one abandoned stale lock without splitting state", async () => {
