@@ -81,6 +81,8 @@ describe("Socratic discovery", () => {
     ]);
     expect(questions[1]!.question).toContain("playable loop");
     expect(questions[4]!.question).toContain("real browser");
+    expect(socraticQuestions("Improve onboarding", "The user completes a browser screen")[4]!.question)
+      .toContain("real browser");
     expect(materialFollowUp(problem, questions[1]!, "Record a cursor loop")).toContain("wins or completes");
     expect(materialFollowUp(
       problem,
@@ -111,6 +113,7 @@ describe("Socratic discovery", () => {
     expect(result.stderr).toBe("");
     expect(result.stdout).toContain("Pass 1/5 · Problem and user");
     expect(result.stdout).toContain("Pass 5/5 · Verification");
+    expect(result.stdout).toContain("Do not enter secrets or credentials");
     expect(result.stdout).toContain("One material follow-up:");
     expect(result.stdout).toContain("Refined request");
     expect(result.stdout).toContain("step 1/7");
@@ -233,6 +236,19 @@ describe("Socratic discovery", () => {
     } catch (error) {
       expect(error).toBeInstanceOf(EmpiricalError);
       expect((error as EmpiricalError).code).toBe("UNSAFE_DISCOVERY_PATH");
+    }
+  });
+
+  test("discovery persistence rejects traversal identifiers", async () => {
+    const { root } = await temporaryProject();
+    const record = { ...createDiscoveryRecord("Explore safe identifiers"), id: "../escaped" };
+
+    try {
+      await saveDiscovery(root, record);
+      throw new Error("Expected discovery storage to reject traversal");
+    } catch (error) {
+      expect(error).toBeInstanceOf(EmpiricalError);
+      expect((error as EmpiricalError).code).toBe("INVALID_DISCOVERY");
     }
   });
 });

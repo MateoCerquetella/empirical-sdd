@@ -115,6 +115,7 @@ async function main(): Promise<void> {
       const project = await EmpiricalProject.open(context.root, context.workstream);
       const packet = await project.explore(request);
       const interactive = forceInteractive
+        || Boolean(agentOption)
         || (!context.json && !noInterview && Boolean(process.stdin.isTTY && process.stdout.isTTY));
       if (interactive) {
         await runSocraticInterview(project, packet, agentOption as "codex" | "none" | undefined);
@@ -365,14 +366,17 @@ async function runSocraticInterview(
   console.log(`Empirical Socratic Explore · five passes · workstream ${project.store.workstream}`);
   console.log(`\nIdea: ${packet.problem}`);
   console.log("\nI will ask one question at a time, save every answer, show the refined brief, and wait for approval before starting work.");
+  console.log("Answers are written into committed project files under .empirical/discoveries/. Do not enter secrets or credentials.");
   console.log("Type :quit at any prompt to save the draft and stop.\n");
 
   try {
     interview: while (true) {
       const answers: SocraticAnswer[] = [];
-      const questions = socraticQuestions(packet.problem);
-      for (let index = 0; index < questions.length; index += 1) {
-        const question = questions[index]!;
+      for (let index = 0; index < 5; index += 1) {
+        const priorContext = answers
+          .map((answer) => `${answer.answer} ${answer.followUp?.answer ?? ""}`)
+          .join(" ");
+        const question = socraticQuestions(packet.problem, priorContext)[index]!;
         console.log(`Pass ${index + 1}/5 · ${question.title}`);
         const answer = await askRequired(prompt, `${question.question}\n> `);
         const entry: SocraticAnswer = { ...question, answer, followUp: null };
@@ -470,7 +474,12 @@ async function runSocraticInterview(
     }
   } catch (error) {
     if (error instanceof InterviewQuit) {
-      console.log(`\nInterview stopped safely. Your latest draft is saved at ${paths.markdown}.`);
+      const savedState = record.status === "started"
+        ? "workflow handoff"
+        : record.status === "approved"
+          ? "approved brief"
+          : "latest draft";
+      console.log(`\nInterview stopped safely. Your ${savedState} is saved at ${paths.markdown}.`);
       return;
     }
     throw error;

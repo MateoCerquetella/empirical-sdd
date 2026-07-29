@@ -1,0 +1,9 @@
+[
+  {
+    "criterionId": "all",
+    "kind": "review",
+    "passed": true,
+    "artifact": "src/discovery.ts",
+    "summary": "Criterion-by-criterion implementation and diff review found no blocking correctness, security, compatibility, or UX issues. Review-driven fixes made later questions adapt to earlier domain answers, made --agent imply interview mode, warned against persisting secrets, reported EOF state accurately, and rejected traversal identifiers in addition to symbolic links. Workflow creation remains approval-gated, Fast override is explicit, Codex launch is allowlisted and shell-free, launch failure preserves resumability, and pure Explore interfaces remain unchanged."
+  }
+]

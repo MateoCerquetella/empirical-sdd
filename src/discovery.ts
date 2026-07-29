@@ -75,8 +75,8 @@ export function createDiscoveryRecord(problem: string, now = new Date()): Discov
   };
 }
 
-export function socraticQuestions(problem: string): SocraticQuestion[] {
-  const domains = classifyDomains(problem);
+export function socraticQuestions(problem: string, priorContext = ""): SocraticQuestion[] {
+  const domains = classifyDomains(`${problem} ${priorContext}`);
   const outcomeHint = domains.game
     ? "Describe the smallest playable loop: player input, recorded or cooperative behavior, reset condition, and exact win or failure condition."
     : domains.ui
@@ -124,7 +124,7 @@ export function materialFollowUp(
   answer: string,
 ): string | null {
   const clean = answer.trim();
-  const domains = classifyDomains(problem);
+  const domains = classifyDomains(`${problem} ${answer}`);
   if (isVague(clean)) {
     return `Make the ${question.title.toLowerCase()} decision concrete: what exact behavior or boundary should the specification use?`;
   }
@@ -186,6 +186,9 @@ export function recommendWorkflow(problem: string, answers: SocraticAnswer[]): D
 }
 
 export async function saveDiscovery(root: string, record: DiscoveryRecord): Promise<DiscoveryPaths> {
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*$/.test(record.id)) {
+    throw new EmpiricalError("INVALID_DISCOVERY", `Invalid discovery id: ${record.id}`);
+  }
   const rootDirectory = join(root, ".empirical", "discoveries");
   const recordDirectory = join(rootDirectory, record.id);
   if (await isSymbolicLink(rootDirectory) || await isSymbolicLink(recordDirectory)) {
