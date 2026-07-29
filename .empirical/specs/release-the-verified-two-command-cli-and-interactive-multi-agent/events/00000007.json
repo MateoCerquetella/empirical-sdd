@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 4,
+  "revision": 7,
+  "previousRevision": 6,
+  "actor": "agent",
+  "summary": "Reviewed all six release criteria and three accepted decisions against commit 42245b2, CI and tarball output, immutable npm integrity metadata, and clean-consumer behavior; registry shasum matches the inspected artifact and no blocking issue remains.",
+  "createdAt": "2026-07-29T21:34:08.754Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 7,
+    "activeFeature": "release-the-verified-two-command-cli-and-interactive-multi-agent",
+    "request": "Release the verified two-command CLI and interactive multi-agent installer as empirical-sdd 0.20.1, publish it to npm under latest, and verify the registry tarball and clean consumer installation.",
+    "profile": "complex",
+    "phase": "archive",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Reviewed all six release criteria and three accepted decisions against commit 42245b2, CI and tarball output, immutable npm integrity metadata, and clean-consumer behavior; registry shasum matches the inspected artifact and no blocking issue remains.",
+    "implementationActor": "agent",
+    "specDigest": "eed69220fb429426299e6685ece37a0a689f3b1b7b3e400ba2c7f05e9849ef26",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "de24432112a35062f184227a2828a145c5b8940439dc1a52b2c928a78baf6c3a",
+    "evidence": [
+      {
+        "criterionId": "AC-1",
+        "kind": "test",
+        "passed": true,
+        "summary": "Release commit 42245b2 aligns package.json, PRODUCT_VERSION, README, repository conventions, the core assertion, and built smoke at 0.20.1; the built CLI reports 0.20.1."
+      },
+      {
+        "criterionId": "AC-2",
+        "kind": "test",
+        "passed": true,
+        "summary": "The 0.20.1 release candidate passed bun run ci, including TypeScript checking, the full Bun suite, built CLI/MCP smoke, and npm package dry-run; an independent repeat of built smoke and package inspection also passed."
+      },
+      {
+        "criterionId": "AC-3",
+        "kind": "test",
+        "passed": true,
+        "summary": "Authenticated browser approval completed the single successful public publication. npm reports empirical-sdd@0.20.1 and latest=0.20.1 with shasum e6ced32b3810b7350f0e39890d3fa5bf81d9ae86."
+      },
+      {
+        "criterionId": "AC-4",
+        "kind": "test",
+        "passed": true,
+        "summary": "A new temporary consumer installed empirical-sdd@0.20.1 from npm. Its local packaged binary and manifest report 0.20.1, help lists only Install and Update, and direct Init returns UNKNOWN_COMMAND."
+      },
+      {
+        "criterionId": "AC-5",
+        "kind": "test",
+        "passed": true,
+        "summary": "Both npm dry-run and the registry-installed package contain exactly the declared 22 distribution files: LICENSE, README, package.json, built JavaScript, and declarations; no source, workflow, credential, or unrelated repository file is present."
+      },
+      {
+        "criterionId": "AC-6",
+        "kind": "test",
+        "passed": true,
+        "summary": "0.20.0 remains untouched, 0.20.1 was absent before publication, no npm version or tag was deleted, no Git history was rewritten, the consumer fixture was removed, and the release candidate worktree remained clean after publication."
+      },
+      {
+        "criterionId": "all",
+        "kind": "review",
+        "passed": true,
+        "summary": "Reviewed AC-1 through AC-6 against release commit 42245b2, decisions D-001 through D-003, CI/package output, npm registry metadata, and clean-consumer results. The registry shasum matches the inspected dry-run artifact, latest resolves to 0.20.1, only workflow evidence changed after the release commit, and no blocking version, distribution, credential, history, or scope issue remains."
+      }
+    ],
+    "updatedAt": "2026-07-29T21:34:08.754Z"
+  }
+}

@@ -1,0 +1,8 @@
+[
+  {
+    "criterionId": "all",
+    "kind": "review",
+    "passed": true,
+    "summary": "Reviewed AC-1 through AC-6 against release commit 42245b2, decisions D-001 through D-003, CI/package output, npm registry metadata, and clean-consumer results. The registry shasum matches the inspected dry-run artifact, latest resolves to 0.20.1, only workflow evidence changed after the release commit, and no blocking version, distribution, credential, history, or scope issue remains."
+  }
+]
