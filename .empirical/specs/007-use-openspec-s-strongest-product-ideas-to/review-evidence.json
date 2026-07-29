@@ -1,0 +1,9 @@
+[
+  {
+    "criterionId": "all",
+    "kind": "review",
+    "passed": true,
+    "artifact": "openspec/changes/evolve-empirical-living-specs/tasks.md",
+    "summary": "Criterion-by-criterion diff review found no blocking correctness, security, migration, concurrency, packaging, or UX issues. Review-driven fixes added delta tamper binding, symbolic-link rejection, rollback error reporting, safe capability cleanup, and complete wrapped-criterion rendering."
+  }
+]

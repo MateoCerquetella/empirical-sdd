@@ -6,9 +6,21 @@
 - Empirical does not run a daemon or expose a network port.
 - State writes use exact revisions, a local exclusive lock, append-only events,
   and atomic file replacement.
+- Named workstreams isolate state locks, event journals, and revisions. Shared
+  feature numbering, workstream metadata, policy, and capability archive use
+  separate project-wide resource locks. Action packets bind mutations to an
+  explicit workstream.
 - Feature start holds the state lock while choosing the feature identity and
   writing its specification. Completed revisions retain a specification digest
   so later criterion changes invalidate verification evidence.
+- Capability and workstream identifiers use portable allowlists and reject path
+  traversal. Complex Archive preflights all delta operations before mutation,
+  rejects ambiguous changes, and rolls back earlier capability writes if any
+  projection or state commit fails. A digest recorded at Specify prevents a delta
+  from being changed silently between approval, review, and Archive.
+- `.empirical/policy.json` is untrusted repository guidance. It is appended to
+  built-in phase instructions and cannot disable criteria, artifacts, exact
+  revisions, evidence, review, delta validation, or Archive.
 - Initialization updates only marked instruction blocks, Empirical-managed
   project skills and commands, and the named `empirical` MCP entry. Existing
   unmanaged or conflicting entries are preserved and reported.

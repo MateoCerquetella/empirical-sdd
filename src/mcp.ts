@@ -20,13 +20,32 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     {
       instructions:
         "Automatically use Empirical for repository-changing work. For new work choose "
+        + "empirical_explore first only when the problem is genuinely vague and needs investigation. Choose "
         + "empirical_fast only when the request is explicit, tiny, localized, reversible, "
         + "low-risk, and non-UI; otherwise choose empirical_complex. Use empirical_loop only "
-        + "to resume work that is already active. Perform the returned action and call "
-        + "empirical_complete at its exact revision. Each completion response is the next "
+        + "to resume work that is already active. Preserve the explicit workstream in every action. "
+        + "Perform the returned action and call empirical_complete or empirical_archive at its exact revision. Each response is the next "
         + "action; consume it directly until done, blocked, or awaiting human input. The "
         + "current host agent executes the work; Empirical never launches an AI runtime.",
     },
+  );
+
+  server.registerTool(
+    "empirical_explore",
+    {
+      title: "Explore a vague problem",
+      description: "Return read-only discovery guidance before choosing Fast or Complex. Never creates workflow state or launches an AI.",
+      inputSchema: {
+        root: z.string().optional(),
+        workstream: z.string().optional(),
+        problem: z.string().min(1),
+      },
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    },
+    async ({ root, workstream, problem }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot, workstream);
+      return project.explore(problem);
+    }),
   );
 
   server.registerTool(
@@ -82,13 +101,14 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
       description: "Start or idempotently resume one explicit, tiny, localized, reversible, low-risk non-UI change.",
       inputSchema: {
         root: z.string().optional(),
+        workstream: z.string().optional(),
         request: z.string().min(1),
         id: z.string().optional(),
       },
       annotations: { destructiveHint: false, idempotentHint: true },
     },
-    async ({ root, request, id }) => toolResult(async () => {
-      const project = await EmpiricalProject.open(root ?? defaultRoot);
+    async ({ root, workstream, request, id }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot, workstream);
       return project.fast(request, { ...(id ? { id } : {}) });
     }),
   );
@@ -100,13 +120,14 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
       description: "Start or idempotently resume the full high-assurance SDD workflow. Use whenever Fast eligibility is uncertain.",
       inputSchema: {
         root: z.string().optional(),
+        workstream: z.string().optional(),
         request: z.string().min(1),
         id: z.string().optional(),
       },
       annotations: { destructiveHint: false, idempotentHint: true },
     },
-    async ({ root, request, id }) => toolResult(async () => {
-      const project = await EmpiricalProject.open(root ?? defaultRoot);
+    async ({ root, workstream, request, id }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot, workstream);
       return project.complex(request, { ...(id ? { id } : {}) });
     }),
   );
@@ -118,14 +139,15 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
       description: "Compatibility entrypoint for older profile-based clients. New agents use empirical_fast or empirical_complex.",
       inputSchema: {
         root: z.string().optional(),
+        workstream: z.string().optional(),
         request: z.string().min(1),
         profile: profileSchema.optional(),
         id: z.string().optional(),
       },
       annotations: { destructiveHint: false, idempotentHint: false },
     },
-    async ({ root, request, profile, id }) => toolResult(async () => {
-      const project = await EmpiricalProject.open(root ?? defaultRoot);
+    async ({ root, workstream, request, profile, id }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot, workstream);
       return project.start(request, {
         ...(profile ? { profile } : {}),
         ...(id ? { id } : {}),
@@ -139,11 +161,11 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
       title: "Resume the agent loop",
       description:
         "Return the current resumable action without starting work or choosing an SDD workflow.",
-      inputSchema: { root: z.string().optional() },
+      inputSchema: { root: z.string().optional(), workstream: z.string().optional() },
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
     },
-    async ({ root }) => toolResult(async () => {
-      const project = await EmpiricalProject.open(root ?? defaultRoot);
+    async ({ root, workstream }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot, workstream);
       return project.loop();
     }),
   );
@@ -153,11 +175,11 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     {
       title: "Read workflow status",
       description: "Read the current feature, phase, revision, and stop condition without mutation.",
-      inputSchema: { root: z.string().optional() },
+      inputSchema: { root: z.string().optional(), workstream: z.string().optional() },
       annotations: { readOnlyHint: true, idempotentHint: true },
     },
-    async ({ root }) => toolResult(async () => {
-      const project = await EmpiricalProject.open(root ?? defaultRoot);
+    async ({ root, workstream }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot, workstream);
       return project.status();
     }),
   );
@@ -167,11 +189,11 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     {
       title: "Get the next action",
       description: "Return complete instructions, criteria, evidence requirements, and revision for the next phase.",
-      inputSchema: { root: z.string().optional() },
+      inputSchema: { root: z.string().optional(), workstream: z.string().optional() },
       annotations: { readOnlyHint: true, idempotentHint: true },
     },
-    async ({ root }) => toolResult(async () => {
-      const project = await EmpiricalProject.open(root ?? defaultRoot);
+    async ({ root, workstream }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot, workstream);
       return project.next();
     }),
   );
@@ -183,6 +205,7 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
       description: "Submit a typed result for the current phase at the exact observed revision.",
       inputSchema: {
         root: z.string().optional(),
+        workstream: z.string().optional(),
         revision: z.number().int().nonnegative(),
         outcome: z.enum(["passed", "failed", "awaiting_human", "blocked"]),
         summary: z.string().min(1),
@@ -191,15 +214,35 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
       },
       annotations: { destructiveHint: false, idempotentHint: false },
     },
-    async ({ root, revision, outcome, summary, actor, evidence }) => toolResult(async () => {
-      const project = await EmpiricalProject.open(root ?? defaultRoot);
+    async ({ root, workstream, revision, outcome, summary, actor, evidence }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot, workstream);
       return project.complete({
         revision,
         outcome,
         summary,
+        ...(workstream ? { workstream } : {}),
         ...(actor ? { actor } : {}),
         ...(evidence ? { evidence: evidence as Evidence[] } : {}),
       });
+    }),
+  );
+
+  server.registerTool(
+    "empirical_archive",
+    {
+      title: "Archive reviewed capability changes",
+      description: "Apply validated capability deltas and complete the exact reviewed Complex revision.",
+      inputSchema: {
+        root: z.string().optional(),
+        workstream: z.string().optional(),
+        revision: z.number().int().nonnegative(),
+        actor: z.string().min(1).optional(),
+      },
+      annotations: { destructiveHint: true, idempotentHint: true },
+    },
+    async ({ root, workstream, revision, actor }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot, workstream);
+      return project.archive(revision, actor);
     }),
   );
 
@@ -208,11 +251,11 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     {
       title: "Validate completion evidence",
       description: "Check acceptance-criterion, UI, screenshot, and review evidence without mutation.",
-      inputSchema: { root: z.string().optional() },
+      inputSchema: { root: z.string().optional(), workstream: z.string().optional() },
       annotations: { readOnlyHint: true, idempotentHint: true },
     },
-    async ({ root }) => toolResult(async () => {
-      const project = await EmpiricalProject.open(root ?? defaultRoot);
+    async ({ root, workstream }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot, workstream);
       return project.verify();
     }),
   );
@@ -224,14 +267,63 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
       description: "Resume after a blocker or required human decision is resolved.",
       inputSchema: {
         root: z.string().optional(),
+        workstream: z.string().optional(),
         revision: z.number().int().nonnegative(),
         actor: z.string().min(1).optional(),
       },
       annotations: { destructiveHint: false, idempotentHint: false },
     },
-    async ({ root, revision, actor }) => toolResult(async () => {
-      const project = await EmpiricalProject.open(root ?? defaultRoot);
+    async ({ root, workstream, revision, actor }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot, workstream);
       return project.retry(revision, actor);
+    }),
+  );
+
+  server.registerTool(
+    "empirical_workstreams",
+    {
+      title: "Manage workstreams",
+      description: "List, create, or select independently revisioned workstreams.",
+      inputSchema: {
+        root: z.string().optional(),
+        operation: z.enum(["list", "create", "select"]).default("list"),
+        name: z.string().optional(),
+      },
+      annotations: { destructiveHint: false, idempotentHint: true },
+    },
+    async ({ root, operation, name }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot);
+      if (operation === "list") return project.workstreams();
+      if (!name) throw new Error(`${operation} requires a workstream name`);
+      return operation === "create" ? project.createWorkstream(name) : project.selectWorkstream(name);
+    }),
+  );
+
+  server.registerTool(
+    "empirical_capabilities",
+    {
+      title: "Read living capability specifications",
+      description: "List capability specs or read one current behavior contract.",
+      inputSchema: { root: z.string().optional(), name: z.string().optional() },
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    },
+    async ({ root, name }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot);
+      return name ? { name, contents: await project.capability(name) } : project.capabilities();
+    }),
+  );
+
+  server.registerTool(
+    "empirical_policy",
+    {
+      title: "Read project policy",
+      description: "Read committed project context and additive phase guidance.",
+      inputSchema: { root: z.string().optional() },
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    },
+    async ({ root }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot);
+      return project.policy();
     }),
   );
 
@@ -240,11 +332,11 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     {
       title: "Refresh agent discovery",
       description: "Safely refresh project instructions and MCP configuration for supported agents.",
-      inputSchema: { root: z.string().optional() },
+      inputSchema: { root: z.string().optional(), workstream: z.string().optional() },
       annotations: { destructiveHint: false, idempotentHint: true },
     },
-    async ({ root }) => toolResult(async () => {
-      const project = await EmpiricalProject.open(root ?? defaultRoot);
+    async ({ root, workstream }) => toolResult(async () => {
+      const project = await EmpiricalProject.open(root ?? defaultRoot, workstream);
       return project.integrations();
     }),
   );

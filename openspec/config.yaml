@@ -1,0 +1,21 @@
+schema: spec-driven
+
+context: |
+  Empirical is an npm-only TypeScript SDD workflow for terminal-capable coding agents.
+  Preserve automatic activation, the one-pass Fast workflow, the gated Complex
+  workflow, exact revisions, mandatory evidence, project-local integrations,
+  stdio MCP, and Node.js 20 portability. OpenSpec is used to plan this repository,
+  but empirical-sdd must not acquire an OpenSpec runtime dependency.
+
+rules:
+  proposal:
+    - State explicit non-goals and compatibility expectations.
+    - Distinguish planning ergonomics from machine-enforced workflow guarantees.
+  specs:
+    - Express every requirement as observable behavior with concrete scenarios.
+    - Include migration and concurrency scenarios for persisted-state changes.
+  design:
+    - Preserve existing Fast, Complex, Quick compatibility, CLI, MCP, and TypeScript API surfaces.
+    - Prefer additive schema migration and project-local files over global state.
+  tasks:
+    - Pair implementation tasks with focused tests and documentation.

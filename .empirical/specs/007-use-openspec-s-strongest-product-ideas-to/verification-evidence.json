@@ -1,0 +1,65 @@
+[
+  {
+    "criterionId": "AC-1",
+    "kind": "test",
+    "passed": true,
+    "artifact": "tests/living-specs.test.ts",
+    "summary": "API and JSON CLI packets are identical, stdio MCP matches the API, and state, events, and specs remain byte-for-byte unchanged by Explore."
+  },
+  {
+    "criterionId": "AC-2",
+    "kind": "test",
+    "passed": true,
+    "artifact": "tests/living-specs.test.ts",
+    "summary": "Complex runs validate capability deltas, enter Archive after passing Review, and atomically create canonical living specifications before Done."
+  },
+  {
+    "criterionId": "AC-3",
+    "kind": "test",
+    "passed": true,
+    "artifact": "tests/living-specs.test.ts",
+    "summary": "Tests reject malformed, duplicate, missing, traversal, symbolic-link, early, and post-approval delta mutations; rollback and repeated Archive convergence pass."
+  },
+  {
+    "criterionId": "AC-4",
+    "kind": "test",
+    "passed": true,
+    "artifact": "tests/workstreams.test.ts",
+    "summary": "Concurrent alpha and beta workstreams receive distinct features and independent revision journals; selection and mismatched completion cannot redirect issued packets."
+  },
+  {
+    "criterionId": "AC-5",
+    "kind": "test",
+    "passed": true,
+    "artifact": "tests/workstreams.test.ts",
+    "summary": "Schema-1 and schema-2 migrations preserve default state, events, specs, and Quick/v1 adoption coverage while adding schema-3 metadata."
+  },
+  {
+    "criterionId": "AC-6",
+    "kind": "test",
+    "passed": true,
+    "artifact": "tests/workstreams.test.ts",
+    "summary": "Committed context and design guidance appear in packets, while conflicting guidance still cannot bypass the required design artifact."
+  },
+  {
+    "criterionId": "AC-7",
+    "kind": "test",
+    "passed": true,
+    "artifact": "tests/core.test.ts",
+    "summary": "Repeatable generated integrations expose Explore, automatic Fast/Complex selection, explicit packet workstreams, and post-Review Archive without profile or JSON UX."
+  },
+  {
+    "criterionId": "AC-8",
+    "kind": "test",
+    "passed": true,
+    "artifact": "tests/core.test.ts",
+    "summary": "Existing Fast, Complex, Quick, revision, repair, browser, screenshot, evidence, review, integration, and concurrency tests all pass with enforced Complex Archive."
+  },
+  {
+    "criterionId": "AC-9",
+    "kind": "test",
+    "passed": true,
+    "artifact": "package.json",
+    "summary": "bun run ci passes 42 tests and 281 assertions plus typecheck, built Node CLI/MCP smoke, npm dry-run; strict OpenSpec validation also passes with no OpenSpec runtime dependency."
+  }
+]

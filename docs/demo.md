@@ -107,7 +107,7 @@ $ ./hello
 Hello from Empirical!
 
 $ empirical status
-feature=001-add-a-hello-command-that-prints-hello phase=done status=done revision=2 profile=fast
+workstream=default feature=001-add-a-hello-command-that-prints-hello phase=done status=done revision=2 profile=fast
 
 $ empirical verify
 Evidence is complete for 1 acceptance criteria.
@@ -142,5 +142,24 @@ empirical complex "Replace authentication"
 ```
 
 Complex adds explicit Specify, Design, and Plan phases before implementation.
+During Specify, the agent declares ADDED, MODIFIED, or REMOVED behavioral
+requirements under the feature's `deltas/` directory. Verify still requires
+criterion evidence, Review still requires review evidence, and the next packet
+then requires Archive:
+
+```text
+Specify → Design → Plan → Implement → Verify → Review → Archive → Done
+```
+
+Archive atomically updates `.empirical/capabilities/<name>/spec.md`, giving later
+changes a concise statement of current behavior rather than only a history of old
+feature plans.
+
 If a later agent session needs to continue that active workflow, it calls
 `empirical_loop()` or runs `empirical loop` with no request.
+
+If the initial request is genuinely vague, the agent can call
+`empirical_explore(problem="...")` first. Explore asks only scope-changing
+questions and creates no feature or revision. If unrelated work is already active,
+the agent creates a named workstream and preserves the explicit workstream from
+every returned packet.

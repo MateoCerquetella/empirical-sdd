@@ -16,22 +16,27 @@ Codex / Claude / Gemini / Cursor / Windsurf / other agents
 
 - `src/core.ts` implements initialization, v1 adoption, state transitions,
   the Fast and Complex public workflows, Quick legacy-state compatibility,
-  acceptance-criterion parsing, evidence gates, and bounded repair routing.
+  Explore, workstream management, acceptance-criterion parsing, evidence gates,
+  Archive, and bounded repair routing.
 - `src/cli.ts` is the global `empirical` executable.
 - `src/mcp.ts` exposes the same operations as stdio MCP tools.
 - `src/integrations.ts` safely adds discovery instructions, project skills,
   native manual commands, and project-scoped MCP configuration without
   replacing unmanaged content.
 - `src/storage.ts` provides atomic JSON projection, append-only transition
-  events, local locking, recovery, and optimistic revisions.
+  events, workstream-scoped state, shared-resource locking, recovery, rollback
+  effects, and optimistic revisions.
+- `src/specifications.ts` parses and preflights requirement deltas, projects
+  canonical capability specifications, and prepares reversible archive writes.
 
 The MCP server owns no state. Deleting an agent's cache or MCP configuration
 does not affect the workflow because another client can resume from
-`.empirical/state.json` and `.empirical/events/`.
+`.empirical/state.json` and `.empirical/events/` for the default workstream or
+the equivalent named-workstream paths.
 
-Protocol schema 2 adds the Fast capability guard. The current engine reads
-schema-1 projects and upgrades them non-destructively on migration or the next
-state mutation. Older engines reject schema 2 before completing a Fast action.
+Protocol schema 3 adds living capability specs, project policy, and independent
+named workstreams. The current engine reads schema-1 and schema-2 projects and
+upgrades them non-destructively on migration or the next state mutation.
 
 ## Cooperative execution loop
 
@@ -42,10 +47,14 @@ submits evidence.
 ```text
 ordinary user request
          |
-  project skill chooses
-     /           \
- Fast          Complex
-   |               |
+  vague? -- yes --> empirical_explore -- refine --+
+         \ no                                  |
+          +-------------------------------------+
+                         |
+                project skill chooses
+                    /           \
+                 Fast          Complex
+                   |               |
 empirical_fast  empirical_complex      (MCP)
 empirical fast  empirical complex      (CLI)
      \           /
@@ -53,7 +62,7 @@ empirical fast  empirical complex      (CLI)
             |
    host agent does the work
             |
-     empirical complete
+ empirical complete / empirical archive
             |
    returned next action packet
             +---- repeat until done, blocked, or awaiting human input
@@ -72,6 +81,28 @@ in the same completion. Complex retains explicit specification, design,
 planning, verification, and review gates. Quick is not a public workflow for
 new work; it remains only so older project state can be resumed safely.
 
+After Complex Review, the workflow enters Archive. All capability deltas are
+preflighted before mutation. Capability writes happen as a reversible effect
+inside the exact-revision state transaction; a failed event/state projection
+restores the previous living specs. The Archive operation is idempotent after
+Done.
+
+## Shared project state and workstreams
+
+```text
+project-wide                          independently revisioned
+config + policy                      default: state.json + events/
+feature specs + deltas               named: workstreams/<id>/state.json + events/
+living capability specs
+        |                                      |
+        +-- shared resource locks     per-workstream state lock --+
+```
+
+Feature numbering and capability archive are globally serialized because their
+files are shared. Routine transitions in different workstreams use independent
+locks and revisions. Selection changes only the default addressed by a fresh
+command; action packets always preserve immutable workstream identity.
+
 ## Portability boundary
 
 “Works on every agent” means:
@@ -81,7 +112,7 @@ new work; it remains only so older project state can be resumed safely.
    them.
 3. Self-guiding `empirical fast "<request>"` and
    `empirical complex "<request>"` fallbacks for any terminal-capable agent,
-   plus `empirical loop` for resume.
+   plus `empirical explore` for genuine ambiguity and `empirical loop` for resume.
 
 The integrations are committed project files. Empirical installs no lifecycle
 hooks and writes no skills or commands into a developer's home directory.
