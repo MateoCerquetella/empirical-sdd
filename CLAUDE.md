@@ -24,6 +24,17 @@ work. The user does not need to mention Empirical.
    files, combine the focused test and diff review, and use the returned
    completion command. Do not reread Empirical internals or add redundant checks.
 
+Command reference:
+- Socratic discovery: `empirical explore "<idea>"`
+- Socratic discovery, then launch Codex: `empirical explore "<idea>" --agent codex`
+- Direct tiny change: `empirical fast "<request>"`
+- Direct substantial or UI change: `empirical complex "<request>"`
+- Unrelated active work: `empirical workstream create <name>`, then add `--workstream <name>`
+- Resume active work: `empirical loop [--workstream <name>]`
+
+The `--agent codex` form is a human terminal entrypoint. Agents must continue in
+their current runtime and use the MCP equivalents when available.
+
 Quick exists only for legacy compatibility. Do not select it for new work or
 add profile/JSON controls to the normal workflow.
 

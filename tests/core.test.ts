@@ -163,6 +163,16 @@ describe("Empirical core", () => {
     expect(agentsSkill).toContain("Choose Complex otherwise");
     expect(agentsSkill).not.toContain("--profile");
     expect(agentsSkill).not.toContain("--json");
+    const instructionPaths = ["AGENTS.md", "CLAUDE.md", "GEMINI.md", ...managedPaths];
+    for (const path of instructionPaths) {
+      const instruction = await readFile(join(root, path), "utf8");
+      expect(instruction).toContain('empirical explore "<idea>"');
+      expect(instruction).toContain('empirical explore "<idea>" --agent codex');
+      expect(instruction).toContain('empirical fast "<request>"');
+      expect(instruction).toContain('empirical complex "<request>"');
+      expect(instruction).toContain("empirical workstream create <name>");
+      expect(instruction).toContain("empirical loop [--workstream <name>]");
+    }
     for (const path of managedPaths.slice(2)) {
       expect(await readFile(join(root, path), "utf8")).toContain("empirical-sdd:managed-file");
     }

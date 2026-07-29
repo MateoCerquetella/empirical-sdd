@@ -7,6 +7,16 @@ const START = "<!-- empirical-sdd:start -->";
 const END = "<!-- empirical-sdd:end -->";
 const MANAGED_FILE_MARKER = "empirical-sdd:managed-file";
 const SOCRATIC_AGENT_GUIDANCE = `For genuinely vague work, retrieve repository and living-spec context with empirical_explore or empirical explore "<problem>", then conduct the original five Socratic passes in the current conversation: problem/user, observable outcome, boundaries/non-goals, failure/risk, and verification. Ask one question at a time, add only a material follow-up, show the complete refined contract, and wait for explicit human approval before starting Fast or Complex. Do not merely repeat the packet's generic questions.`;
+const COMMAND_REFERENCE = `Command reference:
+- Socratic discovery: \`empirical explore "<idea>"\`
+- Socratic discovery, then launch Codex: \`empirical explore "<idea>" --agent codex\`
+- Direct tiny change: \`empirical fast "<request>"\`
+- Direct substantial or UI change: \`empirical complex "<request>"\`
+- Unrelated active work: \`empirical workstream create <name>\`, then add \`--workstream <name>\`
+- Resume active work: \`empirical loop [--workstream <name>]\`
+
+The \`--agent codex\` form is a human terminal entrypoint. Agents must continue in
+their current runtime and use the MCP equivalents when available.`;
 
 const GUIDANCE = `${START}
 ## Empirical SDD
@@ -33,6 +43,8 @@ work. The user does not need to mention Empirical.
    human input. For Fast, trust the criterion in the returned packet, inspect only relevant project
    files, combine the focused test and diff review, and use the returned
    completion command. Do not reread Empirical internals or add redundant checks.
+
+${COMMAND_REFERENCE}
 
 Quick exists only for legacy compatibility. Do not select it for new work or
 add profile/JSON controls to the normal workflow.
@@ -76,6 +88,8 @@ daemon, or runtime.
 8. Stop only at \`done\`, \`blocked\`, or \`awaiting_human\`. Explain a blocker or
    required decision clearly. Keep Fast updates and checks proportional.
 
+${COMMAND_REFERENCE}
+
 Quick exists only to resume legacy workflow state. Do not choose it for new
 work or add profile/JSON controls to the normal path.
 
@@ -98,6 +112,8 @@ work with \`empirical_loop\` or \`empirical loop\`. Preserve its workstream, exe
 each returned action, complete exact revisions with evidence, archive after Review, and consume the
 response directly as the next action. Never select legacy Quick for new work,
 add profile/JSON controls, or launch another AI runtime.
+
+${COMMAND_REFERENCE}
 `;
 
 const GEMINI_COMMAND = `# ${MANAGED_FILE_MARKER}
@@ -106,6 +122,8 @@ prompt = """
 Run the request attached to this command through the repository's Empirical workflow. If there is no new request, resume the active feature.
 
 Use the current Gemini agent. ${SOCRATIC_AGENT_GUIDANCE} For concrete work, choose Fast only for explicit, tiny, localized, reversible, low-risk non-UI changes and Complex otherwise. Start with empirical_fast or empirical_complex; fall back to empirical fast "<request>" or empirical complex "<request>". Resume active work with empirical_loop or empirical loop. Preserve workstream identity, complete exact revisions with evidence, archive after Review, and consume every response directly. Never select legacy Quick for new work, add profile/JSON controls, or launch another AI runtime.
+
+${COMMAND_REFERENCE}
 """
 `;
 
@@ -125,6 +143,8 @@ Start or resume the repository's Empirical workflow for the current request.
    evidence.
 7. Archive validated capability deltas after Review and consume every response.
 8. Stop only at Done, Blocked, or awaiting human input.
+
+${COMMAND_REFERENCE}
 
 Never select legacy Quick for new work or add profile/JSON controls to the
 normal workflow.
