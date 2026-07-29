@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "revision": 1,
+  "previousRevision": 0,
+  "actor": "empirical-start",
+  "summary": "Started 002-replace-rust-with-one-npm-installed-typescript",
+  "createdAt": "2026-07-28T21:20:28.341Z",
+  "state": {
+    "schemaVersion": 1,
+    "revision": 1,
+    "activeFeature": "002-replace-rust-with-one-npm-installed-typescript",
+    "request": "Replace Rust with one npm-installed TypeScript package, self-guiding CLI, and optional MCP support for Codex, Claude, Gemini, Cursor, and Windsurf",
+    "profile": "strong",
+    "phase": "specify",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": null,
+    "implementationActor": null,
+    "evidence": [],
+    "updatedAt": "2026-07-28T21:20:28.341Z"
+  }
+}

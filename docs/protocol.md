@@ -1,80 +1,75 @@
-# Protocol
+# Repository protocol
 
-## Canonical data
+The `.empirical/` directory is committed and portable:
 
-The canonical store is the checked-out repository. A conforming client reads:
+```text
+.empirical/
+├── config.json
+├── state.json
+├── events/00000000.json
+└── specs/<feature>/
+    ├── spec.md
+    ├── design.md        # Complex only
+    └── plan.md          # Complex only
+```
 
-- `ai/empirical.toml` for policy;
-- `ai/STATE.md` frontmatter for the current projection;
-- `ai/events/*.json` for recovery;
-- the selected `ai/specs/<id>/spec.md` for acceptance criteria; and
-- the selected spec's evidence index and artifacts for completion proof.
+The current protocol schema is 2. Schema-1 repositories remain readable and
+can be stamped forward with `empirical migrate`; the next successful mutation
+also upgrades them. Once schema 2 is written, older engines reject completion
+instead of advancing Fast workflow state with the wrong phase sequence.
 
-Clients may cache or index these values. A cache, SQLite file, IDE workspace,
-agent transcript, or MCP session cannot override repository state.
+Every transition supplies the revision from the current action packet. The
+store acquires a short-lived local lock, rejects stale revisions, writes a
+complete event atomically, and then projects the new state. If projection is
+interrupted, the latest event repairs it on the next read.
 
-## Revisions and transitions
+Feature creation holds that same lock across feature numbering, specification
+creation, and state commit. Completed revisions record a specification digest;
+verification fails if criteria change after the evidence-bearing revision.
 
-Every mutating call supplies the state revision it observed. Under a host-local
-lock, the reference implementation reads the state again and rejects a stale
-revision. It writes a complete post-transition event before atomically
-projecting the same state into `STATE.md`.
+The two public workflow sequences are:
 
-An event identifies `expectedRevision`, its new `revision`, and
-`previousEvent`. Recovery follows the single linear chain beginning at revision
-zero. Two events for the same expected revision are a detectable fork; a client
-must not pick one silently.
+```text
+Fast:   Implement + Verify + Review → Done
+Complex: Specify → Design → Plan → Implement → Verify → Review → Done
+```
 
-The lock is intentionally outside the repository and provides local process
-coordination only. Revisions and events provide the portable concurrency
-contract across hosts.
+Fast creates a concise `spec.md` from the request when it starts. Its single
+completion must include at least one acceptance criterion, passing test
+evidence for every criterion, required browser and screenshot evidence for UI
+criteria, and passing review evidence. Complex retains its separate phase gates.
 
-## Profiles
+Quick's historical Shape → Implement → Verify → Review sequence remains in the
+schema only for compatibility with existing repositories. New work cannot
+select Quick through the public Fast or Complex entry points.
 
-Quick is for a small, understood, reversible feature:
+Acceptance criteria use this Markdown form:
 
-`Shape → Implement → Verify → Review → [Deliver] → Done`
+```markdown
+- [ ] [AC-1] A report can be exported.
+- [ ] [AC-UI-1] [UI] The export confirmation is visible.
+```
 
-Strong is for ambiguity, architectural impact, migrations, security risk,
-large changes, or durable public contracts:
+Verify requires passing test evidence for each criterion. UI criteria
+also require browser and screenshot records. Review requires a passing review
+record. Verify or Review failure returns to Implement; exceeding the configured
+repair budget blocks the workflow.
 
-`Specify → Design → Plan → Implement → Verify → Review → [Deliver] → Done`
+## Start and resume semantics
 
-Quick does not require `architecture.md` or `plan.json`. It does not weaken QA,
-criterion evidence, UI verification, or code review.
+`empirical fast "<request>"` / `empirical_fast` and
+`empirical complex "<request>"` / `empirical_complex` create new work and return
+its first action packet. They never run an AI model; the current agent executes
+the packet.
 
-## Loop behavior
+`empirical loop` and `empirical_loop` are pure resume operations:
 
-When automatic continuation is enabled, a client repeatedly:
+- they take no request or profile;
+- active work resumes without changing its revision;
+- idle and terminal state remain idle or terminal; and
+- they never create or replace a feature.
 
-1. synchronizes the hash of the current specification;
-2. stops for terminal, blocked, human, or delivery states;
-3. resolves the adapter and required capabilities;
-4. records Phase Started;
-5. invokes the adapter and validates its result envelope;
-6. validates required artifacts and adds evidence bound to the current
-   workspace hash;
-7. evaluates Verify or Review gates; and
-8. advances or schedules a bounded repair.
-
-A spec content change increments `specRevision`, returns to the first profile
-phase, and makes older evidence stale. Verify or Review failure returns to
-Implement. A non-ignored source change after Verify also makes its evidence
-stale. The third consecutive failure blocks with the default two-repair policy;
-a successful repair resets the budget for the next phase.
-
-Missing adapters or capabilities stop without changing the state to Blocked,
-so installing the missing tool and invoking the loop again resumes immediately.
-After the bounded failure budget is exhausted, an operator resolves the cause
-and runs `empirical retry --expected-revision N`; the retry is a revisioned
-event and resets the repair budget.
-
-## Compatibility
-
-Before adoption, a client recognizes v1 fields such as `current_spec`,
-`current_role`, `current_phase`, and `mode`. Discovery is read-only. Adoption
-adds the current frontmatter, config, and first event while retaining the prior
-Markdown under a preserved-history section. It does not rename spec folders.
-
-JSON forms use camelCase according to the schemas. `STATE.md` frontmatter uses
-snake_case for compatibility and human readability.
+Every Fast, Complex, and `complete` response is also the next packet. Agents
+should consume it directly and repeat until Done, Blocked, or awaiting human
+input; calling `loop` after each successful completion only adds an unnecessary
+round trip. A later agent session uses loop once to recover the current action.

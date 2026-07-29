@@ -1,18 +1,20 @@
 # Contributing
 
-Keep changes product-neutral and preserve read-only compatibility with existing
-`ai/` repositories. Any protocol change should include a schema update,
-migration note, and conformance test. Quick must remain materially shorter than
-Strong, while both retain evidence and review gates.
+Keep the core product-neutral and preserve non-destructive adoption of existing
+`ai/` repositories. Agent-specific files are generated discovery adapters; they
+must never contain workflow state or business logic. Any protocol change needs
+a migration note and conformance test. Fast must remain materially shorter than
+Complex while both retain evidence and review gates.
 
 Before opening a pull request:
 
 ```bash
-cargo fmt --check
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test --all-targets
+bun install
+bun run check
+bun test
+bun run test:package
 ```
 
-Do not add a required database, IDE directory, hosted service, or MCP vendor to
-the canonical state path. New integrations belong behind capability or provider
-interfaces.
+The published package must run on Node.js 20+ even though Bun powers local
+development. Do not add a required database, hosted service, or MCP vendor to
+the canonical state path. New integrations call the exported TypeScript API.

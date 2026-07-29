@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "revision": 3,
+  "previousRevision": 2,
+  "actor": "codex",
+  "summary": "Designed one shared TypeScript core with CLI and MCP adapters",
+  "createdAt": "2026-07-28T21:21:03.562Z",
+  "state": {
+    "schemaVersion": 1,
+    "revision": 3,
+    "activeFeature": "002-replace-rust-with-one-npm-installed-typescript",
+    "request": "Replace Rust with one npm-installed TypeScript package, self-guiding CLI, and optional MCP support for Codex, Claude, Gemini, Cursor, and Windsurf",
+    "profile": "strong",
+    "phase": "plan",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Designed one shared TypeScript core with CLI and MCP adapters",
+    "implementationActor": null,
+    "evidence": [],
+    "updatedAt": "2026-07-28T21:21:03.562Z"
+  }
+}

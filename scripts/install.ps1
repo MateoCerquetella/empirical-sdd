@@ -1,10 +1,20 @@
 $ErrorActionPreference = "Stop"
 
-if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
-    throw "Empirical requires Rust/Cargo 1.85 or newer."
+if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+    throw "Empirical requires Node.js 20+ and npm."
 }
 
-cargo install --locked --force --git https://github.com/MateoCerquetella/empirical-sdd empirical-sdd
-empirical agents sync
+$legacyPackage = npm list -g --depth=0 --parseable "@empirical/cli" 2>$null
+if ($LASTEXITCODE -eq 0 -and $legacyPackage) {
+    Write-Host "Removing the legacy @empirical/cli package that owns the empirical command..."
+    npm uninstall -g "@empirical/cli"
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not remove the legacy @empirical/cli package."
+    }
+}
 
-Write-Host "Empirical and all supported global agent command packs are installed."
+npm install -g empirical-sdd@latest
+if ($LASTEXITCODE -ne 0) {
+    throw "Could not install empirical-sdd."
+}
+empirical --version

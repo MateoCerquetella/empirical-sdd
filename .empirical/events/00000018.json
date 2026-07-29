@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 2,
+  "revision": 18,
+  "previousRevision": 17,
+  "actor": "agent",
+  "summary": "Specified the two SDD starters, pure zero-argument Loop, automatic agent selection, legacy Quick compatibility, flag-free UX, risks, and verification contract.",
+  "createdAt": "2026-07-28T23:17:43.509Z",
+  "state": {
+    "schemaVersion": 2,
+    "revision": 18,
+    "activeFeature": "006-separate-the-pure-execution-loop-from-the",
+    "request": "Separate the pure execution loop from the Fast and Strong SDD starters, keep Quick only for backward compatibility, and make ordinary agent prompts choose the SDD workflow automatically",
+    "profile": "strong",
+    "phase": "design",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Specified the two SDD starters, pure zero-argument Loop, automatic agent selection, legacy Quick compatibility, flag-free UX, risks, and verification contract.",
+    "implementationActor": null,
+    "evidence": [],
+    "updatedAt": "2026-07-28T23:17:43.509Z",
+    "specDigest": "24a013f786d169c990efc759fbc8bd56c109b033f3332acba1a41642053b1c48"
+  }
+}

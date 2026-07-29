@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 2,
+  "revision": 21,
+  "previousRevision": 20,
+  "actor": "agent",
+  "summary": "Implemented public Fast and Complex starters across the TypeScript API, CLI, and MCP; made loop a parameterless resume operation; refreshed automatic agent integrations and documentation; updated compatibility behavior and tests.",
+  "createdAt": "2026-07-28T23:34:22.851Z",
+  "state": {
+    "schemaVersion": 2,
+    "revision": 21,
+    "activeFeature": "006-separate-the-pure-execution-loop-from-the",
+    "request": "Separate the pure execution loop from the Fast and Strong SDD starters, keep Quick only for backward compatibility, and make ordinary agent prompts choose the SDD workflow automatically",
+    "profile": "strong",
+    "phase": "verify",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Implemented public Fast and Complex starters across the TypeScript API, CLI, and MCP; made loop a parameterless resume operation; refreshed automatic agent integrations and documentation; updated compatibility behavior and tests.",
+    "implementationActor": "agent",
+    "evidence": [],
+    "updatedAt": "2026-07-28T23:34:22.851Z",
+    "specDigest": "24a013f786d169c990efc759fbc8bd56c109b033f3332acba1a41642053b1c48"
+  }
+}

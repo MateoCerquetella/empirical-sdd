@@ -1,5 +1,0 @@
-description = "Report Empirical workflow status without mutation"
-prompt = """
-Use `empirical status --json`, `empirical next --json`, and `empirical doctor
---json` to report current progress without changing state. Focus: {{args}}
-"""
