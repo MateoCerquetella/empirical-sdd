@@ -480,19 +480,22 @@ async function withFileLock<T>(lockPath: string, operation: () => Promise<T>): P
         }
         throw error;
       }
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      try {
-        const observed = await inspectLock(lockPath);
-        if (
-          observed
-          && Date.now() - observed.mtimeMs > LOCK_STALE_AFTER_MS
-          && (observed.pid === null || !processIsAlive(observed.pid))
-          && await recoverStaleLock(lockPath, observed)
-        ) {
-          continue;
+      const code = (error as NodeJS.ErrnoException).code;
+      if (!isRetryableLockOpenError(error)) throw error;
+      if (code === "EEXIST") {
+        try {
+          const observed = await inspectLock(lockPath);
+          if (
+            observed
+            && Date.now() - observed.mtimeMs > LOCK_STALE_AFTER_MS
+            && (observed.pid === null || !processIsAlive(observed.pid))
+            && await recoverStaleLock(lockPath, observed)
+          ) {
+            continue;
+          }
+        } catch {
+          // The lock changed while it was inspected; retry through the same bounded wait.
         }
-      } catch {
-        continue;
       }
       if (Date.now() >= deadline) {
         throw new EmpiricalError(
@@ -525,6 +528,15 @@ async function withFileLock<T>(lockPath: string, operation: () => Promise<T>): P
       });
     }
   }
+}
+
+export function isRetryableLockOpenError(
+  error: unknown,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  const code = (error as NodeJS.ErrnoException).code;
+  return code === "EEXIST"
+    || (platform === "win32" && (code === "EPERM" || code === "EACCES"));
 }
 
 async function inspectLock(path: string): Promise<LockSnapshot | null> {

@@ -1,0 +1,23 @@
+[
+  {
+    "criterionId": "AC-1",
+    "kind": "test",
+    "passed": true,
+    "artifact": "tests/core.test.ts",
+    "summary": "The concurrent stale-lock recovery, cleanup, and superseded-owner tests passed in 10 consecutive local stress runs and in GitHub Actions run 30461861341."
+  },
+  {
+    "criterionId": "AC-2",
+    "kind": "test",
+    "passed": true,
+    "artifact": "tests/core.test.ts",
+    "summary": "The classifier test proves Windows EPERM and EACCES are retryable, and the real windows-latest job passed after the previously observed EPERM failure."
+  },
+  {
+    "criterionId": "AC-3",
+    "kind": "test",
+    "passed": true,
+    "artifact": "tests/core.test.ts",
+    "summary": "The classifier rejects non-Windows permission errors and unexpected codes, while the newer-owner protection test confirms compare-before-remove safety remains intact."
+  }
+]

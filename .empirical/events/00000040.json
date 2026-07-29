@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 3,
+  "revision": 40,
+  "previousRevision": 39,
+  "actor": "empirical-start",
+  "summary": "Started 008-fix-intermittent-windows-stale-lock-recovery-eperm",
+  "createdAt": "2026-07-29T14:34:46.998Z",
+  "state": {
+    "schemaVersion": 3,
+    "revision": 40,
+    "activeFeature": "008-fix-intermittent-windows-stale-lock-recovery-eperm",
+    "request": "Fix intermittent Windows stale-lock recovery EPERM so concurrent clients recover safely and CI is deterministic.",
+    "profile": "complex",
+    "phase": "specify",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": null,
+    "implementationActor": null,
+    "evidence": [],
+    "updatedAt": "2026-07-29T14:34:46.998Z",
+    "specDigest": "5ac0112880c3d3212c8269eed022e6c1c00bdf58831fdb064d5638b06931b807",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": null
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 3,
+  "revision": 43,
+  "previousRevision": 42,
+  "actor": "agent",
+  "summary": "Planned the bounded retry change, deterministic coverage, repeated stress checks, and platform matrix",
+  "createdAt": "2026-07-29T14:36:30.171Z",
+  "state": {
+    "schemaVersion": 3,
+    "revision": 43,
+    "activeFeature": "008-fix-intermittent-windows-stale-lock-recovery-eperm",
+    "request": "Fix intermittent Windows stale-lock recovery EPERM so concurrent clients recover safely and CI is deterministic.",
+    "profile": "complex",
+    "phase": "implement",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Planned the bounded retry change, deterministic coverage, repeated stress checks, and platform matrix",
+    "implementationActor": null,
+    "evidence": [],
+    "updatedAt": "2026-07-29T14:36:30.171Z",
+    "specDigest": "7a1094eccf6edd6d369db387786e0a53994cf4b313ed3741e28a9ab3db385f7b",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "f002f4d6e15f3f74ee8d8aae0152628d132f22d2de5e0f0bf6a465a0c454b114"
+  }
+}
