@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { EmpiricalProject } from "../src/core.js";
 
 const directories: string[] = [];
 
@@ -30,11 +31,16 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_loop");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_fast");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_complex");
+    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_explore");
+    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_archive");
+    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_workstreams");
+    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_capabilities");
+    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_policy");
     expect(listed.tools.map((tool) => tool.name)).not.toContain("empirical_strong");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_start");
 
     const loopTool = listed.tools.find((tool) => tool.name === "empirical_loop");
-    expect(Object.keys(loopTool?.inputSchema.properties ?? {})).toEqual(["root"]);
+    expect(Object.keys(loopTool?.inputSchema.properties ?? {})).toEqual(["root", "workstream"]);
     const legacyStart = listed.tools.find((tool) => tool.name === "empirical_start");
     expect(legacyStart?.inputSchema.properties?.profile).toMatchObject({
       enum: ["fast", "complex"],
@@ -48,6 +54,22 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
     expect(initialized.structuredContent).toMatchObject({
       state: { profile: "complex", phase: "idle", revision: 0 },
     });
+
+    const explored = await client.callTool({
+      name: "empirical_explore",
+      arguments: { root, problem: "We might need a more useful status experience" },
+    });
+    expect(explored.isError).not.toBe(true);
+    expect(explored.structuredContent).toMatchObject({
+      problem: "We might need a more useful status experience",
+      projectContext: [],
+      capabilityContext: [],
+    });
+    expect(explored.structuredContent).toEqual(
+      await (await EmpiricalProject.open(root)).explore(
+        "We might need a more useful status experience",
+      ),
+    );
 
     const idle = await client.callTool({
       name: "empirical_loop",
@@ -68,6 +90,7 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
       status: "waiting",
       revision: 1,
       requiredEvidence: ["test", "review"],
+      workstream: "default",
     });
 
     const resumed = await client.callTool({

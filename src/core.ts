@@ -5,22 +5,34 @@ import { EmpiricalError } from "./errors.js";
 import { installProjectIntegrations } from "./integrations.js";
 import { ProjectStore, discoverProject, isFile } from "./storage.js";
 import {
+  capabilityDeltaDigest,
+  listCapabilities,
+  loadCapabilityDeltas,
+  planCapabilityArchive,
+  validateFeatureDeltas,
+} from "./specifications.js";
+import {
   PRODUCT_VERSION,
   SCHEMA_VERSION,
   type ActionPacket,
   type AdoptionOptions,
+  type ArchiveResult,
+  type CapabilitySummary,
   type CompletionInput,
   type Criterion,
   type Evidence,
   type EvidenceKind,
+  type ExplorationPacket,
   type FeatureStartOptions,
   type InitOptions,
   type IntegrationReport,
   type Phase,
   type Profile,
   type ProjectConfig,
+  type ProjectPolicy,
   type StartOptions,
   type ValidationReport,
+  type WorkstreamSummary,
   type Workflow,
   type WorkflowState,
 } from "./types.js";
@@ -34,6 +46,7 @@ const COMPLEX_PHASES: Phase[] = [
   "implement",
   "verify",
   "review",
+  "archive",
   "done",
 ];
 
@@ -44,8 +57,14 @@ export class EmpiricalProject {
     this.store = store;
   }
 
-  static async open(start = process.cwd()): Promise<EmpiricalProject> {
-    return new EmpiricalProject(await discoverProject(start));
+  static async open(start = process.cwd(), workstream?: string): Promise<EmpiricalProject> {
+    const base = await discoverProject(start);
+    const selected = workstream ?? await base.selectedWorkstream();
+    const store = base.forWorkstream(selected);
+    if (!(await store.exists())) {
+      throw new EmpiricalError("WORKSTREAM_NOT_FOUND", `Unknown workstream '${selected}'`);
+    }
+    return new EmpiricalProject(store);
   }
 
   static async initialize(
@@ -141,6 +160,83 @@ export class EmpiricalProject {
     return this.store.loadConfig();
   }
 
+  async policy(): Promise<ProjectPolicy> {
+    return this.store.loadPolicy();
+  }
+
+  async explore(problem: string): Promise<ExplorationPacket> {
+    const cleanProblem = problem.trim();
+    if (!cleanProblem) throw new EmpiricalError("REQUEST_REQUIRED", "A non-empty problem is required");
+    const policy = await this.store.loadPolicy();
+    const capabilities = await listCapabilities(this.store);
+    return {
+      protocol: "empirical-sdd",
+      schemaVersion: SCHEMA_VERSION,
+      root: this.store.root,
+      problem: cleanProblem,
+      instructions: [
+        "Use the current host agent only. Inspect the relevant code and living capability specifications; do not write implementation code yet.",
+        "Identify the observed problem, affected users, current behavior, smallest useful outcome, constraints, risks, and two or three viable approaches.",
+        "Ask only questions whose answers materially change scope or architecture, then restate the refined request in observable terms.",
+        "Choose Fast only when the refined change is explicit, tiny, localized, reversible, low-risk, and non-UI; choose Complex otherwise.",
+      ],
+      questions: [
+        "Who experiences the problem and what observable behavior should change?",
+        "What is the smallest useful outcome, and what is explicitly out of scope?",
+        "Which assumption, dependency, or risk could change the implementation approach?",
+      ],
+      projectContext: policy.context,
+      capabilityContext: capabilities.map((capability) => capability.path),
+      next: {
+        fast: `empirical fast ${JSON.stringify(cleanProblem)}`,
+        complex: `empirical complex ${JSON.stringify(cleanProblem)}`,
+      },
+    };
+  }
+
+  async workstreams(): Promise<WorkstreamSummary[]> {
+    const manifest = await this.store.loadWorkstreams();
+    const summaries: WorkstreamSummary[] = [];
+    for (const id of Object.keys(manifest.workstreams).sort()) {
+      const state = await this.store.forWorkstream(id).loadState();
+      summaries.push({
+        id,
+        selected: manifest.selected === id,
+        activeFeature: state.activeFeature,
+        request: state.request,
+        profile: state.profile,
+        phase: state.phase,
+        status: state.status,
+        revision: state.revision,
+        updatedAt: state.updatedAt,
+      });
+    }
+    return summaries;
+  }
+
+  async createWorkstream(id: string, profile?: Workflow): Promise<WorkstreamSummary> {
+    const configured = (await this.store.loadConfig()).profile;
+    const selectedProfile = profile ?? (configured === "quick" ? "complex" : configured);
+    assertWorkflow(selectedProfile);
+    const state = initialState(selectedProfile);
+    await this.store.createWorkstream(id, state);
+    const project = await EmpiricalProject.open(this.store.root, id);
+    return (await project.workstreams()).find((item) => item.id === id)!;
+  }
+
+  async selectWorkstream(id: string): Promise<WorkstreamSummary> {
+    await this.store.selectWorkstream(id);
+    return (await this.workstreams()).find((item) => item.id === id)!;
+  }
+
+  async capabilities(): Promise<CapabilitySummary[]> {
+    return listCapabilities(this.store);
+  }
+
+  async capability(name: string): Promise<string | null> {
+    return this.store.readCapability(name);
+  }
+
   async start(request: string, options: StartOptions = {}): Promise<ActionPacket> {
     const cleanRequest = request.trim();
     if (!cleanRequest) {
@@ -149,7 +245,7 @@ export class EmpiricalProject {
     const configuredProfile = (await this.store.loadConfig()).profile;
     const profile = options.profile ?? (configuredProfile === "quick" ? "complex" : configuredProfile);
     assertWorkflow(profile);
-    const started = await this.store.transaction(async (current) => {
+    const started = await this.store.withResourceLock("specs", () => this.store.transaction(async (current) => {
       if (current.activeFeature && current.status !== "done") {
         throw new EmpiricalError(
           "FEATURE_ACTIVE",
@@ -179,12 +275,14 @@ export class EmpiricalProject {
           message: null,
           implementationActor: null,
           specDigest: digest(spec),
+          capabilityArchiveRequired: profile === "complex",
+          capabilityDeltaDigest: null,
           evidence: [],
         },
         value: { feature, spec },
       };
-    });
-    return actionPacket(this.store.root, started.state, parseCriteria(started.value.spec));
+    }));
+    return this.packet(started.state, parseCriteria(started.value.spec));
   }
 
   async fast(request: string, options: FeatureStartOptions = {}): Promise<ActionPacket> {
@@ -276,11 +374,17 @@ export class EmpiricalProject {
     const criteria = state.activeFeature
       ? parseCriteria(await this.store.readSpec(state.activeFeature))
       : [];
-    return actionPacket(this.store.root, state, criteria);
+    return this.packet(state, criteria);
   }
 
   async complete(input: CompletionInput): Promise<ActionPacket> {
     assertCompletionInput(input);
+    if (input.workstream && input.workstream !== this.store.workstream) {
+      throw new EmpiricalError(
+        "WORKSTREAM_MISMATCH",
+        `Completion targets '${input.workstream}', but this project is bound to '${this.store.workstream}'`,
+      );
+    }
     const summary = input.summary.trim();
     if (!summary) throw new EmpiricalError("SUMMARY_REQUIRED", "Completion summary cannot be blank");
     const actor = input.actor?.trim() || "agent";
@@ -293,6 +397,9 @@ export class EmpiricalProject {
       }
       if (!current.activeFeature || current.phase === "idle" || current.phase === "done") {
         throw new EmpiricalError("NO_ACTIVE_PHASE", "There is no active phase to complete");
+      }
+      if (current.phase === "archive") {
+        throw new EmpiricalError("ARCHIVE_REQUIRED", "Use empirical archive for the reviewed revision");
       }
       if (current.status === "blocked") {
         throw new EmpiricalError("WORKFLOW_BLOCKED", "Resolve the blocker and run empirical retry");
@@ -313,10 +420,12 @@ export class EmpiricalProject {
           "The specification changed after it was approved; restore it or start a new feature",
         );
       }
+      await this.assertCapabilityDeltasUnchanged(current);
       const criteria = parseCriteria(specBefore);
       const config = await this.store.loadConfig();
+      let approvedDeltaDigest: string | null = null;
       if (input.outcome === "passed") {
-        await this.validatePhasePass(current, input, criteria, config);
+        approvedDeltaDigest = await this.validatePhasePass(current, input, criteria, config);
       }
       const state = structuredClone(current);
       state.specDigest = specBeforeDigest;
@@ -329,6 +438,9 @@ export class EmpiricalProject {
       } else if (input.outcome === "failed") {
         routeFailure(state, summary, config.maxRepairAttempts);
       } else {
+        if (current.phase === "specify" && current.capabilityArchiveRequired) {
+          state.capabilityDeltaDigest = approvedDeltaDigest;
+        }
         if (state.phase === "implement") state.implementationActor = actor;
         if (input.evidence?.length) state.evidence.push(...input.evidence);
         state.phase = followingPhase(state.profile, state.phase);
@@ -348,10 +460,109 @@ export class EmpiricalProject {
               "The specification changed during completion; read the latest action and retry",
             );
           }
+          if (
+            approvedDeltaDigest
+            && await capabilityDeltaDigest(this.store, current.activeFeature!) !== approvedDeltaDigest
+          ) {
+            throw new EmpiricalError(
+              "DELTA_CHANGED",
+              "Capability deltas changed during completion; read the latest action and retry",
+            );
+          }
         },
       };
     });
-    return actionPacket(this.store.root, completed.state, parseCriteria(completed.value));
+    return this.packet(completed.state, parseCriteria(completed.value));
+  }
+
+  async archive(expectedRevision: number, actor = "agent"): Promise<ArchiveResult> {
+    const current = await this.store.loadState();
+    if (!current.activeFeature) throw new EmpiricalError("NO_ACTIVE_PHASE", "There is no feature to archive");
+    if (
+      current.phase === "done"
+      && current.status === "done"
+      && current.profile === "complex"
+      && current.revision === expectedRevision + 1
+      && current.message?.startsWith("Archived")
+    ) {
+      return {
+        action: await this.next(),
+        report: {
+          feature: current.activeFeature,
+          workstream: this.store.workstream,
+          capabilities: [],
+          added: 0,
+          modified: 0,
+          removed: 0,
+          converged: true,
+        },
+      };
+    }
+    if (current.phase === "done" && current.status === "done") {
+      throw new EmpiricalError(
+        "STALE_REVISION",
+        `Archive revision ${expectedRevision} does not identify the latest completed archive`,
+      );
+    }
+    if (current.phase !== "archive" || current.status !== "waiting") {
+      throw new EmpiricalError("ARCHIVE_NOT_READY", "Complex work must pass review before archive");
+    }
+    if (current.revision !== expectedRevision) {
+      throw new EmpiricalError(
+        "STALE_REVISION",
+        `Expected revision ${expectedRevision}, but the project is at ${current.revision}`,
+      );
+    }
+    return this.store.withResourceLock("capabilities", async () => {
+      await this.assertCapabilityDeltasUnchanged(current);
+      const deltas = await loadCapabilityDeltas(this.store, current.activeFeature!);
+      const plan = deltas.length > 0
+        ? await planCapabilityArchive(this.store, current.activeFeature!)
+        : null;
+      if (!plan && current.capabilityArchiveRequired) {
+        throw new EmpiricalError("DELTA_REQUIRED", `Complex change ${current.activeFeature} has no capability deltas`);
+      }
+      const archived = await this.store.transaction(async (latest) => {
+        if (latest.revision !== expectedRevision) {
+          throw new EmpiricalError(
+            "STALE_REVISION",
+            `Expected revision ${expectedRevision}, but the project is at ${latest.revision}`,
+          );
+        }
+        if (latest.phase !== "archive" || latest.status !== "waiting") {
+          throw new EmpiricalError("ARCHIVE_NOT_READY", "Complex work must pass review before archive");
+        }
+        const state = structuredClone(latest);
+        state.phase = "done";
+        state.status = "done";
+        state.message = plan
+          ? `Archived capability changes: ${plan.report.capabilities.join(", ")}`
+          : "Archived legacy change without capability deltas";
+        state.repairAttempts = 0;
+        return {
+          actor: actor.trim() || "agent",
+          summary: state.message,
+          state,
+          value: latest.activeFeature!,
+          ...(plan ? { effect: plan.commit } : {}),
+        };
+      });
+      return {
+        action: await this.packet(
+          archived.state,
+          parseCriteria(await this.store.readSpec(archived.value)),
+        ),
+        report: {
+          feature: archived.value,
+          workstream: this.store.workstream,
+          capabilities: plan?.report.capabilities ?? [],
+          added: plan?.report.added ?? 0,
+          modified: plan?.report.modified ?? 0,
+          removed: plan?.report.removed ?? 0,
+          converged: false,
+        },
+      };
+    });
   }
 
   async retry(expectedRevision: number, actor = "human"): Promise<ActionPacket> {
@@ -369,7 +580,7 @@ export class EmpiricalProject {
     const criteria = state.activeFeature
       ? parseCriteria(await this.store.readSpec(state.activeFeature))
       : [];
-    return actionPacket(this.store.root, state, criteria);
+    return this.packet(state, criteria);
   }
 
   async verify(): Promise<ValidationReport> {
@@ -384,10 +595,19 @@ export class EmpiricalProject {
       criteria,
       state.evidence,
       config,
-      state.phase === "review" || state.phase === "done",
+      state.phase === "review" || state.phase === "archive" || state.phase === "done",
     );
     if (state.specDigest && state.specDigest !== digest(spec)) {
       missing.push("Specification changed after the last completed revision");
+    }
+    if (state.capabilityArchiveRequired && state.capabilityDeltaDigest) {
+      try {
+        if (await capabilityDeltaDigest(this.store, state.activeFeature) !== state.capabilityDeltaDigest) {
+          missing.push("Capability deltas changed after Specify approval");
+        }
+      } catch {
+        missing.push("Capability deltas are malformed or unreadable after Specify approval");
+      }
     }
     for (const record of state.evidence) {
       if (
@@ -407,8 +627,17 @@ export class EmpiricalProject {
   }
 
   async migrate(): Promise<Record<string, unknown>> {
-    const migration = await this.store.migrateSchema();
-    return { ...migration, version: PRODUCT_VERSION, schemaVersion: SCHEMA_VERSION };
+    const manifest = await this.store.loadWorkstreams();
+    const migrations: Array<Record<string, unknown>> = [];
+    for (const id of Object.keys(manifest.workstreams)) {
+      migrations.push({ workstream: id, ...await this.store.forWorkstream(id).migrateSchema() });
+    }
+    return {
+      changed: migrations.some((item) => item.changed === true),
+      migrations,
+      version: PRODUCT_VERSION,
+      schemaVersion: SCHEMA_VERSION,
+    };
   }
 
   async doctor(): Promise<Record<string, unknown>> {
@@ -419,8 +648,12 @@ export class EmpiricalProject {
       version: PRODUCT_VERSION,
       schemaVersion: SCHEMA_VERSION,
       root: this.store.root,
+      workstream: this.store.workstream,
       state,
       config,
+      workstreams: await this.workstreams(),
+      policy: await this.store.loadPolicy(),
+      capabilities: await this.capabilities(),
       runtime: "node",
       bunUsedForDevelopment: true,
       mcpCommand: "empirical mcp",
@@ -433,12 +666,20 @@ export class EmpiricalProject {
     input: CompletionInput,
     criteria: Criterion[],
     config: ProjectConfig,
-  ): Promise<void> {
+  ): Promise<string | null> {
+    let approvedDeltaDigest: string | null = null;
     if ((state.phase === "shape" || state.phase === "specify") && criteria.length === 0) {
       throw new EmpiricalError(
         "CRITERIA_REQUIRED",
         `Add at least one '- [ ] [AC-1] observable behavior' to ${relativeSpec(state.activeFeature)}`,
       );
+    }
+    if (state.phase === "specify" && state.profile === "complex" && state.capabilityArchiveRequired) {
+      const report = await validateFeatureDeltas(this.store, state.activeFeature!);
+      if (!report.valid) {
+        throw new EmpiricalError("DELTA_REQUIRED", `Capability deltas are incomplete: ${report.issues.join("; ")}`);
+      }
+      approvedDeltaDigest = report.digest;
     }
     if (state.phase === "design") {
       await requireArtifact(this.store.specDirectory(state.activeFeature!), "design.md");
@@ -477,28 +718,68 @@ export class EmpiricalProject {
       }
       await validateEvidenceArtifacts(this.store.root, evidence);
     }
+    return approvedDeltaDigest;
+  }
+
+  private async assertCapabilityDeltasUnchanged(state: WorkflowState): Promise<void> {
+    if (!state.capabilityArchiveRequired || !state.capabilityDeltaDigest || !state.activeFeature) return;
+    try {
+      if (await capabilityDeltaDigest(this.store, state.activeFeature) === state.capabilityDeltaDigest) return;
+    } catch {
+      // Report one stable workflow error for malformed, missing, or unreadable approved deltas.
+    }
+    throw new EmpiricalError(
+      "DELTA_CHANGED",
+      "Capability deltas changed after Specify approval; restore the approved deltas before continuing",
+    );
+  }
+
+  private async packet(state: WorkflowState, criteria: Criterion[]): Promise<ActionPacket> {
+    const policy = await this.store.loadPolicy();
+    const capabilities = await listCapabilities(this.store);
+    return actionPacket(
+      this.store.root,
+      this.store.workstream,
+      state,
+      criteria,
+      policy,
+      capabilities.map((capability) => capability.path),
+    );
   }
 }
 
 export function parseCriteria(markdown: string): Criterion[] {
   const criteria: Criterion[] = [];
   let inComment = false;
+  let activeCriterion: Criterion | null = null;
   for (const line of markdown.split(/\r?\n/)) {
-    if (line.includes("<!--")) inComment = true;
+    if (line.includes("<!--")) {
+      inComment = true;
+      activeCriterion = null;
+    }
     if (inComment) {
       if (line.includes("-->")) inComment = false;
       continue;
     }
     const match = /^\s*-\s*\[([ xX])\]\s*\[([^\]]+)\]\s*(.+?)\s*$/.exec(line);
-    if (!match?.[2] || !match[3]) continue;
-    const id = match[2].trim();
-    const text = match[3].trim();
-    criteria.push({
-      id,
-      text,
-      ui: /\[UI\]/i.test(text),
-      checked: match[1]?.toLowerCase() === "x",
-    });
+    if (match?.[2] && match[3]) {
+      const id = match[2].trim();
+      const text = match[3].trim();
+      activeCriterion = {
+        id,
+        text,
+        ui: /\[UI\]/i.test(text),
+        checked: match[1]?.toLowerCase() === "x",
+      };
+      criteria.push(activeCriterion);
+      continue;
+    }
+    if (activeCriterion && /^\s{2,}\S/.test(line)) {
+      activeCriterion.text = `${activeCriterion.text} ${line.trim()}`;
+      activeCriterion.ui = /\[UI\]/i.test(activeCriterion.text);
+      continue;
+    }
+    activeCriterion = null;
   }
   return criteria;
 }
@@ -531,6 +812,8 @@ function initialState(profile: Profile): WorkflowState {
     message: null,
     implementationActor: null,
     specDigest: null,
+    capabilityArchiveRequired: false,
+    capabilityDeltaDigest: null,
     evidence: [],
     updatedAt: new Date().toISOString(),
   };
@@ -559,6 +842,13 @@ Describe the observable result.
 ## Non-goals
 
 ## Verification
+
+## Capability Deltas
+
+Create one or more files under deltas/<capability>.md using ADDED, MODIFIED, or
+REMOVED Requirements sections, named Requirement blocks, and concrete Scenario
+examples. These merge into living specifications
+after verification and review.
 `;
 }
 
@@ -605,7 +895,14 @@ function renderRequest(request: string): string {
     .join("\n");
 }
 
-function actionPacket(root: string, state: WorkflowState, criteria: Criterion[]): ActionPacket {
+function actionPacket(
+  root: string,
+  workstream: string,
+  state: WorkflowState,
+  criteria: Criterion[],
+  policy: ProjectPolicy,
+  capabilityContext: string[],
+): ActionPacket {
   const evidence = requiredEvidence(state, criteria);
   const completionAvailable = state.status === "waiting"
     && state.phase !== "idle"
@@ -616,28 +913,36 @@ function actionPacket(root: string, state: WorkflowState, criteria: Criterion[])
     && evidence.includes("review")
     ? ' --test "<test result>" --review "<diff review>"'
     : null;
+  const archive = state.phase === "archive";
   return {
     protocol: "empirical-sdd",
     schemaVersion: SCHEMA_VERSION,
     root,
+    workstream,
     feature: state.activeFeature,
     request: state.request,
     profile: state.profile,
     phase: state.phase,
     status: state.status,
     revision: state.revision,
-    instructions: instructionsFor(state),
+    instructions: instructionsFor(state, policy),
     acceptanceCriteria: criteria,
     requiredEvidence: evidence,
     artifacts: expectedArtifacts(state),
+    projectContext: policy.context,
+    capabilityContext,
     completion: {
       available: completionAvailable,
-      mcpTool: "empirical_complete",
+      mcpTool: archive ? "empirical_archive" : "empirical_complete",
       cli: completionAvailable
-        ? `empirical complete --revision ${state.revision} --outcome passed --summary "<what you did>"${fastCliEvidence ?? (evidence.length > 0 ? " --evidence <evidence.json>" : "")}`
+        ? archive
+          ? `empirical archive --workstream ${workstream} --revision ${state.revision}`
+          : `empirical complete --workstream ${workstream} --revision ${state.revision} --outcome passed --summary "<what you did>"${fastCliEvidence ?? (evidence.length > 0 ? " --evidence <evidence.json>" : "")}`
         : "",
       requiredFields: completionAvailable
-        ? ["revision", "outcome", "summary", ...(evidence.length > 0 ? ["evidence"] : [])]
+        ? archive
+          ? ["workstream", "revision"]
+          : ["workstream", "revision", "outcome", "summary", ...(evidence.length > 0 ? ["evidence"] : [])]
         : [],
     },
   };
@@ -672,15 +977,15 @@ function assertStartAction(
   return action;
 }
 
-function instructionsFor(state: WorkflowState): string {
-  if (state.status === "blocked") return `Stop. Resolve this blocker before retrying: ${state.message ?? "unknown"}`;
-  if (state.status === "awaiting_human") return `Stop and ask the user: ${state.message ?? "a decision is required"}`;
-  if (state.phase === "idle") return "No feature is active. Start it with empirical_fast or empirical_complex; use empirical loop only to resume current work.";
-  if (state.phase === "done") return "The feature passed verification and review. Report completion; delivery is manual.";
+function instructionsFor(state: WorkflowState, policy: ProjectPolicy): string {
+  if (state.status === "blocked") return appendPolicy(`Stop. Resolve this blocker before retrying: ${state.message ?? "unknown"}`, state, policy);
+  if (state.status === "awaiting_human") return appendPolicy(`Stop and ask the user: ${state.message ?? "a decision is required"}`, state, policy);
+  if (state.phase === "idle") return appendPolicy("No feature is active. Explore genuinely vague work first; otherwise start it with empirical_fast or empirical_complex. Use empirical loop only to resume current work.", state, policy);
+  if (state.phase === "done") return appendPolicy("The feature passed verification, review, and required capability archive. Report completion; delivery is manual.", state, policy);
   const feature = state.activeFeature ?? "current feature";
   const instructions: Record<Exclude<Phase, "idle" | "done">, string> = {
     shape: `Read the request, edit ${relativeSpec(feature)}, and define concise observable acceptance criteria. Do not implement yet.`,
-    specify: `Refine ${relativeSpec(feature)} into a complete contract with observable acceptance criteria, scope, non-goals, risks, and verification.`,
+    specify: `Refine ${relativeSpec(feature)} into a complete contract with observable acceptance criteria, scope, non-goals, risks, and verification. Declare current-behavior changes in .empirical/specs/${feature}/deltas/<capability>.md using ADDED, MODIFIED, or REMOVED requirement blocks with scenarios.`,
     design: `Design the solution and write .empirical/specs/${feature}/design.md. Resolve architectural risks before implementation.`,
     plan: `Break the approved design into an executable plan in .empirical/specs/${feature}/plan.md.`,
     implement: state.profile === "fast"
@@ -688,16 +993,29 @@ function instructionsFor(state: WorkflowState): string {
       : "Implement the current acceptance criteria. Preserve unrelated work and run focused checks while editing.",
     verify: "Run real tests for every criterion. For [UI] criteria, use a real browser and capture a screenshot. Return structured evidence.",
     review: "Review the implementation against every criterion and the diff. Return passing review evidence or route failures back to implementation.",
+    archive: "Apply the reviewed capability deltas to the living specifications with the returned empirical_archive operation. Do not edit capability specs manually during archive.",
   };
-  return instructions[state.phase];
+  return appendPolicy(instructions[state.phase], state, policy);
+}
+
+function appendPolicy(base: string, state: WorkflowState, policy: ProjectPolicy): string {
+  const sections = [base];
+  if (policy.context.length > 0) sections.push(`Project context:\n- ${policy.context.join("\n- ")}`);
+  const phaseGuidance = policy.phases[state.phase] ?? [];
+  if (phaseGuidance.length > 0) {
+    sections.push(`Additional project guidance (mandatory Empirical gates still apply):\n- ${phaseGuidance.join("\n- ")}`);
+  }
+  return sections.join("\n\n");
 }
 
 function expectedArtifacts(state: WorkflowState): string[] {
   if (!state.activeFeature) return [];
   const base = `.empirical/specs/${state.activeFeature}`;
-  if (state.phase === "shape" || state.phase === "specify") return [`${base}/spec.md`];
+  if (state.phase === "shape") return [`${base}/spec.md`];
+  if (state.phase === "specify") return [`${base}/spec.md`, `${base}/deltas/<capability>.md`];
   if (state.phase === "design") return [`${base}/design.md`];
   if (state.phase === "plan") return [`${base}/plan.md`];
+  if (state.phase === "archive") return [".empirical/capabilities/<capability>/spec.md"];
   return [];
 }
 
@@ -754,6 +1072,8 @@ function routeFailure(
   if (state.profile === "fast" && state.phase === "implement") {
     state.profile = "complex";
     state.phase = "specify";
+    state.capabilityArchiveRequired = true;
+    state.capabilityDeltaDigest = null;
     state.repairAttempts = 0;
     state.evidence = [];
     state.status = "waiting";

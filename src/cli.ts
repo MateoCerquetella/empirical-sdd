@@ -10,6 +10,7 @@ import { PRODUCT_VERSION, type CompletionInput, type Evidence, type Workflow } f
 interface CliContext {
   args: string[];
   root: string;
+  workstream?: string;
   json: boolean;
 }
 
@@ -19,7 +20,7 @@ async function main(): Promise<void> {
 
   if (!command) {
     try {
-      const project = await EmpiricalProject.open(context.root);
+      const project = await EmpiricalProject.open(context.root, context.workstream);
       emit(await project.next(), context.json, renderAction);
     } catch (error) {
       if (error instanceof EmpiricalError && error.code === "PROJECT_NOT_INITIALIZED") {
@@ -71,11 +72,34 @@ async function main(): Promise<void> {
       );
       return;
     }
+    case "explore": {
+      const requestOption = takeOption(context.args, "--request");
+      const request = requestOption ?? context.args.join(" ");
+      const project = await EmpiricalProject.open(context.root, context.workstream);
+      emit(await project.explore(request), context.json, (value) => {
+        const packet = value as Awaited<ReturnType<typeof project.explore>>;
+        const sections = [
+          "Empirical Explore · read-only",
+          `Problem: ${packet.problem}`,
+          ...packet.instructions.map((item) => `- ${item}`),
+          `Questions:\n${packet.questions.map((item) => `- ${item}`).join("\n")}`,
+        ];
+        if (packet.projectContext.length > 0) {
+          sections.push(`Project context:\n${packet.projectContext.map((item) => `- ${item}`).join("\n")}`);
+        }
+        if (packet.capabilityContext.length > 0) {
+          sections.push(`Living capability context:\n${packet.capabilityContext.map((item) => `- ${item}`).join("\n")}`);
+        }
+        sections.push(`Start when clear:\n- Fast: ${packet.next.fast}\n- Complex: ${packet.next.complex}`);
+        return sections.join("\n\n");
+      });
+      return;
+    }
     case "fast": {
       const id = takeOption(context.args, "--id");
       const requestOption = takeOption(context.args, "--request");
       const request = requestOption ?? context.args.join(" ");
-      const project = await EmpiricalProject.open(context.root);
+      const project = await EmpiricalProject.open(context.root, context.workstream);
       emit(
         await project.fast(request, { ...(id ? { id } : {}) }),
         context.json,
@@ -87,7 +111,7 @@ async function main(): Promise<void> {
       const id = takeOption(context.args, "--id");
       const requestOption = takeOption(context.args, "--request");
       const request = requestOption ?? context.args.join(" ");
-      const project = await EmpiricalProject.open(context.root);
+      const project = await EmpiricalProject.open(context.root, context.workstream);
       emit(
         await project.complex(request, { ...(id ? { id } : {}) }),
         context.json,
@@ -100,7 +124,7 @@ async function main(): Promise<void> {
       const id = takeOption(context.args, "--id");
       const requestOption = takeOption(context.args, "--request");
       const request = requestOption ?? context.args.join(" ");
-      const project = await EmpiricalProject.open(context.root);
+      const project = await EmpiricalProject.open(context.root, context.workstream);
       const action = await project.start(request, {
         ...(profile ? { profile } : {}),
         ...(id ? { id } : {}),
@@ -115,22 +139,22 @@ async function main(): Promise<void> {
           "empirical loop takes no request or profile; use empirical fast or empirical complex to start work",
         );
       }
-      const project = await EmpiricalProject.open(context.root);
+      const project = await EmpiricalProject.open(context.root, context.workstream);
       const action = await project.loop();
       emit(action, context.json, renderLoopAction);
       return;
     }
     case "status": {
-      const project = await EmpiricalProject.open(context.root);
+      const project = await EmpiricalProject.open(context.root, context.workstream);
       const state = await project.status();
       emit(state, context.json, (value) => {
         const item = value as typeof state;
-        return `feature=${item.activeFeature ?? "none"} phase=${item.phase} status=${item.status} revision=${item.revision} profile=${item.profile}`;
+        return `workstream=${project.store.workstream} feature=${item.activeFeature ?? "none"} phase=${item.phase} status=${item.status} revision=${item.revision} profile=${item.profile}`;
       });
       return;
     }
     case "next": {
-      const project = await EmpiricalProject.open(context.root);
+      const project = await EmpiricalProject.open(context.root, context.workstream);
       emit(await project.next(), context.json, renderAction);
       return;
     }
@@ -139,13 +163,30 @@ async function main(): Promise<void> {
         printCompleteHelp();
         return;
       }
-      const project = await EmpiricalProject.open(context.root);
+      const project = await EmpiricalProject.open(context.root, context.workstream);
       const input = await completionInput(context.args);
-      emit(await project.complete(input), context.json, renderAction);
+      emit(
+        await project.complete({
+          ...input,
+          ...(context.workstream ? { workstream: context.workstream } : {}),
+        }),
+        context.json,
+        renderAction,
+      );
+      return;
+    }
+    case "archive": {
+      const revision = requiredInteger(context.args, "--revision");
+      const actor = takeOption(context.args, "--actor") ?? "agent";
+      const project = await EmpiricalProject.open(context.root, context.workstream);
+      const result = await project.archive(revision, actor);
+      emit(result, context.json, () => result.report.converged
+        ? `Workstream ${result.report.workstream} was already archived.`
+        : `Archived ${result.report.feature}: ${result.report.added} added, ${result.report.modified} modified, ${result.report.removed} removed.`);
       return;
     }
     case "verify": {
-      const project = await EmpiricalProject.open(context.root);
+      const project = await EmpiricalProject.open(context.root, context.workstream);
       const report = await project.verify();
       emit(report, context.json, () => report.valid
         ? `Evidence is complete for ${report.criteria} acceptance criteria.`
@@ -156,25 +197,73 @@ async function main(): Promise<void> {
     case "retry": {
       const revision = requiredInteger(context.args, "--revision");
       const actor = takeOption(context.args, "--actor") ?? "human";
-      const project = await EmpiricalProject.open(context.root);
+      const project = await EmpiricalProject.open(context.root, context.workstream);
       emit(await project.retry(revision, actor), context.json, renderAction);
       return;
     }
     case "integrate": {
-      const project = await EmpiricalProject.open(context.root);
+      const project = await EmpiricalProject.open(context.root, context.workstream);
       const report = await project.integrations();
       emit(report, context.json, () => `Agent discovery refreshed (${report.created.length} created, ${report.updated.length} updated, ${report.preserved.length} preserved).`);
       return;
     }
     case "doctor": {
-      const project = await EmpiricalProject.open(context.root);
+      const project = await EmpiricalProject.open(context.root, context.workstream);
       emit(await project.doctor(), context.json, () => "Empirical is healthy: npm CLI, MCP, and filesystem state are available.");
       return;
     }
     case "migrate": {
-      const project = await EmpiricalProject.open(context.root);
+      const project = await EmpiricalProject.open(context.root, context.workstream);
       const migration = await project.migrate();
       emit(migration, context.json, () => `Project schema is current (${String(migration.schemaVersion)}).`);
+      return;
+    }
+    case "workstream": {
+      const operation = context.args.shift() ?? "list";
+      const project = await EmpiricalProject.open(context.root, context.workstream);
+      if (operation === "list") {
+        const workstreams = await project.workstreams();
+        emit(workstreams, context.json, () => workstreams.map((item) =>
+          `${item.selected ? "*" : " "} ${item.id}: ${item.phase}/${item.status} revision=${item.revision} feature=${item.activeFeature ?? "none"}`
+        ).join("\n"));
+        return;
+      }
+      const id = context.args.shift();
+      if (!id || context.args.length > 0) {
+        throw new EmpiricalError("INVALID_ARGUMENT", `empirical workstream ${operation} requires one name`);
+      }
+      if (operation === "create") {
+        const created = await project.createWorkstream(id);
+        emit(created, context.json, () => `Created workstream ${created.id}. Address it with --workstream ${created.id}.`);
+        return;
+      }
+      if (operation === "select") {
+        const selected = await project.selectWorkstream(id);
+        emit(selected, context.json, () => `Selected workstream ${selected.id} for commands without --workstream.`);
+        return;
+      }
+      throw new EmpiricalError("INVALID_ARGUMENT", `Unknown workstream operation '${operation}'`);
+    }
+    case "capabilities": {
+      const project = await EmpiricalProject.open(context.root, context.workstream);
+      const name = context.args.shift();
+      if (context.args.length > 0) throw new EmpiricalError("INVALID_ARGUMENT", "capabilities accepts at most one name");
+      if (name) {
+        const contents = await project.capability(name);
+        if (contents === null) throw new EmpiricalError("CAPABILITY_NOT_FOUND", `Unknown capability '${name}'`);
+        emit({ name, contents }, context.json, () => contents);
+      } else {
+        const capabilities = await project.capabilities();
+        emit(capabilities, context.json, () => capabilities.length === 0
+          ? "No living capability specifications yet."
+          : capabilities.map((item) => `${item.name}: ${item.requirements} requirements (${item.path})`).join("\n"));
+      }
+      return;
+    }
+    case "policy": {
+      const project = await EmpiricalProject.open(context.root, context.workstream);
+      const policy = await project.policy();
+      emit(policy, context.json, () => `Project policy: ${policy.context.length} context entries, ${Object.keys(policy.phases).length} customized phases (${project.store.policyPath}).`);
       return;
     }
     case "update": {
@@ -198,8 +287,9 @@ async function main(): Promise<void> {
 function parseGlobals(argv: string[]): CliContext {
   const args = [...argv];
   const root = takeOption(args, "--root") ?? process.cwd();
+  const workstream = takeOption(args, "--workstream");
   const json = takeFlag(args, "--json");
-  return { args, root, json };
+  return { args, root, ...(workstream ? { workstream } : {}), json };
 }
 
 async function completionInput(args: string[]): Promise<CompletionInput> {
@@ -302,7 +392,18 @@ function renderAction(value: unknown): string {
   const header = action.feature
     ? `${action.feature}: ${action.phase} (${action.profile}, ${action.status}, revision ${action.revision})`
     : `Empirical: ${action.phase}`;
-  const sections = [header, action.instructions];
+  const progress = phaseProgress(action.profile, action.phase);
+  const sections = [
+    `Empirical · workstream ${action.workstream}${progress ? ` · ${progress}` : ""}`,
+    header,
+    action.instructions,
+  ];
+  if (action.projectContext.length > 0) {
+    sections.push(`Project context:\n${action.projectContext.map((item) => `- ${item}`).join("\n")}`);
+  }
+  if (action.capabilityContext.length > 0) {
+    sections.push(`Living capability context:\n${action.capabilityContext.map((item) => `- ${item}`).join("\n")}`);
+  }
   if (action.acceptanceCriteria.length > 0) {
     sections.push(
       `Acceptance criteria:\n${action.acceptanceCriteria
@@ -318,6 +419,20 @@ function renderAction(value: unknown): string {
   }
   if (action.completion.available) sections.push(`Complete with: ${action.completion.cli}`);
   return sections.join("\n\n");
+}
+
+function phaseProgress(
+  profile: Awaited<ReturnType<EmpiricalProject["next"]>>["profile"],
+  phase: Awaited<ReturnType<EmpiricalProject["next"]>>["phase"],
+): string | null {
+  if (phase === "idle" || phase === "done") return null;
+  const phases = profile === "fast"
+    ? ["implement"]
+    : profile === "quick"
+      ? ["shape", "implement", "verify", "review"]
+      : ["specify", "design", "plan", "implement", "verify", "review", "archive"];
+  const index = phases.indexOf(phase);
+  return index < 0 ? null : `step ${index + 1}/${phases.length}`;
 }
 
 function renderLoopAction(value: unknown): string {
@@ -339,24 +454,39 @@ function printHelp(): void {
 Install once: npm install -g empirical-sdd
 
 Usage:
+  Discover and start
   empirical init
   empirical adopt
+  empirical explore "<vague problem>"
   empirical fast "<feature request>"
   empirical complex "<feature request>"
+
+  Continue the current change
   empirical loop
   empirical next
   empirical complete --revision N --outcome passed --summary "..." [--evidence file.json]
+  empirical archive --revision N
   empirical status
   empirical verify
   empirical retry --revision N
+
+  Parallel work and current behavior
+  empirical workstream list
+  empirical workstream create <name>
+  empirical workstream select <name>
+  empirical capabilities [name]
+  empirical policy
+
+  Project maintenance
   empirical integrate
   empirical doctor
   empirical migrate
   empirical mcp
   empirical update [--check]
 
-Fast and Complex are the SDD workflows. Loop only resumes current state; it never
-chooses a workflow, starts work, or launches an AI runtime.
+Use --workstream <name> to address an independently revisioned workstream.
+Explore is read-only discovery. Fast and Complex are the SDD workflows. Loop only
+resumes current state; it never chooses a workflow, starts work, or launches an AI runtime.
 `);
 }
 

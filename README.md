@@ -1,7 +1,8 @@
 # Empirical SDD
 
 One npm package that gives any terminal-capable coding agent the same resumable,
-evidence-backed development workflow.
+evidence-backed development workflow—with read-only discovery, parallel
+workstreams, and living capability specifications.
 
 ```bash
 npm install -g empirical-sdd
@@ -59,6 +60,10 @@ tiny, localized, reversible, low-risk non-UI changes; the skill chooses Complex
 for everything else. To resume existing work, the agent calls `empirical loop`
 without a request.
 
+When a request is genuinely vague, the agent can first call `empirical explore`.
+Explore returns focused discovery questions and existing capability context but
+does not create a feature or revision. It is not an extra phase for concrete work.
+
 | Agent | Automatic project integration | Manual fallback |
 |---|---|---|
 | Codex | `AGENTS.md` and `.agents/skills/empirical/SKILL.md` | `$empirical` |
@@ -100,6 +105,18 @@ exact revision, and immediately uses the next action returned by
 `empirical complete`. It does not need a redundant `empirical loop` call after
 each completion.
 
+Unrelated active work gets a named workstream instead of replacing the current
+change:
+
+```bash
+empirical workstream create billing
+empirical complex "Add invoice retries" --workstream billing
+empirical loop --workstream billing
+```
+
+Every returned action and completion command includes its workstream identity,
+so changing the selected workstream cannot redirect an already-issued action.
+
 ## Two public workflows
 
 ### Fast
@@ -135,14 +152,63 @@ empirical complex "Replace authentication"
 ```
 
 ```text
-Specify → Design → Plan → Implement → Verify → Review → Done
+Specify → Design → Plan → Implement → Verify → Review → Archive → Done
 ```
 
 Every mutation carries the revision from its current action packet, so two
 agents cannot silently overwrite each other's workflow state. Verify requires
 passing evidence for every acceptance criterion. Criteria marked `[UI]`
 additionally require browser and screenshot evidence. Review requires review
-evidence.
+evidence. Archive validates and atomically folds the change's requirement deltas
+into committed living specifications under
+`.empirical/capabilities/<name>/spec.md`; Complex cannot reach Done first.
+
+### Living specifications
+
+Complex changes declare current-behavior changes in small, reviewable files:
+
+```markdown
+## ADDED Requirements
+
+### Requirement: Reports can be exported
+
+Reports MUST be exportable in a stable format.
+
+#### Scenario: Successful export
+
+- **WHEN** a user exports a report
+- **THEN** the stable export is returned
+```
+
+The file lives at
+`.empirical/specs/<feature>/deltas/report-export.md`. Empirical rejects ambiguous
+adds, modifications, removals, malformed scenarios, and unsafe names before any
+living spec changes. Archive preflights all capabilities and rolls back the whole
+projection if one write fails. A Specify-time digest also prevents an approved
+delta from changing silently before Review and Archive.
+
+This borrows OpenSpec's strongest planning idea without making OpenSpec a runtime
+dependency. Empirical keeps its own automatic routing, execution phases, exact
+revisions, evidence gates, and npm-only portability. See the
+[OpenSpec comparison](https://github.com/MateoCerquetella/empirical-sdd/blob/main/docs/openspec-comparison.md).
+
+### Project context
+
+`.empirical/policy.json` can commit stable domain context and additive phase
+guidance for every agent:
+
+```json
+{
+  "schemaVersion": 1,
+  "context": ["Published reports are immutable."],
+  "phases": {
+    "design": ["Prefer an incremental migration."]
+  }
+}
+```
+
+Policy appears in action packets but cannot turn off mandatory criteria,
+artifacts, revision, evidence, review, or archive gates.
 
 ### Legacy and advanced compatibility
 
@@ -158,14 +224,21 @@ Normal users and generated agent guidance do not need any of them.
 ```text
 empirical init
 empirical adopt
+empirical explore "<vague problem>"
 empirical fast "<request>"
 empirical complex "<request>"
 empirical loop
 empirical next
 empirical complete --revision N --outcome passed --summary "..."
+empirical archive --revision N
 empirical status
 empirical verify
 empirical retry --revision N
+empirical workstream list
+empirical workstream create <name>
+empirical workstream select <name>
+empirical capabilities [name]
+empirical policy
 empirical integrate
 empirical doctor
 empirical migrate
@@ -187,14 +260,19 @@ The same package exposes these tools through `empirical mcp`:
 
 - `empirical_init`
 - `empirical_adopt`
+- `empirical_explore`
 - `empirical_fast`
 - `empirical_complex`
 - `empirical_loop`
 - `empirical_status`
 - `empirical_next`
 - `empirical_complete`
+- `empirical_archive`
 - `empirical_verify`
 - `empirical_retry`
+- `empirical_workstreams`
+- `empirical_capabilities`
+- `empirical_policy`
 - `empirical_integrate`
 
 `empirical_start` remains available for legacy compatibility. The server uses
@@ -207,8 +285,8 @@ Tools and IDEs can embed the exact same engine:
 ```ts
 import { EmpiricalProject } from "empirical-sdd";
 
-const project = await EmpiricalProject.open(process.cwd());
-const action = await project.complex("Add dark mode");
+const project = await EmpiricalProject.open(process.cwd(), "billing");
+const action = await project.complex("Add invoice retries");
 
 // In a later session, resume whichever workflow is active.
 const resumed = await project.loop();
@@ -229,6 +307,10 @@ It preserves `ai/`, copies the active specification into the `.empirical/`
 store, and defaults adopted work to Complex. Existing Quick state remains
 readable and resumable for compatibility.
 
+Schema-1 and schema-2 repositories migrate additively to schema 3 as the
+`default` workstream. Their existing `.empirical/state.json`, `events/`, specs,
+evidence, and adopted `ai/` content stay in place.
+
 ## Updating
 
 ```bash
@@ -238,9 +320,9 @@ empirical integrate
 
 The first command installs the latest public npm package. The second refreshes
 managed project skills, commands, guidance, and MCP configuration without
-replacing unmanaged files. The current engine reads existing schema-1 state;
-mutations upgrade it safely. You can perform that non-destructive schema stamp
-explicitly before more work begins:
+replacing unmanaged files. The current engine reads existing schema-1 and
+schema-2 state; mutations upgrade it safely. You can perform that non-destructive
+schema stamp explicitly before more work begins:
 
 ```bash
 empirical migrate

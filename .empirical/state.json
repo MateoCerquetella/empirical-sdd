@@ -1,71 +1,88 @@
 {
-  "schemaVersion": 2,
-  "revision": 29,
-  "activeFeature": "006-separate-the-pure-execution-loop-from-the",
-  "request": "Separate the pure execution loop from the Fast and Complex SDD starters, keep Quick only for backward compatibility, and make ordinary agent prompts choose the SDD workflow automatically",
+  "schemaVersion": 3,
+  "revision": 39,
+  "activeFeature": "007-use-openspec-s-strongest-product-ideas-to",
+  "request": "Use OpenSpec's strongest product ideas to evolve Empirical into a 10/10 npm-only SDD workflow: add living capability specifications and delta archival, an exploratory discovery path, safe multiple active workstreams, strong customization where it improves UX, preserve automatic ordinary-request activation, Fast and Complex workflows, exact revisions, mandatory evidence, MCP, and cross-agent portability, and deliver cohesive documentation, migration, tests, and packaging.",
   "profile": "complex",
   "phase": "done",
   "status": "done",
   "repairAttempts": 0,
-  "message": "Reviewed the Fast, Complex, and resume-only Loop separation across the core, CLI, MCP tools, generated integrations, legacy compatibility, docs, installers, concurrency and schema handling, and package smoke coverage; no blocking findings remain.",
+  "message": "Archived capability changes: exploratory-discovery, living-specifications, parallel-workstreams, project-policy",
   "implementationActor": "agent",
   "evidence": [
     {
       "criterionId": "AC-1",
       "kind": "test",
       "passed": true,
-      "artifact": "tests/core.test.ts",
-      "summary": "Core, built CLI, and MCP tests prove that Fast starts at implementation with generated AC-1, combined test/review gates, and direct --test/--review completion shortcuts."
+      "artifact": "tests/living-specs.test.ts",
+      "summary": "API and JSON CLI packets are identical, stdio MCP matches the API, and state, events, and specs remain byte-for-byte unchanged by Explore."
     },
     {
       "criterionId": "AC-2",
       "kind": "test",
       "passed": true,
-      "artifact": "tests/core.test.ts",
-      "summary": "Core, built CLI, and MCP tests prove project.complex, empirical complex, and empirical_complex enter Specify and retain Design, Plan, Implement, Verify, and Review gates."
+      "artifact": "tests/living-specs.test.ts",
+      "summary": "Complex runs validate capability deltas, enter Archive after passing Review, and atomically create canonical living specifications before Done."
     },
     {
       "criterionId": "AC-3",
       "kind": "test",
       "passed": true,
-      "artifact": "tests/core.test.ts",
-      "summary": "Core and MCP tests prove loop is a read-only idle, active, or terminal snapshot, while runtime and built-CLI checks reject request arguments."
+      "artifact": "tests/living-specs.test.ts",
+      "summary": "Tests reject malformed, duplicate, missing, traversal, symbolic-link, early, and post-approval delta mutations; rollback and repeated Archive convergence pass."
     },
     {
       "criterionId": "AC-4",
       "kind": "test",
       "passed": true,
-      "artifact": "src/integrations.ts",
-      "summary": "Integration tests prove ordinary coding requests trigger managed skills and guidance that choose Fast only for tiny low-risk non-UI work, choose Complex otherwise, and continue returned packets to a terminal state."
+      "artifact": "tests/workstreams.test.ts",
+      "summary": "Concurrent alpha and beta workstreams receive distinct features and independent revision journals; selection and mismatched completion cannot redirect issued packets."
     },
     {
       "criterionId": "AC-5",
       "kind": "test",
       "passed": true,
-      "artifact": "README.md",
-      "summary": "Repository scans and distribution smoke tests prove normal help, docs, and generated guidance require no profile or JSON flags; programmatic output and low-level start remain available."
+      "artifact": "tests/workstreams.test.ts",
+      "summary": "Schema-1 and schema-2 migrations preserve default state, events, specs, and Quick/v1 adoption coverage while adding schema-3 metadata."
     },
     {
       "criterionId": "AC-6",
       "kind": "test",
       "passed": true,
-      "artifact": "tests/core.test.ts",
-      "summary": "Compatibility tests resume existing Quick state and normalize legacy Strong state to Complex, while runtime guards, help, docs, skills, and MCP expose only Fast and Complex for new work."
+      "artifact": "tests/workstreams.test.ts",
+      "summary": "Committed context and design guidance appear in packets, while conflicting guidance still cannot bypass the required design artifact."
     },
     {
       "criterionId": "AC-7",
       "kind": "test",
       "passed": true,
+      "artifact": "tests/core.test.ts",
+      "summary": "Repeatable generated integrations expose Explore, automatic Fast/Complex selection, explicit packet workstreams, and post-Review Archive without profile or JSON UX."
+    },
+    {
+      "criterionId": "AC-8",
+      "kind": "test",
+      "passed": true,
+      "artifact": "tests/core.test.ts",
+      "summary": "Existing Fast, Complex, Quick, revision, repair, browser, screenshot, evidence, review, integration, and concurrency tests all pass with enforced Complex Archive."
+    },
+    {
+      "criterionId": "AC-9",
+      "kind": "test",
+      "passed": true,
       "artifact": "package.json",
-      "summary": "bun run ci passed: 28 tests, 190 assertions, TypeScript checking, built Fast/Complex/Loop Node CLI plus stdio MCP smoke testing, integration safety, concurrency, schema and installer coverage, and npm pack dry-run."
+      "summary": "bun run ci passes 42 tests and 281 assertions plus typecheck, built Node CLI/MCP smoke, npm dry-run; strict OpenSpec validation also passes with no OpenSpec runtime dependency."
     },
     {
       "criterionId": "all",
       "kind": "review",
       "passed": true,
-      "summary": "Diff review confirmed all seven acceptance criteria are implemented consistently across runtime, integrations, documentation, and tests, with no exposed credentials or blocking quality findings."
+      "artifact": "openspec/changes/evolve-empirical-living-specs/tasks.md",
+      "summary": "Criterion-by-criterion diff review found no blocking correctness, security, migration, concurrency, packaging, or UX issues. Review-driven fixes added delta tamper binding, symbolic-link rejection, rollback error reporting, safe capability cleanup, and complete wrapped-criterion rendering."
     }
   ],
-  "updatedAt": "2026-07-29T13:24:16.047Z",
-  "specDigest": "8af8f66e744c3884aba031e19396a57cc876e33308ec16dfa7b3bc7777e47bab"
+  "updatedAt": "2026-07-29T14:21:54.989Z",
+  "specDigest": "1e7c3e8048f2297d7e2f3293ed3ae581624eede60cdd71bbc4c3f9a8c1ab563d",
+  "capabilityArchiveRequired": false,
+  "capabilityDeltaDigest": null
 }

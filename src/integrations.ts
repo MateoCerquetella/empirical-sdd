@@ -15,18 +15,22 @@ fix, refactor, remove, migrate, upgrade, update tests, or continue repository
 work. The user does not need to mention Empirical.
 
 1. Use the current agent; never launch another AI runtime.
-2. For new work, choose Fast only when it is explicit, tiny, localized,
+2. Explore genuinely vague work through \`empirical_explore\` or
+   \`empirical explore "<problem>"\` before creating workflow state.
+3. For concrete new work, choose Fast only when it is explicit, tiny, localized,
    reversible, low-risk, and non-UI. Choose Complex for everything else.
-3. Start through \`empirical_fast\` or \`empirical_complex\`. Without MCP, run
+4. Start through \`empirical_fast\` or \`empirical_complex\`. Without MCP, run
    \`empirical fast "<the user's request>"\` or
    \`empirical complex "<the user's request>"\`.
-4. Resume active work through \`empirical_loop\` or \`empirical loop\`; loop
+5. Resume active work through \`empirical_loop\` or \`empirical loop\`; loop
    takes no request or profile.
-5. Execute the returned action and complete its exact revision with all required
+6. Preserve the packet workstream; use a different named workstream for unrelated
+   active work. Execute the action and complete its exact revision with all required
    evidence. Each completion response is already the next action; do not call
    status, next, or loop redundantly.
-6. Continue until Done, Blocked, or genuinely awaiting human input. For Fast,
-   trust the criterion in the returned packet, inspect only relevant project
+7. When Review returns Archive, apply its validated capability deltas with the
+   returned archive operation. Continue until Done, Blocked, or genuinely awaiting
+   human input. For Fast, trust the criterion in the returned packet, inspect only relevant project
    files, combine the focused test and diff review, and use the returned
    completion command. Do not reread Empirical internals or add redundant checks.
 
@@ -50,24 +54,27 @@ daemon, or runtime.
 
 1. Treat the user's ordinary coding request as the workflow request. The user
    does not choose a command or profile.
-2. For new work, choose Fast only when the behavior is explicit and the change
+2. Explore genuinely vague problems with \`empirical_explore\` or
+   \`empirical explore "<problem>"\` before starting workflow state.
+3. For concrete work, choose Fast only when the behavior is explicit and the change
    is tiny, localized, reversible, low-risk, and non-UI. Choose Complex otherwise,
    including UI, security, authentication, permissions, payments, destructive
    operations, migrations, dependencies, public APIs, infrastructure,
    architecture, or cross-cutting work.
-3. Start new work with \`empirical_fast\` or \`empirical_complex\`. If MCP is
+4. Start new work with \`empirical_fast\` or \`empirical_complex\`. If MCP is
    unavailable, run \`empirical fast "<request>"\` or
    \`empirical complex "<request>"\`.
-4. If work is already active, resume it with \`empirical_loop\` or
+5. If work is already active, resume it with \`empirical_loop\` or
    \`empirical loop\`. Loop takes no request or profile.
-5. Execute exactly the returned action. Complete the exact revision with every
+6. Preserve the explicit packet workstream; create or address another workstream
+   for unrelated active work. Execute the action and complete the exact revision with every
    required evidence item. For Fast, trust the generated criterion in the
    packet, inspect only relevant project files, implement directly, combine the
    focused test and diff review when practical, and use the returned completion
    command. Do not reread Empirical state/spec files or add redundant checks.
-6. Treat each Fast, Complex, or Complete response as the next action and continue
-   immediately without a redundant status, next, or loop call.
-7. Stop only at \`done\`, \`blocked\`, or \`awaiting_human\`. Explain a blocker or
+7. Treat each Fast, Complex, Complete, or Archive response as the next action.
+   After Review, archive validated deltas into living capability specifications.
+8. Stop only at \`done\`, \`blocked\`, or \`awaiting_human\`. Explain a blocker or
    required decision clearly. Keep Fast updates and checks proportional.
 
 Quick exists only to resume legacy workflow state. Do not choose it for new
@@ -83,12 +90,14 @@ const CURSOR_COMMAND = `<!-- ${MANAGED_FILE_MARKER} -->
 Run the request attached to this command through the repository's Empirical
 workflow. If there is no new request, resume the active feature.
 
-Use the current Cursor agent. For new work, choose Fast only for explicit, tiny,
+Use the current Cursor agent. Explore vague problems first with
+\`empirical_explore\` or \`empirical explore "<problem>"\`. For concrete work,
+choose Fast only for explicit, tiny,
 localized, reversible, low-risk non-UI changes and Complex otherwise. Start with
 \`empirical_fast\` or \`empirical_complex\`; fall back to
 \`empirical fast "<request>"\` or \`empirical complex "<request>"\`. Resume active
-work with \`empirical_loop\` or \`empirical loop\`. Execute each returned action,
-complete its exact revision with required evidence, and consume the completion
+work with \`empirical_loop\` or \`empirical loop\`. Preserve its workstream, execute
+each returned action, complete exact revisions with evidence, archive after Review, and consume the
 response directly as the next action. Never select legacy Quick for new work,
 add profile/JSON controls, or launch another AI runtime.
 `;
@@ -98,7 +107,7 @@ description = "Start or resume Empirical and continue in the current agent until
 prompt = """
 Run the request attached to this command through the repository's Empirical workflow. If there is no new request, resume the active feature.
 
-Use the current Gemini agent. For new work, choose Fast only for explicit, tiny, localized, reversible, low-risk non-UI changes and Complex otherwise. Start with empirical_fast or empirical_complex; fall back to empirical fast "<request>" or empirical complex "<request>". Resume active work with empirical_loop or empirical loop. Execute each returned action, complete its exact revision with all required evidence, and consume each completion response directly as the next action. Never select legacy Quick for new work, add profile/JSON controls, or launch another AI runtime.
+Use the current Gemini agent. Explore vague problems first with empirical_explore or empirical explore "<problem>". For concrete work, choose Fast only for explicit, tiny, localized, reversible, low-risk non-UI changes and Complex otherwise. Start with empirical_fast or empirical_complex; fall back to empirical fast "<request>" or empirical complex "<request>". Resume active work with empirical_loop or empirical loop. Preserve workstream identity, complete exact revisions with evidence, archive after Review, and consume every response directly. Never select legacy Quick for new work, add profile/JSON controls, or launch another AI runtime.
 """
 `;
 
@@ -108,15 +117,17 @@ const WINDSURF_WORKFLOW = `<!-- ${MANAGED_FILE_MARKER} -->
 Start or resume the repository's Empirical workflow for the current request.
 
 1. Use the current Cascade agent; never launch another AI runtime.
-2. For new work, choose Fast only for explicit, tiny, localized, reversible,
+2. Explore vague problems with \`empirical_explore\` or
+   \`empirical explore "<problem>"\` before starting workflow state.
+3. For concrete work, choose Fast only for explicit, tiny, localized, reversible,
    low-risk non-UI changes and Complex otherwise.
-3. Start with \`empirical_fast\` or \`empirical_complex\`; fall back to
+4. Start with \`empirical_fast\` or \`empirical_complex\`; fall back to
    \`empirical fast "<request>"\` or \`empirical complex "<request>"\`.
-4. Resume active work with \`empirical_loop\` or \`empirical loop\`.
-5. Execute the returned action and complete its exact revision with all required
+5. Resume active work with \`empirical_loop\` or \`empirical loop\`.
+6. Preserve its workstream, execute the action, and complete its exact revision with all required
    evidence.
-6. Consume each completion response directly as the next action.
-7. Stop only at Done, Blocked, or awaiting human input.
+7. Archive validated capability deltas after Review and consume every response.
+8. Stop only at Done, Blocked, or awaiting human input.
 
 Never select legacy Quick for new work or add profile/JSON controls to the
 normal workflow.

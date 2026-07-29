@@ -18,6 +18,21 @@ async function temporaryProject(): Promise<string> {
   return directory;
 }
 
+async function writeAddedDelta(
+  root: string,
+  feature: string,
+  capability = "example-capability",
+  requirement = "Requested behavior is available",
+): Promise<void> {
+  const directory = join(root, ".empirical", "specs", feature, "deltas");
+  await mkdir(directory, { recursive: true });
+  await writeFile(
+    join(directory, `${capability}.md`),
+    `## Purpose\n\nThis capability documents the current observable product behavior.\n\n## ADDED Requirements\n\n### Requirement: ${requirement}\n\nThe requested behavior MUST be available.\n\n#### Scenario: Successful use\n\n- **WHEN** a user invokes the behavior\n- **THEN** the requested result is available\n`,
+    "utf8",
+  );
+}
+
 async function seedLegacyWorkflow(
   root: string,
   persistedProfile: "quick" | "strong",
@@ -62,6 +77,18 @@ describe("Empirical core", () => {
 
   test("template examples inside HTML comments are not acceptance criteria", () => {
     expect(parseCriteria("<!--\n- [ ] [AC-1] Example only.\n-->\n")).toEqual([]);
+  });
+
+  test("wrapped acceptance criteria remain complete in human action packets", () => {
+    expect(parseCriteria(
+      "- [ ] [AC-1] The CLI, MCP, and API return the same packet\n"
+      + "  without creating a feature, event, or revision.\n",
+    )).toEqual([{
+      id: "AC-1",
+      text: "The CLI, MCP, and API return the same packet without creating a feature, event, or revision.",
+      ui: false,
+      checked: false,
+    }]);
   });
 
   test("idle packets do not advertise an available completion", async () => {
@@ -125,7 +152,10 @@ describe("Empirical core", () => {
     expect(claudeSkill).toBe(agentsSkill);
     expect(agentsSkill).toContain("empirical_fast");
     expect(agentsSkill).toContain("empirical_complex");
+    expect(agentsSkill).toContain("empirical_explore");
     expect(agentsSkill).toContain("empirical_loop");
+    expect(agentsSkill).toContain("explicit packet workstream");
+    expect(agentsSkill).toContain("archive validated deltas");
     expect(agentsSkill).toContain("Choose Complex otherwise");
     expect(agentsSkill).not.toContain("--profile");
     expect(agentsSkill).not.toContain("--json");
@@ -753,6 +783,10 @@ describe("Empirical core", () => {
         const path = join(root, ".empirical", name);
         const document = JSON.parse(await readFile(path, "utf8")) as Record<string, unknown>;
         document.schemaVersion = 1;
+        if (name === "state.json") {
+          delete document.capabilityArchiveRequired;
+          delete document.capabilityDeltaDigest;
+        }
         await writeFile(path, `${JSON.stringify(document, null, 2)}\n`, "utf8");
       }
     };
@@ -763,18 +797,29 @@ describe("Empirical core", () => {
     });
     await downgradeToSchemaOne(migrateRoot);
 
-    expect((await migrateProject.config()).schemaVersion).toBe(2);
-    expect((await migrateProject.status()).schemaVersion).toBe(2);
+    expect((await migrateProject.config()).schemaVersion).toBe(3);
+    expect((await migrateProject.status()).schemaVersion).toBe(3);
+    expect(await migrateProject.status()).toMatchObject({
+      capabilityArchiveRequired: false,
+      capabilityDeltaDigest: null,
+    });
     expect(await migrateProject.migrate()).toMatchObject({
       changed: true,
-      from: { config: 1, state: 1 },
-      to: 2,
-      schemaVersion: 2,
+      migrations: [{
+        workstream: "default",
+        from: { config: 1, state: 1 },
+        to: 3,
+      }],
+      schemaVersion: 3,
     });
     expect(JSON.parse(await readFile(join(migrateRoot, ".empirical/config.json"), "utf8")).schemaVersion)
-      .toBe(2);
+      .toBe(3);
     expect(JSON.parse(await readFile(join(migrateRoot, ".empirical/state.json"), "utf8")).schemaVersion)
-      .toBe(2);
+      .toBe(3);
+    expect(JSON.parse(await readFile(join(migrateRoot, ".empirical/workstreams.json"), "utf8")))
+      .toMatchObject({ selected: "default", workstreams: { default: {} } });
+    expect(JSON.parse(await readFile(join(migrateRoot, ".empirical/policy.json"), "utf8")))
+      .toMatchObject({ schemaVersion: 1, context: [], phases: {} });
 
     const mutateRoot = await temporaryProject();
     const { project: mutateProject } = await EmpiricalProject.initialize(mutateRoot, {
@@ -784,9 +829,9 @@ describe("Empirical core", () => {
     await mutateProject.fast("Add a small schema-upgrade check");
 
     expect(JSON.parse(await readFile(join(mutateRoot, ".empirical/config.json"), "utf8")).schemaVersion)
-      .toBe(2);
+      .toBe(3);
     expect(JSON.parse(await readFile(join(mutateRoot, ".empirical/state.json"), "utf8")).schemaVersion)
-      .toBe(2);
+      .toBe(3);
   });
 
   test("a newer event schema requires migration instead of being ignored", async () => {
@@ -909,6 +954,7 @@ describe("Empirical core", () => {
       "# Auth\n\n## Acceptance Criteria\n- [ ] [AC-1] Existing users can sign in.\n",
       "utf8",
     );
+    await writeAddedDelta(root, action.feature!, "authentication", "Existing users can sign in");
     action = await project.complete({ revision: 1, outcome: "passed", summary: "Specified" });
     expect(action.phase).toBe("design");
     await expect(project.complete({ revision: 2, outcome: "passed", summary: "Designed" }))
@@ -930,6 +976,7 @@ describe("Empirical core", () => {
       "# Export\n\n## Acceptance Criteria\n- [ ] [AC-1] A report can be exported.\n",
       "utf8",
     );
+    await writeAddedDelta(root, action.feature!, "report-export", "A report can be exported");
     await project.complete({ revision: 1, outcome: "passed", summary: "Shaped" });
     await expect(project.complete({ revision: 1, outcome: "passed", summary: "Stale" }))
       .rejects.toBeInstanceOf(EmpiricalError);

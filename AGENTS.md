@@ -6,18 +6,22 @@ fix, refactor, remove, migrate, upgrade, update tests, or continue repository
 work. The user does not need to mention Empirical.
 
 1. Use the current agent; never launch another AI runtime.
-2. For new work, choose Fast only when it is explicit, tiny, localized,
+2. Explore genuinely vague work through `empirical_explore` or
+   `empirical explore "<problem>"` before creating workflow state.
+3. For concrete new work, choose Fast only when it is explicit, tiny, localized,
    reversible, low-risk, and non-UI. Choose Complex for everything else.
-3. Start through `empirical_fast` or `empirical_complex`. Without MCP, run
+4. Start through `empirical_fast` or `empirical_complex`. Without MCP, run
    `empirical fast "<the user's request>"` or
    `empirical complex "<the user's request>"`.
-4. Resume active work through `empirical_loop` or `empirical loop`; loop
+5. Resume active work through `empirical_loop` or `empirical loop`; loop
    takes no request or profile.
-5. Execute the returned action and complete its exact revision with all required
+6. Preserve the packet workstream; use a different named workstream for unrelated
+   active work. Execute the action and complete its exact revision with all required
    evidence. Each completion response is already the next action; do not call
    status, next, or loop redundantly.
-6. Continue until Done, Blocked, or genuinely awaiting human input. For Fast,
-   trust the criterion in the returned packet, inspect only relevant project
+7. When Review returns Archive, apply its validated capability deltas with the
+   returned archive operation. Continue until Done, Blocked, or genuinely awaiting
+   human input. For Fast, trust the criterion in the returned packet, inspect only relevant project
    files, combine the focused test and diff review, and use the returned
    completion command. Do not reread Empirical internals or add redundant checks.
 
