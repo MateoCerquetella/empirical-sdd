@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 1,
+  "previousRevision": -1,
+  "actor": "empirical-start",
+  "summary": "Started update-readme-md-while-keeping-it-minimal-concisely-explain-every",
+  "createdAt": "2026-07-30T20:36:50.873Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 1,
+    "activeFeature": "update-readme-md-while-keeping-it-minimal-concisely-explain-every",
+    "request": "Update README.md while keeping it minimal: concisely explain every command it presents, including package installation and update commands, all five public coding-agent skills with each agent's invocation syntax, and the Bun development commands. Do not document private internal commands or change source behavior.",
+    "profile": "fast",
+    "phase": "implement",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": null,
+    "implementationActor": null,
+    "specDigest": "81e9ab735ecd4f0f0ac865d86bff2aac7c853f4accaa6781f3fb0ab9c75d8a9a",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "evidence": [],
+    "updatedAt": "2026-07-30T20:36:50.873Z"
+  }
+}

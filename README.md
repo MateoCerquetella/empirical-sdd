@@ -8,37 +8,42 @@ Cursor, Gemini CLI, Windsurf, and MCP clients.
 
 ## Install
 
-```bash
-npm install -g empirical-sdd
-empirical install
-```
+| Command | Purpose |
+| --- | --- |
+| `npm install -g empirical-sdd` | Install the Empirical CLI globally. |
+| `empirical install` | Choose coding agents and install their five Empirical skills. |
+| `empirical update` | Upgrade Empirical and refresh the installed skills. |
 
-Choose your coding agents in the installer, then restart or reload them.
+Restart or reload each selected agent after installation.
 
 ## Use
 
-Invoke Empirical from your coding agent with a request:
+These are coding-agent skills, not shell commands:
 
-```text
-Codex:      $empirical <request>
-Claude:     /empirical <request>
-Cursor:     empirical <request>
-Gemini:     empirical <request>
-Windsurf:   @empirical <request>
-```
+| Agent | Automatic | Init | Spec | Socratic | Loop |
+| --- | --- | --- | --- | --- | --- |
+| Codex | `$empirical` | `$empirical-init` | `$empirical-spec` | `$empirical-socratic` | `$empirical-loop` |
+| Claude Code | `/empirical` | `/empirical-init` | `/empirical-spec` | `/empirical-socratic` | `/empirical-loop` |
+| Cursor | `empirical` | `empirical-init` | `empirical-spec` | `empirical-socratic` | `empirical-loop` |
+| Gemini CLI | `empirical` | `empirical-init` | `empirical-spec` | `empirical-socratic` | `empirical-loop` |
+| Windsurf | `@empirical` | `@empirical-init` | `@empirical-spec` | `@empirical-socratic` | `@empirical-loop` |
 
-Empirical initializes the repository, selects the appropriate workflow, and
-continues through specification, implementation, verification, and review.
-These are agent skills, not shell commands.
+| Skill | Purpose |
+| --- | --- |
+| `empirical <request>` | Initialize if needed, select the workflow, and run the request through review. |
+| `empirical-init` | Initialize or repair repository setup without starting work. |
+| `empirical-spec <request>` | Draft a concrete specification and stop for approval. |
+| `empirical-socratic <idea>` | Refine an idea through a five-pass interview, then draft a specification. |
+| `empirical-loop` | Resume the active approved specification and drive it to completion. |
 
 ## Development
 
 Requires Node.js 20+ and Bun.
 
-```bash
-bun install
-bun run ci
-```
+| Command | Purpose |
+| --- | --- |
+| `bun install` | Install development dependencies. |
+| `bun run ci` | Run type checking, tests, build smoke tests, and package tests. |
 
 ## Documentation
 

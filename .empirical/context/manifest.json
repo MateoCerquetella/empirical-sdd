@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "digest": "b6dc7d88a2d2b06461e4d7a1e2bb98eb00f829a09b2e3d8708927cd5582f2577",
+  "digest": "fe8b66aefffb65be40b73846d664ace4d92aaf3e51d2aaf58dcc34e0685a207b",
   "files": [
     {
       "path": ".codex/config.toml",
@@ -44,8 +44,8 @@
     },
     {
       "path": "README.md",
-      "size": 11941,
-      "digest": "198e46f2bbac81d9a1d9e7e0aeaaf5004ff3e9b7907c1dfef4acb3204a70c318"
+      "size": 2249,
+      "digest": "57b26809ea851251a35aa17d52ba0d6c2ac5e33212a18b7c8e0463e4bf5db30d"
     },
     {
       "path": "SECURITY.md",
