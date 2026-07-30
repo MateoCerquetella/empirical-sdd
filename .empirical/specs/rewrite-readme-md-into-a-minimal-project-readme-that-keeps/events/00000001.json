@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 1,
+  "previousRevision": -1,
+  "actor": "empirical-start",
+  "summary": "Started rewrite-readme-md-into-a-minimal-project-readme-that-keeps",
+  "createdAt": "2026-07-30T19:33:47.977Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 1,
+    "activeFeature": "rewrite-readme-md-into-a-minimal-project-readme-that-keeps",
+    "request": "Rewrite README.md into a minimal project README that keeps only the essential description, installation, basic agent usage, development command, documentation links, and license. Do not change source behavior.",
+    "profile": "fast",
+    "phase": "implement",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": null,
+    "implementationActor": null,
+    "specDigest": "93411711e98e5b29ce6e4ad309f30d4b25673a30003d785f99b7922843221f44",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "evidence": [],
+    "updatedAt": "2026-07-30T19:33:47.977Z"
+  }
+}

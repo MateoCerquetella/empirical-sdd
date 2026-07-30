@@ -18,5 +18,5 @@
   "decisions": {
     "complexRecords": "required"
   },
-  "setupComplete": false
+  "setupComplete": true
 }
