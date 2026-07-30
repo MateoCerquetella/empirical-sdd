@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 1,
+  "previousRevision": -1,
+  "actor": "empirical-start",
+  "summary": "Started release-the-verified-five-skill-empirical-workflow-as-npm-package",
+  "createdAt": "2026-07-30T16:41:22.355Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 1,
+    "activeFeature": "release-the-verified-five-skill-empirical-workflow-as-npm-package",
+    "request": "Release the verified five-skill Empirical workflow as npm package empirical-sdd version 0.20.2, then push the release commit and matching v0.20.2 tag.",
+    "profile": "fast",
+    "phase": "implement",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": null,
+    "implementationActor": null,
+    "specDigest": "b304a20f5d4acd2d5689a8cbf394fb8883747ec2094ad66c16d61639f9c0f55c",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "evidence": [],
+    "updatedAt": "2026-07-30T16:41:22.355Z"
+  }
+}
