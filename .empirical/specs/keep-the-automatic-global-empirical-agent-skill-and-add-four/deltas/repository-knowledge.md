@@ -1,11 +1,11 @@
-# Repository Knowledge Specification
+# Repository Knowledge
 
 ## Purpose
 
-Give every Empirical phase compact, durable repository context without a
-network service, embeddings, or a vector database.
+Make first-run initialization and repair explicit, repeatable, and safe before
+any automatic or deliberate Empirical workflow starts.
 
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Initialization creates compact repository knowledge
 
@@ -35,15 +35,3 @@ metadata and explicit configuration have not changed.
 - **WHEN** a complete project is initialized again with the same explicit choices
 - **THEN** configuration and repository knowledge remain byte-stable
 - **AND** unmanaged local agent content remains untouched
-
-### Requirement: Workflow packets retrieve repository knowledge progressively
-
-Explore and action packets MUST identify the current context pages alongside
-project policy and living capability specifications so agents can retrieve only
-the material context needed for the current phase.
-
-#### Scenario: An agent receives a workflow action
-
-- **WHEN** repository knowledge exists
-- **THEN** the packet lists its context paths
-- **AND** mandatory workflow gates remain authoritative over contextual guidance

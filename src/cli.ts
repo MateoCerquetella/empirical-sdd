@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { createInterface } from "node:readline";
 import { homedir } from "node:os";
+import { join } from "node:path";
 import { EmpiricalProject } from "./core.js";
 import {
   buildRefinedRequest,
@@ -13,6 +14,8 @@ import {
   saveDiscovery,
   socraticQuestions,
   type DiscoveryRecord,
+  type DiscoverySubmission,
+  type DiscoverySubmissionResult,
   type DiscoveryWorkflow,
   type SocraticAnswer,
 } from "./discovery.js";
@@ -60,7 +63,7 @@ async function main(): Promise<void> {
   } else if (command !== "install" && command !== "update") {
     throw new EmpiricalError(
       "UNKNOWN_COMMAND",
-      `Unknown public command '${command}'. Use empirical install or empirical update; repository workflows run inside the installed agent entrypoint.`,
+      `Unknown public command '${command}'. Use empirical install or empirical update; repository workflows run inside the installed agent skills.`,
     );
   }
 
@@ -129,14 +132,19 @@ async function main(): Promise<void> {
       }
       const configuration = readConfigurationFlags(context.args);
       assertNoArgs(context.args, "init");
+      const existingConfiguration = await readFile(
+        join(context.root, ".empirical", "config.json"),
+        "utf8",
+      ).then(() => true, () => false);
+      const setupComplete = forceInteractive
+        ? existingConfiguration ? undefined : false
+        : defaults || configuration.explicit || context.json
+          || !(process.stdin.isTTY && process.stdout.isTTY);
       const initialized = await EmpiricalProject.initialize(context.root, {
         ...(profile ? { profile } : {}),
         integrations,
         ...configuration.input,
-        setupComplete: !forceInteractive && (
-          defaults || configuration.explicit || context.json
-          || !(process.stdin.isTTY && process.stdout.isTTY)
-        ),
+        ...(setupComplete !== undefined ? { setupComplete } : {}),
       });
       let config = await initialized.project.config();
       if (
@@ -215,6 +223,29 @@ async function main(): Promise<void> {
         || (!context.json && !noInterview && Boolean(process.stdin.isTTY && process.stdout.isTTY));
       if (interactive) return runSocraticInterview(project, packet, agentOption as "codex" | "none" | undefined);
       emit(packet, context.json, renderExplore);
+      return;
+    }
+    case "discovery": {
+      const inputPath = takeOption(context.args, "--input");
+      if (!inputPath) {
+        throw new EmpiricalError(
+          "INVALID_ARGUMENT",
+          "empirical __internal discovery requires --input <json-file|->",
+        );
+      }
+      assertNoArgs(context.args, "discovery");
+      const text = inputPath === "-" ? await readStdin() : await readFile(inputPath, "utf8");
+      let input: DiscoverySubmission;
+      try {
+        input = JSON.parse(text) as DiscoverySubmission;
+      } catch (error) {
+        throw new EmpiricalError(
+          "INVALID_DISCOVERY",
+          `Discovery input is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+      const project = await EmpiricalProject.open(context.root);
+      emit(await project.discovery(input), context.json, renderDiscoverySubmission);
       return;
     }
     case "fast":
@@ -434,7 +465,7 @@ async function main(): Promise<void> {
       }
       assertNoArgs(context.args, "update");
       const report = updateEmpirical();
-      emit(report, context.json, () => "Empirical package updated and the one managed agent entrypoint was refreshed.");
+      emit(report, context.json, () => "Empirical package updated and the managed agent skills were refreshed.");
       return;
     }
     default:
@@ -654,6 +685,22 @@ function renderExplore(value: unknown): string {
   ].join("\n\n");
 }
 
+function renderDiscoverySubmission(value: unknown): string {
+  const result = value as DiscoverySubmissionResult;
+  const lines = [
+    `Socratic discovery ${result.record.status}: ${result.record.id}`,
+    `Saved: ${result.paths.markdown}`,
+  ];
+  if (result.refinedRequest) lines.push(`Refined request:\n${result.refinedRequest}`);
+  if (result.nextQuestion) {
+    lines.push(`${result.nextQuestion.kind === "follow_up" ? "Material follow-up" : `Next pass · ${result.nextQuestion.title}`}:\n${result.nextQuestion.question}`);
+  }
+  if (result.start) {
+    lines.push(result.start.kind === "action" ? renderAction(result.start) : renderProposal(result.start));
+  }
+  return lines.join("\n\n");
+}
+
 async function askRequired(prompt: LinePrompter, question: string): Promise<string> {
   while (true) {
     const answer = await prompt.ask(question);
@@ -813,9 +860,9 @@ function renderIntegrationReport(summary: string, report: IntegrationReport): st
   if (!report.entrypoints.length) {
     return report.scope === "global"
       ? `${summary}\n\nNo supported agents were detected. Install an agent or run empirical install --all.`
-      : `${summary}\n\nNo project-local workflow skills are installed; the global Empirical entrypoint owns the UX.`;
+      : `${summary}\n\nNo project-local workflow skills are installed; the global Empirical skills own the UX.`;
   }
-  const lines = [summary, "", "Installed Empirical entrypoints:"];
+  const lines = [summary, "", "Installed Empirical agent skills:"];
   for (const entry of report.entrypoints) {
     lines.push(`- ${entry.agent} (${entry.artifactRoot}): ${entry.invocations.join(", ")}`, `  Reload: ${entry.reload}`);
   }
@@ -897,17 +944,23 @@ Install once: npm install -g empirical-sdd
 
 Lifecycle:
   empirical install            Choose agents in an interactive selector
-  empirical update             Update the package and refresh installed entrypoints
+  empirical update             Update the package and refresh installed skills
 
 Installer automation:
   empirical install --agent codex --agent cursor
   empirical install --all
   empirical install --yes
 
-Repository work happens inside your coding agent through its one Empirical
-entrypoint. It initializes the repository, builds compact context, clarifies
-vague work, chooses the internal workflow, resumes work, and offers explicit
-agent handoff when a specification is ready.`);
+Repository work happens inside your coding agent through five installed skills:
+  empirical                    Automatic end-to-end routing and execution
+  empirical-init               Initialize or repair repository setup only
+  empirical-spec               Draft a concrete specification, then stop
+  empirical-socratic           Interview, draft a specification, then stop
+  empirical-loop               Resume an approved specification to completion
+
+Agents use native syntax such as $empirical in Codex, /empirical in Claude Code,
+and @empirical in Windsurf. Init, Spec, Socratic, and Loop are agent skills, not
+terminal commands. Fast and Complex remain internal routing profiles.`);
 }
 
 function printExploreHelp(): void {

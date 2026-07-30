@@ -1,0 +1,9 @@
+[
+  {
+    "criterionId": "all",
+    "kind": "review",
+    "passed": true,
+    "summary": "Reviewed the complete diff against AC-1 through AC-12 and Accepted decisions D-001 through D-005. The automatic and deliberate workflows have disjoint boundaries; initialization and discovery persistence are validated; installation cleanup remains marker- and path-safe; Loop preserves the approval-bound handoff; public CLI and documentation match. No blocking findings remain.",
+    "artifact": ".empirical/specs/keep-the-automatic-global-empirical-agent-skill-and-add-four/review.md"
+  }
+]

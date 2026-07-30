@@ -17,66 +17,211 @@ const OBSOLETE_ENTRYPOINTS = [
   "empirical-explore",
   "empirical-fast",
   "empirical-complex",
-  "empirical-loop",
 ] as const;
 
-export const SINGLE_AGENT_SKILL = `---
-name: empirical
-description: Initialize, understand, start, or resume Empirical repository work through one safe agent-native workflow.
----
+const AUTOMATIC_SKILL_BODY = `# Empirical
 
-<!-- ${MANAGED_FILE_MARKER} -->
-# Empirical
+Use the current host agent to initialize, route, and complete Empirical work.
+This is the automatic end-to-end path. Do not ask the user to choose Fast or
+Complex and do not ask them to run hidden terminal commands.
 
-Use the current host agent. This is the only user-facing Empirical workflow
-entrypoint; never ask the user to invoke separate Explore, Fast, Complex, or
-Loop skills.
-
-1. If the repository is not initialized, inspect its manifests, documentation,
-   source and test layout; ask only first-run answers that materially change Git
-   isolation or decision policy; then pass the chosen isolation, base, worktree
-   path, branch pattern, and decision policy to empirical_init (private CLI
-   fallback: empirical __internal init). Do not install project-local workflow skills.
-2. Call empirical_context (CLI fallback: empirical __internal context) on first use and
-   whenever it reports stale repository knowledge. Complete or refresh the
-   compact overview, architecture, commands, and conventions pages from actual
-   repository evidence. Retrieve only context relevant to the current action.
-3. If Empirical reports selected non-terminal work, call empirical_loop or
-   empirical __internal loop with no request or profile and resume it. Never replace active
-   work with attached invocation text.
-4. For a genuinely vague new idea, call empirical_explore or empirical __internal explore
-   "<idea>" --no-interview for context, then conduct five Socratic passes in the
-   current conversation: problem/user, observable outcome, boundaries/non-goals,
-   failure/risk, and verification. Ask one question at a time, add only a
-   material follow-up, show the complete refined contract, and wait for explicit
-   approval before creating workflow state.
-5. For concrete work, call empirical_fast only when the change is explicit,
-   tiny, localized, reversible, low-risk, and non-UI. Call empirical_complex for
+1. Before interpreting a feature request, inspect .empirical/config.json and
+   repository context. If configuration is missing, setupComplete is false, or
+   context is missing, inspect manifests, documentation, source, and tests; ask
+   one at a time only for choices that materially change Git isolation or
+   decision policy; then call empirical_init. Call empirical_context when
+   context is stale. Private fallbacks are empirical __internal init and
+   empirical __internal context. Do not install project-local skills.
+2. If selected non-terminal work exists, call empirical_loop with no request or
+   profile and resume the returned action. Attached text never replaces active
+   work. The private fallback is empirical __internal loop.
+3. For a genuinely vague new idea, call empirical_explore for repository and
+   capability context, then call empirical_discovery with empty answers to
+   create the draft and receive its first nextQuestion. Ask only the returned
+   pass or material follow-up, one at a time, and resubmit the ordered answers
+   after each response. The five passes are problem/user, observable outcome,
+   boundaries/non-goals, risk/failure, and verification. Show the returned exact
+   refined contract and wait for approval before calling empirical_discovery
+   with approved true.
+   Private fallbacks are empirical __internal explore and empirical __internal
+   discovery --input <json-file>.
+4. For concrete work, call empirical_fast only when it is explicit, tiny,
+   localized, reversible, low-risk, and non-UI. Call empirical_complex for
    everything else, including UI, architecture, public APIs, security,
    permissions, payments, migrations, dependencies, infrastructure, or
-   cross-cutting work. CLI fallbacks are empirical __internal fast and empirical __internal complex;
-   these are internal operations, not additional user commands.
-6. If unrelated work returns a worktree proposal, show its exact base, commit,
-   branch, path, and command. Wait for explicit approval, then execute only the
-   approved worktree creation operation.
-7. Execute every returned action, complete its exact revision with every
-   required artifact and evidence item, and consume the completion response as
-   the next action. After Review, archive validated capability deltas. Stop only
-   at Done, Blocked, or genuinely awaiting human input.
-8. When a Complex Specify action has passed and the returned phase is Design,
-   call empirical_handoff (CLI fallback: empirical __internal handoff) and offer exactly:
-   Continue here, Save for later, or Continue in one detected agent. Detection
-   and Save launch nothing. Before another runtime starts, display the selected
-   agent, capability, cwd, and exact argv; wait for explicit human approval;
-   revalidate the approval; then execute only the authorized argv through the
-   host's terminal/session facility. Workspace-only launchers open the approved
-   repository and must not be described as accepting a prompt.
+   cross-cutting work. Private fallbacks are empirical __internal fast and
+   empirical __internal complex; these are agent operations, not user commands.
+5. Show any worktree proposal exactly and wait for approval before calling the
+   approved creation operation. Never stash, force, or replace selected work.
+6. Execute every returned action, complete its exact revision with required
+   artifacts and evidence, consume the response as the next action, and archive
+   reviewed capability deltas. Stop only at Done, Blocked, or Awaiting Human.
+7. After Complex Specify passes, empirical_handoff may offer Continue here,
+   Save for later, or one detected agent. Detection and Save launch nothing;
+   another runtime requires explicit approval of its exact target, cwd, and argv.
 
-Do not invent state, weaken acceptance criteria, store private chain-of-thought,
-or expose credentials. Repository knowledge, specifications, decisions, and
-evidence under .empirical/ are the durable source of truth; checkout-local Git
-metadata selects which portable feature this checkout owns.
-`;
+Do not invent state, weaken acceptance criteria, expose credentials, or persist
+private chain-of-thought. Files under .empirical/ are the durable source of truth.`;
+
+const INIT_SKILL_BODY = `# Empirical Init
+
+Initialize or repair Empirical repository setup in the current host agent. This
+skill owns setup and compact repository knowledge only; it must not create a
+feature, specification, workflow revision, worktree, or external agent session.
+
+1. Inspect .empirical/config.json, .empirical/context/, repository manifests,
+   documentation, source layout, tests, Git state, and existing living
+   capabilities. Treat setupComplete false or missing context as partial setup,
+   not as an initialized repository.
+2. Ask one focused question at a time only when its answer changes isolation
+   mode, base, sibling worktree path, branch pattern, or Complex decision
+   records. Explain the safe shown default and accept it when the choice is not
+   material. Never ask for Fast versus Complex.
+3. Call empirical_init with the explicit chosen settings. Its private fallback
+   is empirical __internal init with the equivalent flags. This safely removes
+   only marker-owned project-local Empirical skills and installs MCP bridges;
+   report any unmanaged collision it preserves.
+4. Call empirical_context, or empirical __internal context as fallback, and
+   refine overview, architecture, commands, and conventions only from inspected
+   evidence. Confirm setupComplete is true and context is current.
+5. Stop with a concise setup report and the valid next choices: empirical for
+   automatic work, empirical-spec for a concrete contract, or
+   empirical-socratic for an interview.
+
+Never tell the user to run empirical init in a terminal. Never start feature
+work while performing initialization, and never expose secrets or private
+chain-of-thought.`;
+
+const SPEC_SKILL_BODY = `# Empirical Spec
+
+Turn one concrete request into a reviewable Complex SDD contract in the current
+host agent, then stop for approval before implementation.
+
+1. Require a concrete feature request; ask only for missing information that
+   materially changes its observable contract. Inspect repository setup first.
+   If missing or partial, perform the empirical-init contract with empirical_init
+   and empirical_context before starting feature state.
+2. Call empirical_complex with the exact refined request. The private fallback
+   is empirical __internal complex. Never expose Fast or Complex as a user
+   choice. If unrelated work yields a worktree proposal, display its exact base,
+   commit, branch, path, and argv and wait for explicit approval before creation.
+3. Execute only the returned Specify action: inspect relevant implementation,
+   repository context, policy, and living capability specifications; write a
+   complete spec.md with observable acceptance criteria, scope, non-goals,
+   risks, and verification; write every required ADDED, MODIFIED, or REMOVED
+   capability delta with concrete scenarios.
+4. Present the resulting contract, artifact paths, important decisions, and any
+   remaining ambiguity. Leave the Specify revision waiting. Do not call
+   empirical_complete and do not write implementation code.
+5. Tell the user that invoking empirical-loop after review is explicit approval
+   to complete Specify and continue through the evidence-gated workflow.
+
+Use MCP operations first and empirical __internal only as fallback. Do not
+invent repository behavior, weaken gates, expose credentials, or store private
+chain-of-thought.`;
+
+const SOCRATIC_SKILL_BODY = `# Empirical Socratic
+
+Clarify an idea through the original five-pass Socratic interview, preserve the
+answers, draft its Complex SDD contract, and stop for specification approval.
+
+1. Require an idea and ensure repository setup is complete; if missing or
+   partial, perform the empirical-init contract before discovery.
+2. Call empirical_explore for read-only repository, policy, and capability
+   context. Call empirical_discovery with empty answers to create the record and
+   receive its first nextQuestion. Ask exactly that one question, reflect the
+   answer briefly, and ask only a returned material follow-up. The five passes
+   are problem/user, outcome, boundaries/non-goals, risk/failure, and verification.
+3. After every answer or follow-up, call empirical_discovery with the returned
+   discovery id, original problem, and ordered answers. This persists the draft
+   and returns the next single question.
+   Private fallbacks are empirical __internal explore and empirical __internal
+   discovery --input <json-file>.
+4. After all five passes, show the complete refined request and wait for
+   explicit approval. Saving or rejecting starts nothing. On approval, call
+   empirical_discovery with approved true; it binds that exact request to
+   internal Complex Specify. Never offer Fast versus Complex.
+5. If an isolation proposal is returned, display it exactly and wait for human
+   approval before creating its worktree. Otherwise execute only the returned
+   Specify action: inspect relevant code and living specifications, write the
+   complete spec.md and required capability deltas, then present them.
+6. Leave Specify waiting. Do not call empirical_complete and do not implement
+   code. Tell the user that empirical-loop after review is explicit approval to
+   continue.
+
+Use the current host agent only. Never expose credentials, persist private
+chain-of-thought, invent answers, or create workflow state before approval.`;
+
+const LOOP_SKILL_BODY = `# Empirical Loop
+
+Resume the selected Empirical specification in the current host agent and drive
+its exact state machine to a terminal result. This skill does not accept or
+route a new feature request.
+
+1. Call empirical_loop with only the repository root. The private fallback is
+   empirical __internal loop. Ignore attached feature text as routing input.
+2. If no feature is active, create no state. Direct the user to empirical for
+   automatic work, empirical-spec for a concrete contract, or
+   empirical-socratic for discovery, then stop.
+3. Treat invocation after reviewing an empirical-spec or empirical-socratic
+   draft as approval to continue. Validate the existing Specify artifacts,
+   complete that exact revision, and consume the returned response as the next
+   action. If artifacts are absent or incomplete, execute the returned Specify
+   instructions before completion.
+4. When Complex Specify completion returns Design, call empirical_handoff and
+   offer Continue here, Save for later, or one detected agent. Detection and
+   Save launch nothing. An external runtime requires explicit approval of its
+   exact target, capability, cwd, and argv; workspace-only agents must not be
+   described as accepting a prompt.
+5. For every subsequent action, retrieve only relevant repository context,
+   preserve approved decisions and acceptance criteria, create required
+   artifacts, collect named evidence, call empirical_complete with the exact
+   revision, and continue from its response. Use empirical_retry only for a
+   returned repair path and empirical_archive only after reviewed deltas pass.
+6. Show worktree or external-agent proposals exactly and wait for explicit
+   approval before any authorized operation. Stop only at Done, Blocked, or
+   Awaiting Human.
+
+Use MCP operations first and empirical __internal only as fallback. Never start
+unrelated work, weaken gates, expose credentials, or persist private
+chain-of-thought.`;
+
+function skillContent(name: string, description: string, body: string): string {
+  return `---\nname: ${name}\ndescription: ${description}\n---\n\n<!-- ${MANAGED_FILE_MARKER} -->\n${body}\n\nUse Empirical MCP operations first. Use empirical __internal only when MCP is unavailable; it is a private agent fallback, never a command for the user to run.\n`;
+}
+
+export const EMPIRICAL_AGENT_SKILLS = [
+  {
+    name: "empirical",
+    description: "Automatically initialize, route, resume, and complete Empirical repository work.",
+    content: skillContent("empirical", "Automatically initialize, route, resume, and complete Empirical repository work.", AUTOMATIC_SKILL_BODY),
+  },
+  {
+    name: "empirical-init",
+    description: "Initialize or repair Empirical repository setup and compact context without starting feature work.",
+    content: skillContent("empirical-init", "Initialize or repair Empirical repository setup and compact context without starting feature work.", INIT_SKILL_BODY),
+  },
+  {
+    name: "empirical-spec",
+    description: "Draft a concrete Complex SDD contract and stop for approval before implementation.",
+    content: skillContent("empirical-spec", "Draft a concrete Complex SDD contract and stop for approval before implementation.", SPEC_SKILL_BODY),
+  },
+  {
+    name: "empirical-socratic",
+    description: "Conduct a durable five-pass Socratic interview and draft its Complex SDD contract for approval.",
+    content: skillContent("empirical-socratic", "Conduct a durable five-pass Socratic interview and draft its Complex SDD contract for approval.", SOCRATIC_SKILL_BODY),
+  },
+  {
+    name: "empirical-loop",
+    description: "Resume the active Empirical specification through evidence, review, archive, and completion.",
+    content: skillContent("empirical-loop", "Resume the active Empirical specification through evidence, review, archive, and completion.", LOOP_SKILL_BODY),
+  },
+] as const;
+
+export type EmpiricalAgentSkill = typeof EMPIRICAL_AGENT_SKILLS[number];
+export type EmpiricalAgentSkillName = EmpiricalAgentSkill["name"];
+export const EMPIRICAL_AGENT_SKILL_NAMES: readonly EmpiricalAgentSkillName[] =
+  EMPIRICAL_AGENT_SKILLS.map((skill) => skill.name);
 
 const MCP_SERVER = {
   command: "empirical",
@@ -148,16 +293,20 @@ export async function installGlobalAgentSkills(
     agent: definition.agent,
     kind: "skill",
     artifactRoot: join(home, ...definition.skillSegments),
-    invocations: [definition.invocation],
+    invocations: EMPIRICAL_AGENT_SKILLS.map((skill) => invocationFor(definition, skill.name)),
     reload: definition.reload,
   }));
 
   for (const definition of SUPPORTED_AGENTS) {
     const skillRoot = join(home, ...definition.skillSegments);
     if (requestedIds.has(definition.id)) {
-      await writeManagedFile(home, join(skillRoot, "empirical", "SKILL.md"), SINGLE_AGENT_SKILL, report);
+      for (const skill of EMPIRICAL_AGENT_SKILLS) {
+        await writeManagedFile(home, join(skillRoot, skill.name, "SKILL.md"), skill.content, report);
+      }
     } else if (options.agents || options.all) {
-      await removeManagedFile(home, join(skillRoot, "empirical", "SKILL.md"), report);
+      for (const skill of EMPIRICAL_AGENT_SKILLS) {
+        await removeManagedFile(home, join(skillRoot, skill.name, "SKILL.md"), report);
+      }
     }
     for (const obsolete of OBSOLETE_ENTRYPOINTS) {
       await removeManagedFile(home, join(skillRoot, obsolete, "SKILL.md"), report);
@@ -171,7 +320,7 @@ function emptyReport(scope: IntegrationReport["scope"]): IntegrationReport {
 }
 
 function projectSkillTargets(root: string): string[] {
-  const names = ["empirical", ...OBSOLETE_ENTRYPOINTS];
+  const names = [...EMPIRICAL_AGENT_SKILL_NAMES, ...OBSOLETE_ENTRYPOINTS];
   return names.flatMap((name) => [
     join(root, ".agents", "skills", name, "SKILL.md"),
     join(root, ".claude", "skills", name, "SKILL.md"),
@@ -183,13 +332,20 @@ function projectSkillTargets(root: string): string[] {
 
 async function hasManagedGlobalTarget(home: string, definition: SupportedAgentDefinition): Promise<boolean> {
   const root = join(home, ...definition.skillSegments);
-  for (const name of ["empirical", ...OBSOLETE_ENTRYPOINTS]) {
+  for (const name of [...EMPIRICAL_AGENT_SKILL_NAMES, ...OBSOLETE_ENTRYPOINTS]) {
     const path = join(root, name, "SKILL.md");
     if (await isSafeRegularFile(home, path) && (await readFile(path, "utf8")).includes(MANAGED_FILE_MARKER)) {
       return true;
     }
   }
   return false;
+}
+
+function invocationFor(
+  definition: SupportedAgentDefinition,
+  skillName: EmpiricalAgentSkillName,
+): string {
+  return definition.invocation.replace(/empirical$/, skillName);
 }
 
 async function isSafeRegularFile(root: string, path: string): Promise<boolean> {

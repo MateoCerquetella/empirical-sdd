@@ -27,7 +27,7 @@ export const SUPPORTED_AGENTS: SupportedAgentDefinition[] = [
     executables: ["codex"],
     skillSegments: [".codex", "skills"],
     invocation: "$empirical",
-    reload: "Restart or reopen Codex so it rescans user skills, then invoke $empirical or ask for repository work normally.",
+    reload: "Restart or reopen Codex so it rescans user skills, then invoke any installed $empirical skill.",
     capability: "prompt",
   },
   {
@@ -36,7 +36,7 @@ export const SUPPORTED_AGENTS: SupportedAgentDefinition[] = [
     executables: ["claude"],
     skillSegments: [".claude", "skills"],
     invocation: "/empirical",
-    reload: "Restart Claude Code so it reloads the global Empirical skill, then invoke /empirical.",
+    reload: "Restart Claude Code so it reloads the global Empirical skills, then invoke the desired /empirical skill.",
     capability: "prompt",
   },
   {
@@ -45,7 +45,7 @@ export const SUPPORTED_AGENTS: SupportedAgentDefinition[] = [
     executables: ["cursor"],
     skillSegments: [".cursor", "skills"],
     invocation: "empirical",
-    reload: "Reload Cursor and open Agent chat; Cursor discovers the global Empirical skill.",
+    reload: "Reload Cursor and open Agent chat; Cursor discovers the global Empirical skills.",
     capability: "workspace",
   },
   {
@@ -54,7 +54,7 @@ export const SUPPORTED_AGENTS: SupportedAgentDefinition[] = [
     executables: ["gemini"],
     skillSegments: [".gemini", "skills"],
     invocation: "empirical",
-    reload: "Run /skills reload and /skills list, then ask Gemini to run Empirical.",
+    reload: "Run /skills reload and /skills list, then ask Gemini to run the desired Empirical skill.",
     capability: "prompt",
   },
   {
@@ -63,7 +63,7 @@ export const SUPPORTED_AGENTS: SupportedAgentDefinition[] = [
     executables: ["windsurf"],
     skillSegments: [".codeium", "windsurf", "skills"],
     invocation: "@empirical",
-    reload: "Reload Windsurf or start a new Cascade session, then invoke @empirical.",
+    reload: "Reload Windsurf or start a new Cascade session, then invoke the desired @empirical skill.",
     capability: "workspace",
   },
 ];

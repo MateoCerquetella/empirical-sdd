@@ -86,6 +86,34 @@ Structured creation repeats every editable proposal field plus `baseCommit`,
 requires a fresh proposal. Success returns `kind: worktree_handoff`, checkout
 metadata, the first ActionPacket, and an exact resume command.
 
+## Socratic discovery submission
+
+Agent-native discovery saves an ordered prefix of the five canonical passes:
+
+```json
+{
+  "problem": "Improve team onboarding",
+  "id": "optional-id-returned-by-the-first-save",
+  "answers": [
+    {
+      "pass": "problem",
+      "title": "Problem and user",
+      "question": "Who needs this and why?",
+      "answer": "Team administrators lose time coordinating setup manually.",
+      "followUp": null
+    }
+  ]
+}
+```
+
+Draft calls persist JSON and Markdown without feature state. `approved: true`
+requires exactly `problem → outcome → boundaries → risks → verification`,
+derives one refined request, and starts Complex with that exact text. The result
+contains the record, portable paths, refined request, and either an ActionPacket
+or a worktree proposal. Draft responses also include one `nextQuestion` with
+`kind: pass` or `kind: follow_up`; no unnecessary follow-up is accepted. A
+record becomes `started` only after an action exists.
+
 ## Workflows
 
 Fast phases: `implement → done`.

@@ -22,5 +22,5 @@
 - Fast is restricted to explicit tiny low-risk non-UI work; substantial or UI
   changes use the seven-phase Complex workflow.
 - Do not persist private chain-of-thought or credentials.
-- Do not add project-local workflow skills; global installation owns the single
-  user-facing Empirical entrypoint.
+- Do not add project-local workflow skills; global installation owns the five
+  automatic and deliberate Empirical entrypoints.

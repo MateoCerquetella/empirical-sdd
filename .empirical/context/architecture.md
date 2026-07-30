@@ -11,15 +11,18 @@
 - `src/worktrees.ts` / `src/checkouts.ts`: safe Git worktree creation and
   checkout-local active selection.
 - `src/knowledge.ts`: bounded repository inventory and compact context.
+- `src/discovery.ts`: ordered Socratic passes, progressive durable answers, and
+  exact approved Complex handoff.
 - `src/agents.ts` / `src/integrations.ts` / `src/lifecycle.ts`: supported-agent
-  detection, one global skill, managed migration, and package updates.
+  detection, the five-skill global catalog, managed migration, and updates.
 - `src/cli.ts` / `src/mcp.ts`: adapters over the same core API.
 
 ## Data and control flow
 
-A user invokes the global skill in a host agent. The host initializes or opens
-`.empirical/`, retrieves relevant context, resumes selected work or routes a new
-request, executes the returned exact action, and submits completion evidence.
+A user invokes the automatic skill or explicit Init, Spec, Socratic, or Loop in
+a host agent. The host initializes or repairs `.empirical/`, retrieves relevant
+context, then routes, drafts, pauses for approval, or resumes according to that
+skill's boundary. Returned actions and evidence still use one state machine.
 Complex Review projects validated deltas into living capability specifications.
 Git metadata selects the feature owned by each linked checkout.
 

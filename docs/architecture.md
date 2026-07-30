@@ -15,7 +15,8 @@ one committed `.empirical/` model.
   supersession, and safe summaries.
 - `src/specifications.ts` owns capability-delta parsing, validation,
   transactional projection, convergence, and rollback.
-- `src/discovery.ts` owns the five Socratic passes and durable approved briefs.
+- `src/discovery.ts` owns the five Socratic passes, progressive validation,
+  durable drafts, and exact approved briefs.
 - `src/agents.ts` owns supported-agent detection, launch capability metadata,
   approval-bound handoff options, and integrity tokens.
 - `src/checkouts.ts` owns checkout-local feature selection in per-worktree Git
@@ -55,16 +56,30 @@ resource lock during Archive.
 
 ## Agent experience and context
 
-The installed `empirical` skill is the only user-facing workflow entrypoint.
-It owns first-use initialization, progressive context retrieval, resume,
-Socratic discovery, internal workflow routing, exact transitions, and optional
-post-Specify handoff. The public CLI exposes only installation and update; MCP
-and the TypeScript API expose workflow operations as automation primitives.
+Every selected agent receives one automatic skill plus four deliberate SDD
+skills. `empirical` owns automatic initialization, context retrieval, resume,
+discovery, internal routing, exact transitions, and optional handoff.
+`empirical-init` stops after setup, `empirical-spec` and
+`empirical-socratic` stop with Specify awaiting contract approval, and
+`empirical-loop` resumes selected work through a terminal workflow result. Fast
+and Complex remain internal profiles. The public CLI exposes only installation
+and update; MCP and the TypeScript API expose workflow operations as automation
+primitives.
+
+The generated catalog is reconciled into each native global skill root. Current
+and legacy names share marker ownership and path-safety checks, so repository
+initialization can remove stale managed local shadows without deleting unmanaged
+extensions.
 
 Repository knowledge is file-backed under `.empirical/context/`. The generated
 manifest includes only normalized paths, sizes, and content digests from a
 bounded Git-aware inventory. Agent-maintained topic pages are created once and
 preserved. No semantic index or external service participates.
+
+Agent-native Socratic progress is saved after each ordered pass. Approval
+derives one deterministic refined request, persists it, and starts internal
+Complex with the exact same text. A worktree proposal leaves the record approved
+but not falsely started.
 
 Handoff is proposal/authorization, not process execution. A proposal binds the
 approved spec digest, feature, target agent, launch capability, cwd, prompt, and

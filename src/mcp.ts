@@ -15,6 +15,16 @@ const evidenceSchema = z.object({
   summary: z.string().min(1),
   artifact: z.string().min(1).optional(),
 });
+const socraticAnswerSchema = z.object({
+  pass: z.enum(["problem", "outcome", "boundaries", "risks", "verification"]),
+  title: z.string().min(1),
+  question: z.string().min(1),
+  answer: z.string().min(1),
+  followUp: z.object({
+    question: z.string().min(1),
+    answer: z.string().min(1),
+  }).nullable(),
+});
 const configurationSchema = {
   isolation: z.enum(["ask", "off"]).optional(),
   base: z.string().min(1).optional(),
@@ -28,7 +38,7 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     { name: "empirical-sdd", version: PRODUCT_VERSION },
     {
       instructions:
-        "Use one Empirical workflow entrypoint for repository-changing work. Initialize with empirical_init when needed, refresh compact repository knowledge with empirical_context, resume selected work with empirical_loop, use empirical_explore only for genuine ambiguity, and choose empirical_fast only for explicit tiny localized reversible low-risk non-UI work; use empirical_complex otherwise. Complete exact actions and archive reviewed deltas. After Complex Specify passes, empirical_handoff may offer current, save, or a detected-agent proposal; never start another runtime without explicit approval of the exact target and command.",
+        "Use Empirical through the installed automatic or explicit agent skills. Initialize or repair with empirical_init, refresh compact context with empirical_context, save five-pass interviews with empirical_discovery, start concrete Complex specifications with empirical_complex, and resume selected work with empirical_loop. Fast and Complex are internal routing profiles, not human commands. Complete exact revisions and archive reviewed deltas. Never launch a worktree or another runtime without explicit approval of the exact proposal.",
     },
   );
 
@@ -39,9 +49,30 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
   }, async ({ root, problem }) => toolResult(async () => (await EmpiricalProject.openReadOnly(root ?? defaultRoot)).explore(problem)));
 
+  server.registerTool("empirical_discovery", {
+    title: "Save or approve Socratic discovery",
+    description: "Persist ordered five-pass Socratic answers and return one next pass or material follow-up. With approved true, bind the exact refined request to internal Complex Specify.",
+    inputSchema: {
+      root: z.string().optional(),
+      id: z.string().min(1).optional(),
+      problem: z.string().min(1),
+      answers: z.array(socraticAnswerSchema).max(5),
+      approved: z.literal(true).optional(),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  }, async ({ root, id, problem, answers, approved }) => toolResult(async () => {
+    const project = await EmpiricalProject.open(root ?? defaultRoot);
+    return project.discovery({
+      ...(id ? { id } : {}),
+      problem,
+      answers,
+      ...(approved ? { approved } : {}),
+    });
+  }));
+
   server.registerTool("empirical_init", {
     title: "Initialize Empirical",
-    description: "Initialize feature-local Empirical state with deterministic non-interactive configuration.",
+    description: "Initialize or repair repository configuration, runtime bridges, and compact context without starting a feature.",
     inputSchema: { root: z.string().optional(), profile: profileSchema.optional(), ...configurationSchema },
     annotations: { destructiveHint: false, idempotentHint: true },
   }, async ({ root, profile, isolation, base, worktreePath, branchPattern, decisions }) => toolResult(async () => {

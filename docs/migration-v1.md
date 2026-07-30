@@ -2,15 +2,16 @@
 
 ## Empirical v1 (`ai/`)
 
-Invoke the installed Empirical entrypoint in the repository. Adoption reads
+Invoke an installed Empirical skill in the repository. Adoption reads
 `ai/STATE.md`, copies the current spec when available, writes
 schema-4 configuration and feature-local state, and leaves `ai/` untouched.
 
 ## Earlier npm alpha schemas
 
-Invoke the installed Empirical entrypoint after upgrading. Schema-1, schema-2,
-and schema-3 default state at `.empirical/state.json` and
-its root journal are normalized and copied to:
+Invoke `$empirical-init` (or the equivalent native Init skill) after upgrading.
+It removes only marker-owned stale local skills, repairs partial schema-4 setup,
+and then normalizes schema-1, schema-2, or schema-3 default state at
+`.empirical/state.json` with its root journal into:
 
 ```text
 .empirical/specs/<existing-feature>/state.json
@@ -30,7 +31,5 @@ than pretending to migrate ambiguous concurrent histories.
 
 ## Version reset
 
-The canonical alpha release is `0.20.0`. It is intentionally breaking. Public
-2.x versions are removed from npm only after 0.20.0 is published, installed in
-an empty consumer, and verified as `latest`. Removed npm versions cannot be
-reused.
+The canonical alpha line is `0.20.x` and is intentionally breaking while the
+workflow stabilizes. Removed npm versions cannot be reused.

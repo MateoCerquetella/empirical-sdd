@@ -1,12 +1,11 @@
-# Agent Integrations Specification
+# Agent Integrations
 
 ## Purpose
 
-Make Empirical workflows discoverable and safely invocable either from one
-repository or globally across a developer's projects using each supported
-agent's native extension mechanism.
+Offer automatic and explicit Empirical workflows through native global agent
+skills while keeping the terminal lifecycle surface small and safe.
 
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Explicit global skill installation
 
@@ -83,18 +82,7 @@ compatibility.
 - **THEN** terminal commands remain limited to Install and Update
 - **AND** Init, Spec, Socratic, and Loop are described as in-agent skills rather than CLI verbs
 
-### Requirement: Update converges package and integrations
-
-`empirical update` MUST install `empirical-sdd@latest` and invoke the newly
-installed CLI as `empirical install --yes`. Update MUST preserve detected and
-currently managed targets without prompting, report each stage distinctly, and
-MUST NOT claim refresh success unless both stages pass.
-
-#### Scenario: A developer updates Empirical
-
-- **WHEN** npm successfully installs the latest package
-- **THEN** the new Empirical process refreshes the preserved target set with `install --yes`
-- **AND** no selector prompt blocks the update process
+## ADDED Requirements
 
 ### Requirement: Explicit skills have disjoint approval boundaries
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, readdir, rm, symlink } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { EmpiricalProject } from "../src/core.js";
@@ -10,6 +10,7 @@ import {
   saveDiscovery,
   socraticQuestions,
   type DiscoveryRecord,
+  type SocraticAnswer,
 } from "../src/discovery.js";
 import { EmpiricalError } from "../src/errors.js";
 
@@ -68,6 +69,22 @@ async function onlyDiscovery(root: string): Promise<DiscoveryRecord> {
   )) as DiscoveryRecord;
 }
 
+function completeAnswers(problem: string): SocraticAnswer[] {
+  const questions = socraticQuestions(problem);
+  const responses = [
+    "Repository developers need a reliable way to turn vague feature ideas into reviewable contracts.",
+    "The developer approves one complete contract and sees a Complex Specify action created from it.",
+    "Include durable discovery and exact handoff only; no UI, hosted service, or automatic external-agent launch.",
+    "Invalid or interrupted answers must fail safely and preserve the last valid draft without creating workflow state.",
+    "Integration tests assert every saved pass, the exact refined request, rejection behavior, and the created specification.",
+  ];
+  return questions.map((question, index) => ({
+    ...question,
+    answer: responses[index]!,
+    followUp: null,
+  }));
+}
+
 describe("Socratic discovery", () => {
   test("restores five domain-aware passes and only material follow-ups", () => {
     const problem = "Build a browser game with cursor time loops";
@@ -91,6 +108,130 @@ describe("Socratic discovery", () => {
       "The player records a cursor loop, wins at the exit, and fails when time expires.",
     )).toBeNull();
     expect(recommendWorkflow(problem, [])).toBe("complex");
+  });
+
+  test("agent-native discovery saves progressive answers and binds the approved brief exactly to Complex", async () => {
+    const { root, project } = await temporaryProject();
+    const problem = "Design a durable Socratic specification workflow";
+    const answers = completeAnswers(problem);
+    const opened = await project.discovery({ problem, answers: [] });
+    let id: string | undefined = opened.record.id;
+    expect(opened.nextQuestion).toMatchObject({ pass: "problem", kind: "pass" });
+
+    for (let index = 1; index <= answers.length; index += 1) {
+      const saved = await project.discovery({
+        ...(id ? { id } : {}),
+        problem,
+        answers: answers.slice(0, index),
+      });
+      id = saved.record.id;
+      expect(saved.record).toMatchObject({ status: "draft", answers: { length: index } });
+      expect(saved.start).toBeNull();
+      expect(saved.nextQuestion?.pass ?? null)
+        .toBe(index === answers.length ? null : answers[index]!.pass);
+      expect(await readFile(join(root, saved.paths.markdown), "utf8")).toContain(`Pass ${String(index)}`);
+    }
+
+    const approved = await project.discovery({ id: id!, problem, answers, approved: true });
+    expect(approved.record).toMatchObject({
+      status: "started",
+      workflow: "complex",
+      handoff: { revision: 1 },
+    });
+    expect(approved.start).toMatchObject({ kind: "action", phase: "specify", revision: 1 });
+    expect(approved.refinedRequest).toContain("Approved Socratic discovery");
+    expect(await project.status()).toMatchObject({ request: approved.refinedRequest });
+    expect(await project.store.readSpec(approved.record.handoff!.feature))
+      .toContain("Approved Socratic discovery:");
+
+    const repeated = await project.discovery({ id: id!, problem, answers, approved: true });
+    expect(repeated.record).toEqual(approved.record);
+    expect(repeated.start).toMatchObject({
+      kind: "action",
+      feature: approved.record.handoff!.feature,
+      phase: "specify",
+      revision: 1,
+    });
+  });
+
+  test("agent-native discovery rejects incomplete, reordered, changed, and unknown submissions without starting work", async () => {
+    const { project } = await temporaryProject();
+    const problem = "Clarify a reporting workflow";
+    const answers = completeAnswers(problem);
+
+    await expect(project.discovery({ problem, answers: [answers[1]!] }))
+      .rejects.toMatchObject({ code: "INVALID_DISCOVERY" });
+    await expect(project.discovery({ problem, answers: answers.slice(0, 4), approved: true }))
+      .rejects.toMatchObject({ code: "INVALID_DISCOVERY" });
+
+    const draft = await project.discovery({ problem, answers: answers.slice(0, 2) });
+    await expect(project.discovery({
+      id: draft.record.id,
+      problem,
+      answers: [{ ...answers[0]!, answer: "Repository developers changed this persisted answer." }, answers[1]!],
+    })).rejects.toMatchObject({ code: "DISCOVERY_MISMATCH" });
+    await expect(project.discovery({ id: "missing-discovery", problem, answers: [] }))
+      .rejects.toMatchObject({ code: "DISCOVERY_NOT_FOUND" });
+    expect(await project.status()).toMatchObject({ phase: "idle", revision: 0, activeFeature: null });
+  });
+
+  test("agent-native discovery returns and enforces only material follow-ups", async () => {
+    const { project } = await temporaryProject();
+    const problem = "Clarify a repository feature";
+    const answers = completeAnswers(problem);
+    const first = await project.discovery({ problem, answers: answers.slice(0, 1) });
+    const vagueOutcome = { ...answers[1]!, answer: "Simple", followUp: null };
+    const needsFollowUp = await project.discovery({
+      id: first.record.id,
+      problem,
+      answers: [answers[0]!, vagueOutcome],
+    });
+    expect(needsFollowUp.nextQuestion).toMatchObject({ pass: "outcome", kind: "follow_up" });
+
+    await expect(project.discovery({
+      id: first.record.id,
+      problem,
+      answers: [answers[0]!, vagueOutcome, answers[2]!],
+    })).rejects.toMatchObject({ code: "INVALID_DISCOVERY" });
+
+    const resolved = await project.discovery({
+      id: first.record.id,
+      problem,
+      answers: [answers[0]!, {
+        ...vagueOutcome,
+        followUp: {
+          question: needsFollowUp.nextQuestion!.question,
+          answer: "The developer sees one complete observable specification ready for review.",
+        },
+      }],
+    });
+    expect(resolved.nextQuestion).toMatchObject({ pass: "boundaries", kind: "pass" });
+  });
+
+  test("private discovery CLI accepts structured input while the public command stays unavailable", async () => {
+    const { root } = await temporaryProject();
+    const problem = "Clarify a CLI-backed specification";
+    const inputPath = join(root, "discovery-input.json");
+    await writeFile(inputPath, JSON.stringify({
+      problem,
+      answers: completeAnswers(problem),
+      approved: true,
+    }), "utf8");
+    const child = Bun.spawn([
+      Bun.argv[0]!, "run", cliPath, "__internal", "discovery",
+      "--input", inputPath, "--json", "--root", root,
+    ], { stdout: "pipe", stderr: "pipe" });
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+      child.exited,
+    ]);
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe("");
+    expect(JSON.parse(stdout)).toMatchObject({
+      record: { status: "started", workflow: "complex" },
+      start: { kind: "action", phase: "specify", revision: 1 },
+    });
   });
 
   test("interactive Explore saves every pass, refines the request, and starts Complex after approval", async () => {

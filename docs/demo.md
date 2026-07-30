@@ -1,57 +1,67 @@
 # Empirical 0.20 demo
 
-## First setup
-
-Install once from a terminal:
+## Install once
 
 ```bash
 npm install -g empirical-sdd
 empirical install
 ```
 
-Select agents with the arrow keys and Space, then press Enter. Detected and
-previously installed agents start selected. Open a repository in one selected
-coding agent, reload it as instructed by the installer, and invoke the one
-Empirical entrypoint. On first use the agent
-initializes `.empirical/`, asks only material repository-policy questions, and
-builds compact repository context. No project-local workflow command is added.
+Select agents, reload them, and use one of the five installed skills. No
+project-local workflow skill is added.
 
-## Small feature
+## Initialize deliberately
 
-Ask in agent chat:
+In Codex:
 
-> `$empirical` Add a hello command that prints `hello`.
+> `$empirical-init`
 
-The single entrypoint routes this eligible tiny change internally to Fast,
-implements it, runs a focused test, reviews the diff, and completes the exact
-revision. There is no separate Fast skill for you to invoke.
+The agent inspects the repository, asks only material isolation or decision
+questions, repairs partial setup, builds compact context, and stops without
+creating feature state.
 
-## Complex feature
+## Small concrete contract
 
-Ask in agent chat:
+> `$empirical-spec` Add a hello command that prints `hello`; do not change any
+> existing command output.
+
+The agent drafts the Complex specification and capability deltas, presents them,
+and stops before implementation. After review:
+
+> `$empirical-loop`
+
+Loop treats that invocation as approval and drives the selected contract to a
+terminal result. After Specify passes it offers Continue here, Save for later,
+or an exact approval-bound handoff to a detected agent.
+
+## Complex Socratic contract
+
+> `$empirical-socratic` Add expiring team invitations with revocation and audit
+> history.
+
+The agent asks the five passes one at a time, saves each answer, shows one exact
+refined request, waits for approval, drafts Specify, and stops for contract
+review. Invoke `$empirical-loop` after approval.
+
+## Automatic mode
+
+> `$empirical` Add a health command that prints `ok`.
+
+Automatic mode initializes if needed, routes this eligible tiny change
+internally to Fast, implements it, tests it, reviews it, and completes it.
 
 > `$empirical` Add expiring team invitations with revocation and audit history.
 
-The single entrypoint routes to Complex, produces an observable specification,
-design and accepted decisions, plans and implements the change, verifies every
-criterion, reviews the result, and archives validated behavior into living
-capability specs.
+Automatic mode routes substantial work to Complex and drives Specify, Design,
+Plan, Implement, Verify, Review, and Archive. It uses Socratic discovery only if
+ambiguity is material.
 
-After the specification passes, choose one of:
+## Unrelated active work
 
-- Continue here.
-- Save for later.
-- Continue in a detected agent.
-
-The last choice shows an exact target, cwd, and command and requires explicit
-approval before the host agent starts anything.
-
-## Unrelated work while active
-
-Ask the same entrypoint for a different feature. Empirical previews an isolated
-Git worktree with exact base commit, branch, path, and argv. After approval it
-creates and starts the request in the linked checkout. The original feature
-remains selected only in its original checkout.
+Starting a different feature while one is selected returns an exact, read-only
+Git worktree proposal. After explicit approval Empirical creates the linked
+checkout and starts the request there. The original feature remains selected
+only in its original checkout.
 
 ## Upgrade
 
@@ -59,6 +69,6 @@ remains selected only in its original checkout.
 empirical update
 ```
 
-This upgrades the package and non-interactively refreshes detected and already
-managed agent entrypoints. The only other public terminal command is
+This upgrades the package and refreshes all five managed skills for detected or
+already managed agents. The only other public terminal command is
 `empirical install`.

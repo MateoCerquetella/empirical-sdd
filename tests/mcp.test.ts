@@ -15,7 +15,8 @@ afterEach(async () => {
 test("the bundled stdio MCP server exposes and executes the portable workflow tools", async () => {
   const root = await mkdtemp(join(tmpdir(), "empirical-mcp-"));
   const complexRoot = await mkdtemp(join(tmpdir(), "empirical-mcp-complex-"));
-  directories.push(root, complexRoot);
+  const discoveryRoot = await mkdtemp(join(tmpdir(), "empirical-mcp-discovery-"));
+  directories.push(root, complexRoot, discoveryRoot);
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: ["run", resolve("src/cli.ts"), "mcp", "--root", root],
@@ -32,6 +33,7 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_fast");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_complex");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_explore");
+    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_discovery");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_context");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_handoff");
     expect(listed.tools.map((tool) => tool.name)).toContain("empirical_archive");
@@ -95,6 +97,10 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
     });
     expect(idle.isError).not.toBe(true);
     expect(idle.structuredContent).toMatchObject({ phase: "idle", revision: 0 });
+    expect((idle.structuredContent as { instructions: string }).instructions)
+      .toContain("empirical-spec");
+    expect((idle.structuredContent as { instructions: string }).instructions)
+      .toContain("does not create or route new work");
 
     const started = await client.callTool({
       name: "empirical_fast",
@@ -150,6 +156,39 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
     });
     expect(resumedComplex.isError).not.toBe(true);
     expect(resumedComplex.structuredContent).toEqual(complex.structuredContent);
+
+    expect((await client.callTool({
+      name: "empirical_init",
+      arguments: { root: discoveryRoot },
+    })).isError).not.toBe(true);
+    const problem = "Clarify an agent-native Socratic contract";
+    const answers = [
+      { pass: "problem", title: "Problem and user", question: "Who needs this?", answer: "Repository developers need durable discovery before implementation.", followUp: null },
+      { pass: "outcome", title: "Observable outcome", question: "What changes?", answer: "The developer approves one exact contract and sees Complex Specify start.", followUp: null },
+      { pass: "boundaries", title: "Boundaries", question: "What is excluded?", answer: "Include file-backed answers only; no hosted service or external runtime launch.", followUp: null },
+      { pass: "risks", title: "Failure and risk", question: "What can fail?", answer: "Invalid input must fail safely without losing the last valid draft or creating work.", followUp: null },
+      { pass: "verification", title: "Verification", question: "How is it proven?", answer: "Integration tests assert persistence, exact handoff, rejection, and specification state.", followUp: null },
+    ];
+    const draftDiscovery = await client.callTool({
+      name: "empirical_discovery",
+      arguments: { root: discoveryRoot, problem, answers: answers.slice(0, 1) },
+    });
+    expect(draftDiscovery.isError).not.toBe(true);
+    expect(draftDiscovery.structuredContent).toMatchObject({
+      record: { status: "draft" },
+      nextQuestion: { pass: "outcome", kind: "pass" },
+      start: null,
+    });
+    const discoveryId = (draftDiscovery.structuredContent as { record: { id: string } }).record.id;
+    const approvedDiscovery = await client.callTool({
+      name: "empirical_discovery",
+      arguments: { root: discoveryRoot, id: discoveryId, problem, answers, approved: true },
+    });
+    expect(approvedDiscovery.isError).not.toBe(true);
+    expect(approvedDiscovery.structuredContent).toMatchObject({
+      record: { id: discoveryId, status: "started", workflow: "complex" },
+      start: { kind: "action", phase: "specify", revision: 1 },
+    });
 
     const explained = await client.callTool({ name: "empirical_explain", arguments: { root: complexRoot } });
     expect(explained.isError).not.toBe(true);

@@ -96,6 +96,51 @@ describe("Empirical 0.20 core", () => {
     expect(await stat(join(root, ".empirical/state.json")).then(() => true, () => false)).toBe(false);
   });
 
+  test("reinitialization repairs partial setup and applies only explicit configuration", async () => {
+    const root = await temporaryProject();
+    const first = await EmpiricalProject.initialize(root, {
+      integrations: false,
+      isolation: { baseBranch: "develop", worktreePath: "../saved-{feature}" },
+      decisions: { complexRecords: "required" },
+      setupComplete: false,
+    });
+    await rm(join(root, ".empirical", "context"), { recursive: true, force: true });
+    await mkdir(join(root, ".agents", "skills", "empirical-loop"), { recursive: true });
+    await writeFile(
+      join(root, ".agents", "skills", "empirical-loop", "SKILL.md"),
+      "<!-- empirical-sdd:managed-file -->\nstale local skill\n",
+      "utf8",
+    );
+
+    const repaired = await EmpiricalProject.initialize(root, {
+      isolation: { mode: "off" },
+      decisions: { complexRecords: "off" },
+      setupComplete: true,
+    });
+    expect(await repaired.project.config()).toMatchObject({
+      isolation: { mode: "off", baseBranch: "develop", worktreePath: "../saved-{feature}" },
+      decisions: { complexRecords: "off" },
+      setupComplete: true,
+    });
+    expect(repaired.state).toMatchObject({ phase: "idle", revision: 0, activeFeature: null });
+    expect(repaired.integrations.removed).toContain(".agents/skills/empirical-loop/SKILL.md");
+    expect(await stat(join(root, ".empirical", "context", "manifest.json"))).toBeDefined();
+    await expect(readFile(join(root, ".agents", "skills", "empirical-loop", "SKILL.md"), "utf8"))
+      .rejects.toBeDefined();
+
+    const configBefore = await readFile(first.project.store.configPath, "utf8");
+    const manifestBefore = await readFile(join(root, ".empirical", "context", "manifest.json"), "utf8");
+    await EmpiricalProject.initialize(root, {
+      integrations: false,
+      isolation: { mode: "off" },
+      decisions: { complexRecords: "off" },
+      setupComplete: true,
+    });
+    expect(await readFile(first.project.store.configPath, "utf8")).toBe(configBefore);
+    expect(await readFile(join(root, ".empirical", "context", "manifest.json"), "utf8"))
+      .toBe(manifestBefore);
+  });
+
   test("configuration is durable and validates templates", async () => {
     const root = await temporaryProject();
     const { project } = await EmpiricalProject.initialize(root, { integrations: false });

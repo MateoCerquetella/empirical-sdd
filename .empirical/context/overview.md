@@ -11,8 +11,9 @@ evidence, review, living capability specifications, and safe Git worktrees.
 
 - One active feature is selected per checkout; parallel work uses real linked
   Git worktrees.
-- One globally installed Empirical skill owns the user experience. CLI and MCP
-  workflow operations remain internal automation APIs.
+- Five globally installed Empirical skills provide automatic and deliberate SDD
+  modes. Public CLI commands remain Install and Update; workflow operations are
+  MCP/private automation APIs.
 - Repository knowledge is bounded and file-backed. There are no embeddings,
   hosted indexing services, or persisted private reasoning.
 - Empirical does not publish, commit user work, force Git, or launch another

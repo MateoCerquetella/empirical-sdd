@@ -8,6 +8,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 const root = await mkdtemp(join(tmpdir(), "empirical-dist-smoke-"));
 const complexRoot = await mkdtemp(join(tmpdir(), "empirical-dist-complex-"));
 const gitRoot = await mkdtemp(join(tmpdir(), "empirical-dist-git-"));
+const skillHome = await mkdtemp(join(tmpdir(), "empirical-dist-skills-"));
 const createdWorktrees: string[] = [];
 const cli = resolve(import.meta.dir, "../dist/cli.js");
 const transport = new StdioClientTransport({
@@ -18,9 +19,13 @@ const transport = new StdioClientTransport({
 });
 const client = new Client({ name: "empirical-dist-smoke", version: "1.0.0" });
 
-async function runCli(directory: string, args: string[]) {
+async function runCli(directory: string, args: string[], env?: Record<string, string>) {
   const publicCommand = ["help", "--help", "-h", "--version", "-v", "install", "update"].includes(args[0] ?? "");
-  const child = Bun.spawn(["node", cli, ...(publicCommand ? args : ["__internal", ...args]), "--root", directory], { stdout: "pipe", stderr: "pipe" });
+  const child = Bun.spawn(["node", cli, ...(publicCommand ? args : ["__internal", ...args]), "--root", directory], {
+    stdout: "pipe",
+    stderr: "pipe",
+    ...(env ? { env: { ...process.env, ...env } } : {}),
+  });
   const [stdout, stderr, code] = await Promise.all([
     new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited,
   ]);
@@ -37,7 +42,7 @@ try {
   await client.connect(transport);
   const listed = (await client.listTools()).tools.map((tool) => tool.name);
   for (const name of [
-    "empirical_explore", "empirical_fast", "empirical_complex", "empirical_loop",
+    "empirical_explore", "empirical_discovery", "empirical_fast", "empirical_complex", "empirical_loop",
     "empirical_archive", "empirical_explain", "empirical_worktree_propose",
     "empirical_worktree_create", "empirical_configure", "empirical_capabilities",
     "empirical_context", "empirical_handoff",
@@ -54,6 +59,23 @@ try {
     throw new Error("Bundled Explore failed");
   }
   if (await readFile(join(root, ".empirical/config.json"), "utf8") !== configBefore) throw new Error("Explore mutated configuration");
+  const discovery = await client.callTool({
+    name: "empirical_discovery",
+    arguments: {
+      root,
+      problem: "Clarify status behavior",
+      answers: [{
+        pass: "problem",
+        title: "Problem and user",
+        question: "Who needs clearer status?",
+        answer: "Repository developers need to understand the selected workflow state.",
+        followUp: null,
+      }],
+    },
+  });
+  if (discovery.isError || (discovery.structuredContent as { record?: { status?: string } })?.record?.status !== "draft") {
+    throw new Error("Bundled progressive discovery failed");
+  }
 
   let fast = await runCli(root, ["fast", "Add a hello command"]);
   for (const expected of [
@@ -168,8 +190,23 @@ Run existing and new sign-in tests.
     if (help.stdout.includes(hidden)) throw new Error(`Bundled help exposed internal operation ${hidden}`);
   }
 
-  console.log("Bundled 0.20 single-entrypoint help, internal workflow, context, handoff, worktree, CLI, and MCP smoke passed.");
+  const installed = await runCli(root, ["install", "--all", "--json"], {
+    HOME: skillHome,
+    USERPROFILE: skillHome,
+  });
+  const integration = JSON.parse(installed.stdout) as { created?: string[]; entrypoints?: Array<{ invocations: string[] }> };
+  if (installed.code !== 0 || integration.created?.length !== 25 || integration.entrypoints?.some((entry) => entry.invocations.length !== 5)) {
+    throw new Error(`Bundled five-skill install failed: ${installed.stderr}`);
+  }
+  for (const name of ["empirical", "empirical-init", "empirical-spec", "empirical-socratic", "empirical-loop"]) {
+    const skill = await readFile(join(skillHome, ".codex", "skills", name, "SKILL.md"), "utf8");
+    if (!skill.includes(`name: ${name}`) || !skill.includes("empirical-sdd:managed-file")) {
+      throw new Error(`Bundled install produced an invalid ${name} skill`);
+    }
+  }
+
+  console.log("Bundled 0.20 five-skill help, discovery, workflow, context, handoff, worktree, CLI, and MCP smoke passed.");
 } finally {
   await client.close();
-  await Promise.all([...createdWorktrees, root, complexRoot, gitRoot].map((path) => rm(path, { recursive: true, force: true })));
+  await Promise.all([...createdWorktrees, root, complexRoot, gitRoot, skillHome].map((path) => rm(path, { recursive: true, force: true })));
 }

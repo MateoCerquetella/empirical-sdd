@@ -3,9 +3,9 @@
 Generated from repository metadata. Topic pages are maintained by the current
 agent from inspected evidence; refresh never overwrites them.
 
-- Repository: empirical-sdd-replace-the-redundant-multi-command-ux-with-a-single-empirical
-- Inventory digest: 3b0e89e4016e02d09fe05ffadb541bba3c28ef19de32b0a74f1b914a6bdbc0ed
-- Included files: 52
+- Repository: empirical-sdd
+- Inventory digest: 1a8b0252c31a28099e94bdc9bcfff7e476bacccee73bea5f0fb150cf63fedcb9
+- Included files: 54
 - Roots: .codex, .cursor, .gemini, .github, ., docs, openspec, scripts, src, tests
 - Manifests: package.json
 - Primary docs: CONTRIBUTING.md, README.md, SECURITY.md, docs/architecture.md, docs/security.md

@@ -1,19 +1,11 @@
-# Exploratory Discovery Specification
+# Exploratory Discovery
 
 ## Purpose
 
-Exploratory discovery lets an agent clarify genuinely vague product work before committing the repository to a workflow revision.
+Preserve automatic ambiguity handling while restoring an explicit, durable
+Socratic specification path for developers who want deliberate discovery.
 
-## Requirements
-
-### Requirement: Explore is a pure discovery operation
-
-The MCP, TypeScript, JSON CLI, and explicit non-interview Explore interfaces MUST return consistent guidance, questions, project context, capability context, and concrete Fast or Complex next commands without creating a feature, event, revision, discovery record, or agent runtime.
-
-#### Scenario: Automation investigates vague work
-
-- **WHEN** an agent or script invokes Explore through MCP, TypeScript, `--json`, or `--no-interview`
-- **THEN** Empirical returns a deterministic discovery packet and leaves all repository state unchanged
+## MODIFIED Requirements
 
 ### Requirement: Explore remains an intentional choice
 
@@ -27,15 +19,6 @@ to the eligible internal Fast or Complex operation.
 - **WHEN** the developer invokes `empirical-socratic` with an idea
 - **THEN** ambiguity is explored even if the initial sentence appears concise
 - **AND** automatic routing behavior remains unchanged for ordinary `empirical` requests
-
-### Requirement: Interactive Explore conducts a Socratic interview
-
-An interactive terminal Explore MUST ask the original five discovery passes one question at a time, add only material follow-ups, show the refined request, and require explicit approval before starting workflow state.
-
-#### Scenario: A developer explores a vague browser-game idea
-
-- **WHEN** the developer runs `empirical explore` in a terminal and answers the interview
-- **THEN** Empirical asks domain-relevant questions about the user/problem, observable core loop, MVP boundaries, failure risks, and real browser verification before requesting approval
 
 ### Requirement: Discovery is durable and hands off exactly
 
@@ -64,6 +47,8 @@ Specify artifacts and wait for a second approval before completing Specify.
 - **WHEN** a supported agent receives the idea through `empirical-socratic`
 - **THEN** it covers user/problem, outcome, boundaries, risk, and verification
 - **AND** neither workflow creation nor implementation occurs before its corresponding approval
+
+## ADDED Requirements
 
 ### Requirement: Approved agent-native discovery is structurally validated
 

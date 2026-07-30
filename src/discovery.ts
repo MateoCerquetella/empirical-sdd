@@ -1,7 +1,8 @@
 import { mkdir } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { EmpiricalError } from "./errors.js";
-import { isSymbolicLink, writeJsonAtomic, writeTextAtomic } from "./storage.js";
+import { isFile, isSymbolicLink, readJson, writeJsonAtomic, writeTextAtomic } from "./storage.js";
+import type { FeatureStartResult } from "./types.js";
 
 export const DISCOVERY_SCHEMA_VERSION = 1 as const;
 
@@ -9,10 +10,22 @@ export type DiscoveryPassId = "problem" | "outcome" | "boundaries" | "risks" | "
 export type DiscoveryStatus = "draft" | "approved" | "started";
 export type DiscoveryWorkflow = "fast" | "complex";
 
+export const DISCOVERY_PASS_ORDER: readonly DiscoveryPassId[] = [
+  "problem",
+  "outcome",
+  "boundaries",
+  "risks",
+  "verification",
+] as const;
+
 export interface SocraticQuestion {
   pass: DiscoveryPassId;
   title: string;
   question: string;
+}
+
+export interface SocraticPrompt extends SocraticQuestion {
+  kind: "pass" | "follow_up";
 }
 
 export interface SocraticAnswer {
@@ -44,6 +57,21 @@ export interface DiscoveryPaths {
   directory: string;
   json: string;
   markdown: string;
+}
+
+export interface DiscoverySubmission {
+  id?: string;
+  problem: string;
+  answers: SocraticAnswer[];
+  approved?: true;
+}
+
+export interface DiscoverySubmissionResult {
+  record: DiscoveryRecord;
+  paths: DiscoveryPaths;
+  refinedRequest: string | null;
+  nextQuestion: SocraticPrompt | null;
+  start: FeatureStartResult | null;
 }
 
 interface DiscoveryDomains {
@@ -174,6 +202,98 @@ Approved Socratic discovery:
 - Required verification: ${answerFor("verification")}`;
 }
 
+export function validateSocraticAnswers(
+  answers: SocraticAnswer[],
+  options: { complete?: boolean } = {},
+): SocraticAnswer[] {
+  if (!Array.isArray(answers) || answers.length > DISCOVERY_PASS_ORDER.length) {
+    throw new EmpiricalError(
+      "INVALID_DISCOVERY",
+      `Discovery requires at most ${String(DISCOVERY_PASS_ORDER.length)} ordered answers`,
+    );
+  }
+  if (options.complete && answers.length !== DISCOVERY_PASS_ORDER.length) {
+    throw new EmpiricalError(
+      "INVALID_DISCOVERY",
+      `Approved discovery requires exactly ${String(DISCOVERY_PASS_ORDER.length)} answers`,
+    );
+  }
+  return answers.map((entry, index) => {
+    if (!entry || typeof entry !== "object") {
+      throw new EmpiricalError("INVALID_DISCOVERY", `Discovery answer ${String(index + 1)} is invalid`);
+    }
+    const expected = DISCOVERY_PASS_ORDER[index];
+    if (entry.pass !== expected) {
+      throw new EmpiricalError(
+        "INVALID_DISCOVERY",
+        `Discovery answer ${String(index + 1)} must be the '${String(expected)}' pass`,
+      );
+    }
+    const title = requiredDiscoveryText(entry.title, `answer ${String(index + 1)} title`);
+    const question = requiredDiscoveryText(entry.question, `answer ${String(index + 1)} question`);
+    const answer = requiredDiscoveryText(entry.answer, `answer ${String(index + 1)} response`);
+    let followUp: SocraticAnswer["followUp"] = null;
+    if (entry.followUp !== null && entry.followUp !== undefined) {
+      if (typeof entry.followUp !== "object") {
+        throw new EmpiricalError("INVALID_DISCOVERY", `Discovery answer ${String(index + 1)} follow-up is invalid`);
+      }
+      followUp = {
+        question: requiredDiscoveryText(entry.followUp.question, `answer ${String(index + 1)} follow-up question`),
+        answer: requiredDiscoveryText(entry.followUp.answer, `answer ${String(index + 1)} follow-up response`),
+      };
+    }
+    return { pass: entry.pass, title, question, answer, followUp };
+  });
+}
+
+export function validateMaterialFollowUps(
+  problem: string,
+  answers: SocraticAnswer[],
+  options: { complete?: boolean } = {},
+): void {
+  answers.forEach((entry, index) => {
+    const expected = materialFollowUp(problem, entry, entry.answer);
+    if (entry.followUp) {
+      if (!expected) {
+        throw new EmpiricalError(
+          "INVALID_DISCOVERY",
+          `Discovery '${entry.pass}' includes a follow-up that is not material`,
+        );
+      }
+      if (entry.followUp.question !== expected) {
+        throw new EmpiricalError(
+          "INVALID_DISCOVERY",
+          `Discovery '${entry.pass}' must use the material follow-up returned by Empirical`,
+        );
+      }
+    } else if (expected && (options.complete || index < answers.length - 1)) {
+      throw new EmpiricalError(
+        "INVALID_DISCOVERY",
+        `Discovery '${entry.pass}' requires its material follow-up before continuing`,
+      );
+    }
+  });
+}
+
+export function nextSocraticPrompt(
+  problem: string,
+  answers: SocraticAnswer[],
+): SocraticPrompt | null {
+  const last = answers.at(-1);
+  if (last && !last.followUp) {
+    const followUp = materialFollowUp(problem, last, last.answer);
+    if (followUp) {
+      return { pass: last.pass, title: last.title, question: followUp, kind: "follow_up" };
+    }
+  }
+  if (answers.length >= DISCOVERY_PASS_ORDER.length) return null;
+  const prior = answers
+    .map((entry) => `${entry.answer} ${entry.followUp?.answer ?? ""}`)
+    .join(" ");
+  const question = socraticQuestions(problem, prior)[answers.length]!;
+  return { ...question, kind: "pass" };
+}
+
 export function recommendWorkflow(problem: string, answers: SocraticAnswer[]): DiscoveryWorkflow {
   const combined = `${problem} ${answers.map((item) => `${item.answer} ${item.followUp?.answer ?? ""}`).join(" ")}`;
   if (/(game|browser|ui|ux|screen|visual|css|react|vue|svelte|auth|security|permission|payment|migration|database|schema|api|dependency|infrastructure|architecture|refactor|multiple|cross-cutting)/i.test(combined)) {
@@ -185,27 +305,56 @@ export function recommendWorkflow(problem: string, answers: SocraticAnswer[]): D
 }
 
 export async function saveDiscovery(root: string, record: DiscoveryRecord): Promise<DiscoveryPaths> {
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*$/.test(record.id)) {
-    throw new EmpiricalError("INVALID_DISCOVERY", `Invalid discovery id: ${record.id}`);
-  }
-  const rootDirectory = join(root, ".empirical", "discoveries");
-  const recordDirectory = join(rootDirectory, record.id);
-  if (await isSymbolicLink(rootDirectory) || await isSymbolicLink(recordDirectory)) {
+  assertDiscoveryId(record.id);
+  const storage = discoveryStorage(root, record.id);
+  if (
+    await isSymbolicLink(storage.rootDirectory)
+    || await isSymbolicLink(storage.recordDirectory)
+    || await isSymbolicLink(storage.jsonPath)
+    || await isSymbolicLink(storage.markdownPath)
+  ) {
     throw new EmpiricalError(
       "UNSAFE_DISCOVERY_PATH",
-      `Discovery storage cannot use symbolic links: ${recordDirectory}`,
+      `Discovery storage cannot use symbolic links: ${storage.recordDirectory}`,
     );
   }
-  await mkdir(recordDirectory, { recursive: true });
-  const jsonPath = join(recordDirectory, "interview.json");
-  const markdownPath = join(recordDirectory, "brief.md");
-  await writeJsonAtomic(jsonPath, record);
-  await writeTextAtomic(markdownPath, renderDiscoveryMarkdown(record));
+  await mkdir(storage.recordDirectory, { recursive: true });
+  await writeJsonAtomic(storage.jsonPath, record);
+  await writeTextAtomic(storage.markdownPath, renderDiscoveryMarkdown(record));
   return {
-    directory: portableRelative(root, recordDirectory),
-    json: portableRelative(root, jsonPath),
-    markdown: portableRelative(root, markdownPath),
+    directory: portableRelative(root, storage.recordDirectory),
+    json: portableRelative(root, storage.jsonPath),
+    markdown: portableRelative(root, storage.markdownPath),
   };
+}
+
+export async function loadDiscovery(root: string, id: string): Promise<DiscoveryRecord> {
+  assertDiscoveryId(id);
+  const storage = discoveryStorage(root, id);
+  if (
+    await isSymbolicLink(storage.rootDirectory)
+    || await isSymbolicLink(storage.recordDirectory)
+    || await isSymbolicLink(storage.jsonPath)
+  ) {
+    throw new EmpiricalError(
+      "UNSAFE_DISCOVERY_PATH",
+      `Discovery storage cannot use symbolic links: ${storage.recordDirectory}`,
+    );
+  }
+  if (!(await isFile(storage.jsonPath))) {
+    throw new EmpiricalError("DISCOVERY_NOT_FOUND", `Discovery '${id}' was not found`);
+  }
+  let record: DiscoveryRecord;
+  try {
+    record = await readJson<DiscoveryRecord>(storage.jsonPath);
+  } catch (error) {
+    throw new EmpiricalError(
+      "INVALID_DISCOVERY",
+      `Discovery '${id}' could not be read: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  validateDiscoveryRecord(record, id);
+  return record;
 }
 
 export function renderDiscoveryMarkdown(record: DiscoveryRecord): string {
@@ -241,6 +390,52 @@ function classifyDomains(problem: string): DiscoveryDomains {
 function isVague(answer: string): boolean {
   return answer.length < 16
     || /^(i don'?t know|idk|not sure|whatever|anything|simple|basic|yes|no|maybe|tbd)[.!]?$/i.test(answer);
+}
+
+function requiredDiscoveryText(value: unknown, label: string): string {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new EmpiricalError("INVALID_DISCOVERY", `Discovery ${label} must be non-empty`);
+  }
+  return value.trim();
+}
+
+function assertDiscoveryId(id: string): void {
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*$/.test(id)) {
+    throw new EmpiricalError("INVALID_DISCOVERY", `Invalid discovery id: ${id}`);
+  }
+}
+
+function discoveryStorage(root: string, id: string): {
+  rootDirectory: string;
+  recordDirectory: string;
+  jsonPath: string;
+  markdownPath: string;
+} {
+  const rootDirectory = join(root, ".empirical", "discoveries");
+  const recordDirectory = join(rootDirectory, id);
+  return {
+    rootDirectory,
+    recordDirectory,
+    jsonPath: join(recordDirectory, "interview.json"),
+    markdownPath: join(recordDirectory, "brief.md"),
+  };
+}
+
+function validateDiscoveryRecord(record: DiscoveryRecord, expectedId: string): void {
+  if (!record || typeof record !== "object" || record.schemaVersion !== DISCOVERY_SCHEMA_VERSION) {
+    throw new EmpiricalError("INVALID_DISCOVERY", `Discovery '${expectedId}' has an unsupported schema`);
+  }
+  if (record.id !== expectedId) {
+    throw new EmpiricalError("INVALID_DISCOVERY", `Discovery '${expectedId}' contains a mismatched id`);
+  }
+  requiredDiscoveryText(record.problem, "problem");
+  if (!["draft", "approved", "started"].includes(record.status)) {
+    throw new EmpiricalError("INVALID_DISCOVERY", `Discovery '${expectedId}' has an invalid status`);
+  }
+  validateSocraticAnswers(record.answers, { complete: record.status !== "draft" });
+  if (record.status !== "draft" && !record.refinedRequest) {
+    throw new EmpiricalError("INVALID_DISCOVERY", `Discovery '${expectedId}' is missing its refined request`);
+  }
 }
 
 function slugify(value: string): string {

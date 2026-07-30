@@ -532,7 +532,7 @@ export class ProjectStore {
     if (config.schemaVersion !== SCHEMA_VERSION || await pathExists(join(this.directory, "state.json")) || await pathExists(join(this.directory, "events"))) {
       throw new EmpiricalError(
         "MIGRATION_REQUIRED",
-        "This read-only operation requires schema 4; migrate through the Empirical agent entrypoint first",
+        "This read-only operation requires schema 4; migrate through an installed Empirical agent skill first",
       );
     }
   }
@@ -866,7 +866,7 @@ export async function discoverProject(start: string): Promise<ProjectStore> {
   }
   throw new EmpiricalError(
     "PROJECT_NOT_INITIALIZED",
-    "No .empirical project found; initialize or adopt it through the Empirical agent entrypoint",
+    "No .empirical project found; initialize or adopt it through an installed Empirical agent skill",
   );
 }
 
@@ -1098,7 +1098,7 @@ function assertSupportedSchema(value: { schemaVersion: number }): void {
   ) {
     throw new EmpiricalError(
       "MIGRATION_REQUIRED",
-      `Project schema ${String(value.schemaVersion)} is not supported; migrate it through the Empirical agent entrypoint`,
+      `Project schema ${String(value.schemaVersion)} is not supported; migrate it through an installed Empirical agent skill`,
     );
   }
 }

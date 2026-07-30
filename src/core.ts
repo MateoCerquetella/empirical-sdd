@@ -7,6 +7,18 @@ import { installProjectIntegrations } from "./integrations.js";
 import { refreshRepositoryKnowledge, repositoryKnowledgePaths } from "./knowledge.js";
 import { ProjectStore, discoverProject, isFile } from "./storage.js";
 import { createDecisionTemplate, requireValidDecisions, validateDecisions } from "./decisions.js";
+import {
+  buildRefinedRequest,
+  createDiscoveryRecord,
+  loadDiscovery,
+  nextSocraticPrompt,
+  saveDiscovery,
+  validateMaterialFollowUps,
+  validateSocraticAnswers,
+  type DiscoveryRecord,
+  type DiscoverySubmission,
+  type DiscoverySubmissionResult,
+} from "./discovery.js";
 import { createGitWorktree, featureSlug, proposeWorktree as buildWorktreeProposal } from "./worktrees.js";
 import {
   capabilityDeltaDigest,
@@ -99,15 +111,23 @@ export class EmpiricalProject {
         ? emptyIntegrationReport()
         : await installProjectIntegrations(absoluteRoot);
       await store.migrateSchema();
-      await refreshRepositoryKnowledge(absoluteRoot);
       const active = await store.activeFeature();
       const project = new EmpiricalProject(active ? store.forFeature(active) : store);
+      const explicitConfiguration = initializationConfiguration(options);
+      if (explicitConfiguration) {
+        const current = await project.config();
+        await project.configure({
+          ...explicitConfiguration,
+          setupComplete: explicitConfiguration.setupComplete ?? current.setupComplete,
+        });
+      }
+      await refreshRepositoryKnowledge(absoluteRoot);
       return { project, state: await project.store.loadState(), integrations };
     }
     if (await isFile(join(absoluteRoot, "ai", "STATE.md"))) {
       throw new EmpiricalError(
         "LEGACY_PROJECT",
-        "An Empirical v1 ai/ workspace already exists; use the Empirical agent entrypoint to adopt it",
+        "An Empirical v1 ai/ workspace already exists; use an installed Empirical agent skill to adopt it",
       );
     }
     const profile = options.profile ?? "complex";
@@ -142,7 +162,7 @@ export class EmpiricalProject {
     if (!(await isFile(legacyStatePath))) {
       throw new EmpiricalError(
         "LEGACY_NOT_FOUND",
-        "No ai/STATE.md was found; use the Empirical agent entrypoint for a new repository",
+        "No ai/STATE.md was found; use the Empirical Init or automatic agent skill for a new repository",
       );
     }
     const legacy = await readFile(legacyStatePath, "utf8");
@@ -235,6 +255,113 @@ export class EmpiricalProject {
         complex: `empirical __internal complex ${JSON.stringify(cleanProblem)}`,
       },
     };
+  }
+
+  async discovery(input: DiscoverySubmission): Promise<DiscoverySubmissionResult> {
+    if (this.readOnly) {
+      throw new EmpiricalError("READ_ONLY", "Socratic discovery persistence requires a writable project");
+    }
+    if (!input || typeof input !== "object") {
+      throw new EmpiricalError("INVALID_DISCOVERY", "Discovery input must be an object");
+    }
+    if (input.approved !== undefined && input.approved !== true) {
+      throw new EmpiricalError("INVALID_DISCOVERY", "Discovery approval must be literal true when supplied");
+    }
+    if (input.id !== undefined && (typeof input.id !== "string" || !input.id.trim())) {
+      throw new EmpiricalError("INVALID_DISCOVERY", "Discovery id must be a non-empty string when supplied");
+    }
+    const problem = typeof input.problem === "string" ? input.problem.trim() : "";
+    if (!problem) throw new EmpiricalError("REQUEST_REQUIRED", "A non-empty problem is required");
+    const answers = validateSocraticAnswers(input.answers, { complete: input.approved === true });
+    validateMaterialFollowUps(problem, answers, { complete: input.approved === true });
+    let record = input.id
+      ? await loadDiscovery(this.store.root, input.id)
+      : createDiscoveryRecord(problem);
+    if (record.problem !== problem) {
+      throw new EmpiricalError(
+        "DISCOVERY_MISMATCH",
+        `Discovery '${record.id}' belongs to a different problem`,
+      );
+    }
+    if (record.status === "draft" && !extendsDiscoveryAnswers(record.answers, answers)) {
+      throw new EmpiricalError(
+        "DISCOVERY_MISMATCH",
+        `Discovery '${record.id}' answers must extend the saved draft without changing it`,
+      );
+    }
+    if (record.status !== "draft" && !sameDiscoveryAnswers(record.answers, answers)) {
+      throw new EmpiricalError(
+        "DISCOVERY_IMMUTABLE",
+        `Discovery '${record.id}' cannot change after approval`,
+      );
+    }
+    if (
+      record.status !== "draft"
+      && record.refinedRequest !== buildRefinedRequest(problem, answers)
+    ) {
+      throw new EmpiricalError(
+        "DISCOVERY_MISMATCH",
+        `Discovery '${record.id}' refined request does not match its approved answers`,
+      );
+    }
+    if (record.status === "started") {
+      if (input.approved !== true) {
+        throw new EmpiricalError(
+          "DISCOVERY_IMMUTABLE",
+          `Discovery '${record.id}' has already started`,
+        );
+      }
+      const state = await this.status();
+      if (!record.handoff || state.activeFeature !== record.handoff.feature) {
+        throw new EmpiricalError(
+          "DISCOVERY_NOT_ACTIVE",
+          `Discovery '${record.id}' is not the selected workflow in this checkout`,
+        );
+      }
+      const paths = await saveDiscovery(this.store.root, record);
+      return {
+        record,
+        paths,
+        refinedRequest: record.refinedRequest,
+        nextQuestion: null,
+        start: await this.next(),
+      };
+    }
+
+    const nextQuestion = nextSocraticPrompt(problem, answers);
+    const refinedRequest = answers.length === 5 && nextQuestion === null
+      ? buildRefinedRequest(problem, answers)
+      : null;
+    if (record.status === "draft") {
+      record = touchDiscoveryRecord(record, { answers, refinedRequest });
+    }
+    let paths = await saveDiscovery(this.store.root, record);
+    if (input.approved !== true) {
+      return { record, paths, refinedRequest: record.refinedRequest, nextQuestion, start: null };
+    }
+
+    if (!refinedRequest) {
+      throw new EmpiricalError("INVALID_DISCOVERY", "Approved discovery requires all five answers");
+    }
+    if (record.status === "draft" || record.workflow !== "complex") {
+      record = touchDiscoveryRecord(record, {
+        status: "approved",
+        refinedRequest,
+        approvedAt: record.approvedAt ?? new Date().toISOString(),
+        workflow: "complex",
+      });
+      paths = await saveDiscovery(this.store.root, record);
+    }
+    const start = await this.complex(refinedRequest);
+    if (start.kind === "action") {
+      record = touchDiscoveryRecord(record, {
+        status: "started",
+        workflow: "complex",
+        handoff: { feature: start.feature ?? "unknown", revision: start.revision },
+      });
+      paths = await saveDiscovery(this.store.root, record);
+    }
+    return { record, paths, refinedRequest, nextQuestion: null, start };
   }
 
   async capabilities(): Promise<CapabilitySummary[]> {
@@ -1017,6 +1144,50 @@ function defaultConfig(
   };
 }
 
+function initializationConfiguration(options: InitOptions): ProjectConfigurationInput | null {
+  const isolation = options.isolation && Object.keys(options.isolation).length > 0
+    ? options.isolation
+    : undefined;
+  const decisions = options.decisions && Object.keys(options.decisions).length > 0
+    ? options.decisions
+    : undefined;
+  if (!isolation && !decisions && options.setupComplete === undefined) return null;
+  return {
+    ...(isolation ? { isolation } : {}),
+    ...(decisions ? { decisions } : {}),
+    ...(options.setupComplete !== undefined ? { setupComplete: options.setupComplete } : {}),
+  };
+}
+
+function touchDiscoveryRecord(
+  record: DiscoveryRecord,
+  update: Partial<Omit<DiscoveryRecord, "schemaVersion" | "id" | "problem" | "createdAt">>,
+): DiscoveryRecord {
+  return { ...record, ...update, updatedAt: new Date().toISOString() };
+}
+
+function sameDiscoveryAnswers(left: DiscoveryRecord["answers"], right: DiscoveryRecord["answers"]): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function extendsDiscoveryAnswers(
+  saved: DiscoveryRecord["answers"],
+  submitted: DiscoveryRecord["answers"],
+): boolean {
+  if (submitted.length < saved.length) return false;
+  return saved.every((entry, index) => {
+    const next = submitted[index];
+    if (!next) return false;
+    if (
+      entry.pass !== next.pass
+      || entry.title !== next.title
+      || entry.question !== next.question
+      || entry.answer !== next.answer
+    ) return false;
+    return entry.followUp === null || JSON.stringify(entry.followUp) === JSON.stringify(next.followUp);
+  });
+}
+
 function initialState(profile: Profile): WorkflowState {
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -1235,7 +1406,7 @@ function assertStartAction(
 function instructionsFor(state: WorkflowState, policy: ProjectPolicy): string {
   if (state.status === "blocked") return appendPolicy(`Stop. Resolve this blocker before retrying: ${state.message ?? "unknown"}`, state, policy);
   if (state.status === "awaiting_human") return appendPolicy(`Stop and ask the user: ${state.message ?? "a decision is required"}`, state, policy);
-  if (state.phase === "idle") return appendPolicy("No feature is active. Explore genuinely vague work first; otherwise start it with empirical_fast or empirical_complex. Use empirical_loop only to resume current work.", state, policy);
+  if (state.phase === "idle") return appendPolicy("No feature is active. Loop does not create or route new work. Use the installed empirical skill for automatic routing, empirical-spec for a concrete contract, or empirical-socratic for five-pass discovery.", state, policy);
   if (state.phase === "done") return appendPolicy("The feature passed verification, review, and required capability archive. Report completion; delivery is manual.", state, policy);
   const feature = state.activeFeature ?? "current feature";
   const instructions: Record<Exclude<Phase, "idle" | "done">, string> = {

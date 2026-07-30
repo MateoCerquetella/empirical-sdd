@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "digest": "3b0e89e4016e02d09fe05ffadb541bba3c28ef19de32b0a74f1b914a6bdbc0ed",
+  "digest": "1a8b0252c31a28099e94bdc9bcfff7e476bacccee73bea5f0fb150cf63fedcb9",
   "files": [
     {
       "path": ".codex/config.toml",
@@ -44,8 +44,8 @@
     },
     {
       "path": "README.md",
-      "size": 9930,
-      "digest": "db787701f73d61ed38639859b5c791cf25b8fdbc0b52831c127b53f8f861e597"
+      "size": 11941,
+      "digest": "608dbc11926fb85b6a1b76ccf1acfd461f982f891cb748f8b168c3bc98c83767"
     },
     {
       "path": "SECURITY.md",
@@ -59,23 +59,23 @@
     },
     {
       "path": "docs/architecture.md",
-      "size": 5491,
-      "digest": "de2ffc0c158e1b19a8c797ba247bc51f88f29d83df6c59fcaf49856f393bcf34"
+      "size": 6388,
+      "digest": "3bd9b0a07213d6b587891e30e27c87190baf47b2c6f14e2bf1403eb1b87276bd"
     },
     {
       "path": "docs/demo.md",
-      "size": 1811,
-      "digest": "0d78fbd3b78df8f9c752c478d6866f1966ac2f727a6c98d187a4f14ea8ecce36"
+      "size": 2262,
+      "digest": "be87d71c15b19074fcafed2b0c3333a05088300ce6b3becf7ad60f1f1010a4ff"
     },
     {
       "path": "docs/mcp.md",
-      "size": 2153,
-      "digest": "2002225a1c188c2776cac6be5575cdbc4bb57afb2430960c5890566807f0a1b7"
+      "size": 2974,
+      "digest": "1dd00ec9669380cc461951b3efb6c71e3406dec2de783b3d5351750c3933264d"
     },
     {
       "path": "docs/migration-v1.md",
-      "size": 1398,
-      "digest": "1ecb7d3ddbb4ffe9f0b0bb34eaaad4bd8a3dee938f70e3b21d9dd57e8de504d4"
+      "size": 1446,
+      "digest": "e7d68e2b36a703153619dfb895a14b1c20b9b28dc4e81b16736b85f7601480e2"
     },
     {
       "path": "docs/openspec-comparison.md",
@@ -84,8 +84,8 @@
     },
     {
       "path": "docs/protocol.md",
-      "size": 4234,
-      "digest": "4750204f24c3356ef3bf4cc3ae4d1144fd99365a45b39cf2613271ccf9335ef7"
+      "size": 5230,
+      "digest": "9cd8680c7f38bb6594f851eee9f9df4f3806b849aed50f729b5a2d754954abe4"
     },
     {
       "path": "docs/security.md",
@@ -100,7 +100,7 @@
     {
       "path": "package.json",
       "size": 1430,
-      "digest": "bc7cbfb8e4315dc1eccc61306ed18e7f7a0a5f5f90cf262314cbf77618863b32"
+      "digest": "7fb7aeb85b5258f889cc3fa1c9f162207870e9e7c58a51f0f1ba5816f6cb0ef9"
     },
     {
       "path": "scripts/build.ts",
@@ -119,8 +119,8 @@
     },
     {
       "path": "scripts/smoke-mcp.ts",
-      "size": 10168,
-      "digest": "7fad147bbd233ac3c1176583b536e729510c0c8099d85852d4483df706e0e786"
+      "size": 12142,
+      "digest": "4579d808a298b87453a46f54184608a10eb92e0e04437f80e2736a97b9fec044"
     },
     {
       "path": "scripts/test-package.ts",
@@ -129,8 +129,8 @@
     },
     {
       "path": "src/agents.ts",
-      "size": 5435,
-      "digest": "0bfad1885045d453a0feb634aaa7a8081e9c951c3b16f6998b90130ebfd3da76"
+      "size": 5475,
+      "digest": "f2a8f3812d7b7f818841426ea352ea310cfbfcf10510c7be29664de8740b9740"
     },
     {
       "path": "src/checkouts.ts",
@@ -139,13 +139,13 @@
     },
     {
       "path": "src/cli.ts",
-      "size": 43230,
-      "digest": "e102f55d9395d374f5e521bc04f19a46dc77cb1eeca531cf0300bbe298c68d7a"
+      "size": 49139,
+      "digest": "60d8a61cbff4c210f46e428c1f15f5919576c1cf3223fa82197d025deeaccdb6"
     },
     {
       "path": "src/core.ts",
-      "size": 57111,
-      "digest": "128c93b1d44a1d38bf8439343b988db1dc2f3114d57081ecb5ed26b4c5b15b40"
+      "size": 63860,
+      "digest": "ad7734fca5ee9b6158c3955d9be10a24662e5d43b3b4d4b70d17f0e41f2b5666"
     },
     {
       "path": "src/decisions.ts",
@@ -154,8 +154,8 @@
     },
     {
       "path": "src/discovery.ts",
-      "size": 11550,
-      "digest": "b295fa5361e5e74c2ff3dab34c893d90bc9025ae3f60d59c11e660bef49e6983"
+      "size": 18398,
+      "digest": "a2b758036e4a24bf4b00d05345334cc813c1bf723fdf7cdfab47d51ea8d96922"
     },
     {
       "path": "src/errors.ts",
@@ -164,13 +164,13 @@
     },
     {
       "path": "src/index.ts",
-      "size": 739,
-      "digest": "772ed2c7c583c504394bfe74773bcf1399093db4293cf68cd24b6f3a8e91e184"
+      "size": 1268,
+      "digest": "80debe586034804247fa3f14858740d2fdda62959549a9ae062cbf8ef1b3baa2"
     },
     {
       "path": "src/integrations.ts",
-      "size": 16359,
-      "digest": "4543b9b9e975c2596cf6d00f901a9e8301b659a027021e9febb517f82312b37e"
+      "size": 26660,
+      "digest": "26eeb03358cae993ea6eb08810a7df97fd6d9733c371d36310d48c0cfe9763a3"
     },
     {
       "path": "src/knowledge.ts",
@@ -179,13 +179,18 @@
     },
     {
       "path": "src/lifecycle.ts",
-      "size": 1518,
-      "digest": "1d1d169068f63d60a99b9ee884c0617283d04da68ca3f9783bbf52e685203635"
+      "size": 1527,
+      "digest": "7e418832ea2f110386e40891baddc1446f4311ba67f5d9e1f4f15169e3d75568"
     },
     {
       "path": "src/mcp.ts",
-      "size": 17000,
-      "digest": "e63428e28fdaa9e314a63cf0b3b04764b21597623bbf8d915281374184e90ffc"
+      "size": 18147,
+      "digest": "41a9620a05bbf000beafe1daeebe62dc18a970f1abd9a9fb8b31db90e33a7122"
+    },
+    {
+      "path": "src/selector.ts",
+      "size": 4497,
+      "digest": "ad3a0e6e759d67f0948bda601600e3cea2fdb46bd07f4788caed07e974a77ae5"
     },
     {
       "path": "src/specifications.ts",
@@ -194,13 +199,13 @@
     },
     {
       "path": "src/storage.ts",
-      "size": 39502,
-      "digest": "c82184e92f9bc2ae1569ef89dc8854a52ee5c62181d409a977a2ce46c88942cc"
+      "size": 39591,
+      "digest": "586037a45d7b68c34075bdbba21dc7e0dfa7f912e7b32ade0391fa3b93022f27"
     },
     {
       "path": "src/types.ts",
       "size": 8670,
-      "digest": "9cbbe70aedd68dcb1a18f123de706ec2f7f84583672eacc7d2ec822ac6cc8b00"
+      "digest": "421ab9b96e0392a5568e8f04eef69dc1292ff965e56c2d1497c68f670227b0b5"
     },
     {
       "path": "src/worktrees.ts",
@@ -214,23 +219,23 @@
     },
     {
       "path": "tests/cli-config.test.ts",
-      "size": 4487,
-      "digest": "74adc5912bad97cdc1c39f418be84e998687d282fdb1396260f3517179d6e181"
+      "size": 4660,
+      "digest": "6420786e96ddea009e82b5df8ffaff3c5192b5ab2db8a1b57f7c03096bd4f296"
     },
     {
       "path": "tests/core.test.ts",
-      "size": 24389,
-      "digest": "2e31d5cfb0e9265f16692e56cc3265e430ef106f0c6d2f8aa95b6461c044cac8"
+      "size": 26542,
+      "digest": "fc1e96d2712c8d58c328a6b0015a731dbf1e3db153160d233d84154d2d408b33"
     },
     {
       "path": "tests/discovery.test.ts",
-      "size": 10495,
-      "digest": "65ef00f3417937f2e2685a4efd6ebfe37c8dee6ed265fe166ca70d8901189b44"
+      "size": 16918,
+      "digest": "017899ff816e3ae0b34db1c0ed569786dc5a79cee26b0adb49f5b99959fc12a4"
     },
     {
       "path": "tests/integrations.test.ts",
-      "size": 10635,
-      "digest": "1671adc085c0132fb24ab3dba42c9ce059611c41b45d77fbf1f40ed60af1c9af"
+      "size": 17224,
+      "digest": "b33f2d51c5282dfac90cf4b64f9ac65f75f80ff62ba426cbdc2f91a06ad3fb1e"
     },
     {
       "path": "tests/knowledge.test.ts",
@@ -239,18 +244,23 @@
     },
     {
       "path": "tests/lifecycle.test.ts",
-      "size": 1219,
-      "digest": "8a08710e5aebca9114c901d9f9a41b448bf3e03b764dd3dd3e1331c9e8b3a041"
+      "size": 1228,
+      "digest": "433a9b4cd68d2f926916305e413b3ca9d872e985608a8965574b946095fa8e38"
     },
     {
       "path": "tests/living-specs.test.ts",
-      "size": 15398,
-      "digest": "c8a2883d18f7b810fdd89b9c8b73a0e4e68b0a927cd30e22e9e530de3d8760d8"
+      "size": 15418,
+      "digest": "b9da8ad0b11b40d0ccc8af655083d6cdec2b0a63fc1a6ed2d6be11ec83155a32"
     },
     {
       "path": "tests/mcp.test.ts",
-      "size": 6641,
-      "digest": "6eae6e5c78265ca6381c19290f8c09f9bca3f788c2af6fb2bedefb1f97f374bb"
+      "size": 9210,
+      "digest": "bd5cae5f4ad3f86e0b130ad76b22a0ee407b77528379c5d22596b62b1b202f7c"
+    },
+    {
+      "path": "tests/selector.test.ts",
+      "size": 1592,
+      "digest": "937a1b9967e7048e69b41e7d4ce3f5dce9b3eef8f74940dd466d72e51ca8cbb9"
     },
     {
       "path": "tests/worktree-isolation.test.ts",
