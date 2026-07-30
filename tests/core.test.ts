@@ -73,7 +73,7 @@ The product MUST expose the example behavior.
 
 describe("Empirical 0.20 core", () => {
   test("exports the alpha product and schema versions", () => {
-    expect(PRODUCT_VERSION).toBe("0.20.1");
+    expect(PRODUCT_VERSION).toBe("0.20.2");
     expect(SCHEMA_VERSION).toBe(4);
   });
 

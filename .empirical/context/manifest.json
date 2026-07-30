@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "digest": "1a8b0252c31a28099e94bdc9bcfff7e476bacccee73bea5f0fb150cf63fedcb9",
+  "digest": "b6dc7d88a2d2b06461e4d7a1e2bb98eb00f829a09b2e3d8708927cd5582f2577",
   "files": [
     {
       "path": ".codex/config.toml",
@@ -45,7 +45,7 @@
     {
       "path": "README.md",
       "size": 11941,
-      "digest": "608dbc11926fb85b6a1b76ccf1acfd461f982f891cb748f8b168c3bc98c83767"
+      "digest": "198e46f2bbac81d9a1d9e7e0aeaaf5004ff3e9b7907c1dfef4acb3204a70c318"
     },
     {
       "path": "SECURITY.md",
@@ -100,7 +100,7 @@
     {
       "path": "package.json",
       "size": 1430,
-      "digest": "7fb7aeb85b5258f889cc3fa1c9f162207870e9e7c58a51f0f1ba5816f6cb0ef9"
+      "digest": "b7ddc773b4056003ab9e407e9234df8da0bfa9aff766a3362751e14db06c24f9"
     },
     {
       "path": "scripts/build.ts",
@@ -120,7 +120,7 @@
     {
       "path": "scripts/smoke-mcp.ts",
       "size": 12142,
-      "digest": "4579d808a298b87453a46f54184608a10eb92e0e04437f80e2736a97b9fec044"
+      "digest": "af4be478119d1566b2799552ec310d702c56dd1897304d252e22321e82dfbcf7"
     },
     {
       "path": "scripts/test-package.ts",
@@ -205,7 +205,7 @@
     {
       "path": "src/types.ts",
       "size": 8670,
-      "digest": "421ab9b96e0392a5568e8f04eef69dc1292ff965e56c2d1497c68f670227b0b5"
+      "digest": "7a57b483555fd82b6f9c94a24ee205146ec3d82f9bc62c104f532c42ee41f358"
     },
     {
       "path": "src/worktrees.ts",
@@ -225,7 +225,7 @@
     {
       "path": "tests/core.test.ts",
       "size": 26542,
-      "digest": "fc1e96d2712c8d58c328a6b0015a731dbf1e3db153160d233d84154d2d408b33"
+      "digest": "c5afd7245e61d2622d7c5b8041db7e8183caa1c801e9fd1b192cf473774c1d60"
     },
     {
       "path": "tests/discovery.test.ts",

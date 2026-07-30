@@ -4,7 +4,7 @@ Generated from repository metadata. Topic pages are maintained by the current
 agent from inspected evidence; refresh never overwrites them.
 
 - Repository: empirical-sdd
-- Inventory digest: 1a8b0252c31a28099e94bdc9bcfff7e476bacccee73bea5f0fb150cf63fedcb9
+- Inventory digest: b6dc7d88a2d2b06461e4d7a1e2bb98eb00f829a09b2e3d8708927cd5582f2577
 - Included files: 54
 - Roots: .codex, .cursor, .gemini, .github, ., docs, openspec, scripts, src, tests
 - Manifests: package.json

@@ -5,7 +5,7 @@ Code, Cursor, Gemini CLI, Windsurf, and MCP clients. It turns a coding request
 into a durable contract, exact workflow revisions, verification evidence,
 review, and living capability specifications.
 
-Empirical `0.20.1` is an alpha release. It supports one active feature per
+Empirical `0.20.2` is an alpha release. It supports one active feature per
 checkout and uses real Git worktrees for isolated parallel work.
 
 ## Install
