@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 6,
+  "previousRevision": 5,
+  "actor": "codex",
+  "summary": "PR #6 merged the verified 0.20.3 release at eff18f7, but npm publication requires the maintainer's one-time authenticator code. No npm version or Git tag was created.",
+  "createdAt": "2026-07-31T13:53:06.197Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 6,
+    "activeFeature": "release-empirical-sdd-0-20-3",
+    "request": "Release the completed Empirical setup wizard and broad 73-target agent installer as npm package empirical-sdd version 0.20.3, verify the live registry artifact from a clean consumer, then push the release commits and matching v0.20.3 tag.",
+    "profile": "fast",
+    "phase": "implement",
+    "status": "awaiting_human",
+    "repairAttempts": 0,
+    "message": "PR #6 merged the verified 0.20.3 release at eff18f7, but npm publication requires the maintainer's one-time authenticator code. No npm version or Git tag was created.",
+    "implementationActor": null,
+    "specDigest": "e06a70102d3774300e7b9aa7f7538087749bf9fe963e05523ae2c537223e2637",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "evidence": [],
+    "updatedAt": "2026-07-31T13:53:06.197Z"
+  }
+}

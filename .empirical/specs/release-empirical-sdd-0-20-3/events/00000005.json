@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 5,
+  "previousRevision": 4,
+  "actor": "codex",
+  "summary": "Resumed workflow",
+  "createdAt": "2026-07-31T13:41:52.921Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 5,
+    "activeFeature": "release-empirical-sdd-0-20-3",
+    "request": "Release the completed Empirical setup wizard and broad 73-target agent installer as npm package empirical-sdd version 0.20.3, verify the live registry artifact from a clean consumer, then push the release commits and matching v0.20.3 tag.",
+    "profile": "fast",
+    "phase": "implement",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": null,
+    "implementationActor": null,
+    "specDigest": "e06a70102d3774300e7b9aa7f7538087749bf9fe963e05523ae2c537223e2637",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "evidence": [],
+    "updatedAt": "2026-07-31T13:41:52.921Z"
+  }
+}
