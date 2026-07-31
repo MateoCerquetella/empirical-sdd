@@ -2,13 +2,18 @@ import { lstat, readFile, rm, rmdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import {
-  SUPPORTED_AGENTS,
-  detectSupportedAgents,
-  type SupportedAgentDefinition,
-} from "./agents.js";
+  AGENT_CATALOG_SOURCE,
+  agentSkillTarget,
+  agentSkillTargetPath,
+  detectAgentSkillTargets,
+  globalAgentSkillTargets,
+  resolveAgentSkillTargetId,
+  type AgentSkillTargetId,
+  type GlobalAgentSkillTarget,
+} from "./agent-catalog.js";
 import { EmpiricalError } from "./errors.js";
 import { isFile, readJson, writeJsonAtomic, writeTextAtomic } from "./storage.js";
-import type { AgentIntegrationId, IntegrationReport } from "./types.js";
+import type { IntegrationReport } from "./types.js";
 
 const START = "<!-- empirical-sdd:start -->";
 const END = "<!-- empirical-sdd:end -->";
@@ -18,6 +23,9 @@ const OBSOLETE_ENTRYPOINTS = [
   "empirical-fast",
   "empirical-complex",
 ] as const;
+const GLOBAL_SELECTION_SCHEMA = 1 as const;
+const GLOBAL_SELECTION_OWNER = "empirical-sdd" as const;
+const UNVERIFIED_RUNTIME_GUIDANCE = "Skill files installed; invocation and reload guidance for this runtime has not been verified.";
 
 const AUTOMATIC_SKILL_BODY = `# Empirical
 
@@ -27,11 +35,17 @@ Complex and do not ask them to run hidden terminal commands.
 
 1. Before interpreting a feature request, inspect .empirical/config.json and
    repository context. If configuration is missing, setupComplete is false, or
-   context is missing, inspect manifests, documentation, source, and tests; ask
-   one at a time only for choices that materially change Git isolation or
-   decision policy; then call empirical_init. Call empirical_context when
-   context is stale. Private fallbacks are empirical __internal init and
-   empirical __internal context. Do not install project-local skills.
+   context is missing, inspect manifests, documentation, source, tests, and Git
+   base without writing. Before calling any mutating setup operation, render the
+   complete empirical-init Verification, Parallel work, and Decisions summary
+   and offer Apply recommended settings (or Keep current settings), Customize,
+   and Cancel. On Customize, visit one section at a time and end with a complete
+   Save, Edit, or Cancel review. Cancel stops setup without calling empirical_init,
+   empirical_context, or any private fallback. After confirmation, call
+   empirical_init with all four explicit evidence booleans plus isolation, base,
+   path, branch, and decision policy. Call empirical_context when context is
+   stale. Private fallbacks are empirical __internal init with equivalent flags
+   and empirical __internal context. Do not install project-local skills.
 2. If selected non-terminal work exists, call empirical_loop with no request or
    profile and resume the returned action. Attached text never replaces active
    work. The private fallback is empirical __internal loop.
@@ -71,20 +85,42 @@ feature, specification, workflow revision, worktree, or external agent session.
 
 1. Inspect .empirical/config.json, .empirical/context/, repository manifests,
    documentation, source layout, tests, Git state, and existing living
-   capabilities. Treat setupComplete false or missing context as partial setup,
-   not as an initialized repository.
-2. Ask one focused question at a time only when its answer changes isolation
-   mode, base, sibling worktree path, branch pattern, or Complex decision
-   records. Explain the safe shown default and accept it when the choice is not
-   material. Never ask for Fast versus Complex.
-3. Call empirical_init with the explicit chosen settings. Its private fallback
-   is empirical __internal init with the equivalent flags. This safely removes
-   only marker-owned project-local Empirical skills and installs MCP bridges;
-   report any unmanaged collision it preserves.
-4. Call empirical_context, or empirical __internal context as fallback, and
+   capabilities without writing. Treat setupComplete false or missing context
+   as partial setup, not as initialized. Resolve the current Git base for display
+   while preserving the stored value \`auto\` unless the user edits it.
+2. Before any empirical_init, empirical_context, or private fallback call, show
+   one compact “Empirical setup” summary with these exact sections and settings:
+   Verification (acceptance-test evidence for every criterion, real-browser
+   evidence for [UI], screenshot artifacts for [UI], independent code-review
+   evidence); Parallel work (ask/off isolation, base, sibling worktree path,
+   branch pattern); and Decisions (required/off Complex decision records).
+   All first-run settings default on/ask/required with base auto, path
+   ../{repo}-{feature}, and branch {type}/{feature}. Label existing values
+   current and do not reset omitted values during repair.
+3. Offer Apply recommended settings, Customize, and Cancel on first run; offer
+   Keep current settings, Customize, and Cancel on repair. Apply/Keep is the
+   shown default. Cancel stops immediately and creates or repairs nothing.
+   Never ask for Fast/Complex or repair-attempt limits.
+4. Customize one section at a time. Verification is a four-value checklist.
+   Explain that turning criterion evidence off makes test/browser/screenshot
+   gates inactive without erasing the stored UI values, while code review stays
+   independent. Validate ask/off, required/off, a worktree path containing
+   {feature}, and a branch pattern containing {type} and {feature}. Show the
+   worktree templates as editable only while isolation is ask; otherwise keep
+   their stored values. Show the complete effective summary and offer Save,
+   Edit, or Cancel; do not mutate until Save.
+5. Only after Apply/Keep/Save, call empirical_init with explicit
+   evidenceRequired, browserForUi, screenshotForUi, codeReview, isolation, base,
+   worktreePath, branchPattern, and decisions values. Its private fallback is
+   empirical __internal init with equivalent --evidence, --ui-browser,
+   --ui-screenshot, --code-review, --isolation, --base, --worktree-path,
+   --branch-pattern, and --decisions flags. This safely removes only marker-owned
+   project-local Empirical skills and installs MCP bridges; report preserved
+   unmanaged collisions.
+6. Call empirical_context, or empirical __internal context as fallback, and
    refine overview, architecture, commands, and conventions only from inspected
    evidence. Confirm setupComplete is true and context is current.
-5. Stop with a concise setup report and the valid next choices: empirical for
+7. Stop with a concise setup report and the valid next choices: empirical for
    automatic work, empirical-spec for a concrete contract, or
    empirical-socratic for an interview.
 
@@ -230,17 +266,49 @@ const MCP_SERVER = {
 
 export interface InstallGlobalAgentSkillsOptions {
   all?: boolean;
-  agents?: AgentIntegrationId[];
+  agents?: readonly string[];
   pathValue?: string;
 }
 
-export async function managedGlobalAgentIds(homeRoot = homedir()): Promise<AgentIntegrationId[]> {
+interface GlobalSelectionManifest {
+  schemaVersion: typeof GLOBAL_SELECTION_SCHEMA;
+  managedBy: typeof GLOBAL_SELECTION_OWNER;
+  catalogCommit: typeof AGENT_CATALOG_SOURCE.commit;
+  selected: AgentSkillTargetId[];
+}
+
+interface GlobalSelectionRead {
+  selected: AgentSkillTargetId[] | null;
+  warning: string | null;
+  writable: boolean;
+}
+
+export async function managedGlobalAgentIds(homeRoot = homedir()): Promise<AgentSkillTargetId[]> {
   const home = validateHomeRoot(homeRoot);
-  const managed: AgentIntegrationId[] = [];
-  for (const definition of SUPPORTED_AGENTS) {
+  const manifest = await readGlobalSelection(home);
+  if (manifest.selected) return manifest.selected;
+  const managed: AgentSkillTargetId[] = [];
+  for (const id of ["codex", "claude-code", "cursor", "gemini-cli", "windsurf"] as const) {
+    const definition = agentSkillTarget(id) as GlobalAgentSkillTarget;
     if (await hasManagedGlobalTarget(home, definition)) managed.push(definition.id);
   }
   return managed;
+}
+
+export async function installedGlobalAgentIds(homeRoot = homedir()): Promise<AgentSkillTargetId[]> {
+  const home = validateHomeRoot(homeRoot);
+  const installed: AgentSkillTargetId[] = [];
+  const roots = new Map<string, boolean>();
+  for (const definition of globalAgentSkillTargets()) {
+    const root = agentSkillTargetPath(home, definition);
+    let managed = roots.get(root);
+    if (managed === undefined) {
+      managed = await hasManagedGlobalTarget(home, definition);
+      roots.set(root, managed);
+    }
+    if (managed) installed.push(definition.id);
+  }
+  return installed;
 }
 
 export async function installProjectIntegrations(root: string): Promise<IntegrationReport> {
@@ -268,42 +336,46 @@ export async function installGlobalAgentSkills(
   if (options.all && options.agents) {
     throw new EmpiricalError("INVALID_ARGUMENT", "Choose either all agents or explicit agents, not both");
   }
-  const detected = await detectSupportedAgents({
+  const detected = await detectAgentSkillTargets({
     homeRoot: home,
     ...(options.pathValue !== undefined ? { pathValue: options.pathValue } : {}),
-    ...(options.all !== undefined ? { includeAll: options.all } : {}),
   });
-  const detectedIds = new Set(detected.map((agent) => agent.id));
+  const detectedIds = new Set(detected);
   for (const id of await managedGlobalAgentIds(home)) detectedIds.add(id);
 
-  const requestedIds = options.agents
-    ? new Set(options.agents)
+  const explicitIds = options.agents
+    ? resolveRequestedAgentIds(options.agents)
+    : null;
+  const requestedIds = explicitIds
+    ? new Set(explicitIds)
     : options.all
-      ? new Set(SUPPORTED_AGENTS.map((definition) => definition.id))
+      ? new Set(globalAgentSkillTargets().map((definition) => definition.id))
       : detectedIds;
-  for (const id of requestedIds) {
-    if (!SUPPORTED_AGENTS.some((definition) => definition.id === id)) {
-      throw new EmpiricalError("INVALID_ARGUMENT", `Unsupported agent '${id}'`);
-    }
-  }
-  const selected = SUPPORTED_AGENTS.filter((definition) => requestedIds.has(definition.id));
+  const selected = globalAgentSkillTargets().filter((definition) => requestedIds.has(definition.id));
   const report = emptyReport("global");
+  report.selected = selected.map((definition) => definition.id);
+  report.destinations = [...new Set(selected.map((definition) => agentSkillTargetPath(home, definition)))];
   report.entrypoints = selected.map((definition) => ({
     id: definition.id,
-    agent: definition.agent,
+    agent: definition.label,
     kind: "skill",
-    artifactRoot: join(home, ...definition.skillSegments),
-    invocations: EMPIRICAL_AGENT_SKILLS.map((skill) => invocationFor(definition, skill.name)),
-    reload: definition.reload,
+    artifactRoot: agentSkillTargetPath(home, definition),
+    skills: [...EMPIRICAL_AGENT_SKILL_NAMES],
+    invocations: definition.invocation
+      ? EMPIRICAL_AGENT_SKILLS.map((skill) => invocationFor(definition.invocation!, skill.name))
+      : [],
+    reload: definition.reload ?? UNVERIFIED_RUNTIME_GUIDANCE,
+    guidanceVerified: Boolean(definition.invocation && definition.reload),
+    projectMcp: definition.projectMcp === true,
+    handoff: definition.handoff === true,
   }));
 
-  for (const definition of SUPPORTED_AGENTS) {
-    const skillRoot = join(home, ...definition.skillSegments);
-    if (requestedIds.has(definition.id)) {
+  for (const [skillRoot, definitions] of groupedGlobalTargets(home)) {
+    if (definitions.some((definition) => requestedIds.has(definition.id))) {
       for (const skill of EMPIRICAL_AGENT_SKILLS) {
         await writeManagedFile(home, join(skillRoot, skill.name, "SKILL.md"), skill.content, report);
       }
-    } else if (options.agents || options.all) {
+    } else if (options.agents !== undefined || options.all) {
       for (const skill of EMPIRICAL_AGENT_SKILLS) {
         await removeManagedFile(home, join(skillRoot, skill.name, "SKILL.md"), report);
       }
@@ -312,11 +384,12 @@ export async function installGlobalAgentSkills(
       await removeManagedFile(home, join(skillRoot, obsolete, "SKILL.md"), report);
     }
   }
+  await writeGlobalSelection(home, report.selected, report);
   return report;
 }
 
 function emptyReport(scope: IntegrationReport["scope"]): IntegrationReport {
-  return { scope, created: [], updated: [], removed: [], preserved: [], entrypoints: [] };
+  return { scope, selected: [], destinations: [], created: [], updated: [], removed: [], preserved: [], entrypoints: [] };
 }
 
 function projectSkillTargets(root: string): string[] {
@@ -330,8 +403,8 @@ function projectSkillTargets(root: string): string[] {
   ]);
 }
 
-async function hasManagedGlobalTarget(home: string, definition: SupportedAgentDefinition): Promise<boolean> {
-  const root = join(home, ...definition.skillSegments);
+async function hasManagedGlobalTarget(home: string, definition: GlobalAgentSkillTarget): Promise<boolean> {
+  const root = agentSkillTargetPath(home, definition);
   for (const name of [...EMPIRICAL_AGENT_SKILL_NAMES, ...OBSOLETE_ENTRYPOINTS]) {
     const path = join(root, name, "SKILL.md");
     if (await isSafeRegularFile(home, path) && (await readFile(path, "utf8")).includes(MANAGED_FILE_MARKER)) {
@@ -342,10 +415,114 @@ async function hasManagedGlobalTarget(home: string, definition: SupportedAgentDe
 }
 
 function invocationFor(
-  definition: SupportedAgentDefinition,
+  invocation: string,
   skillName: EmpiricalAgentSkillName,
 ): string {
-  return definition.invocation.replace(/empirical$/, skillName);
+  return invocation.replace(/empirical$/, skillName);
+}
+
+function resolveRequestedAgentIds(values: readonly string[]): AgentSkillTargetId[] {
+  const requested = new Set<AgentSkillTargetId>();
+  for (const value of values) {
+    const id = resolveAgentSkillTargetId(value);
+    if (!id) throw new EmpiricalError("INVALID_ARGUMENT", `Unsupported agent '${value}'`);
+    const definition = agentSkillTarget(id);
+    if (definition.globalSkillPath === null) {
+      throw new EmpiricalError(
+        "INVALID_ARGUMENT",
+        `Agent '${value}' cannot be installed globally: ${definition.exclusionReason}`,
+      );
+    }
+    requested.add(id);
+  }
+  return globalAgentSkillTargets()
+    .filter((definition) => requested.has(definition.id))
+    .map((definition) => definition.id);
+}
+
+function groupedGlobalTargets(home: string): Map<string, GlobalAgentSkillTarget[]> {
+  const groups = new Map<string, GlobalAgentSkillTarget[]>();
+  for (const definition of globalAgentSkillTargets()) {
+    const root = agentSkillTargetPath(home, definition);
+    const existing = groups.get(root) ?? [];
+    existing.push(definition);
+    groups.set(root, existing);
+  }
+  return groups;
+}
+
+function globalSelectionPath(home: string): string {
+  return join(home, ".empirical-sdd", "integrations.json");
+}
+
+async function readGlobalSelection(home: string): Promise<GlobalSelectionRead> {
+  const path = globalSelectionPath(home);
+  const details = await lstat(path).catch((error) => {
+    if (isMissingPathError(error)) return null;
+    throw error;
+  });
+  if (!details) return { selected: null, warning: null, writable: true };
+  if (!(await isSafeRegularFile(home, path))) {
+    return { selected: null, warning: `${relativeLabel(home, path)} (unsafe or non-file selection metadata)`, writable: false };
+  }
+  let value: unknown;
+  try {
+    value = await readJson<unknown>(path);
+  } catch {
+    return { selected: null, warning: `${relativeLabel(home, path)} (invalid selection metadata)`, writable: false };
+  }
+  if (!isRecord(value)
+    || value.schemaVersion !== GLOBAL_SELECTION_SCHEMA
+    || value.managedBy !== GLOBAL_SELECTION_OWNER
+    || typeof value.catalogCommit !== "string"
+    || !/^[0-9a-f]{40}$/.test(value.catalogCommit)
+    || !Array.isArray(value.selected)) {
+    return { selected: null, warning: `${relativeLabel(home, path)} (unmanaged or incompatible selection metadata)`, writable: false };
+  }
+  const selected = resolveManifestSelection(value.selected);
+  if (!selected) {
+    return { selected: null, warning: `${relativeLabel(home, path)} (invalid selected agent ids)`, writable: false };
+  }
+  return { selected, warning: null, writable: true };
+}
+
+function resolveManifestSelection(values: unknown[]): AgentSkillTargetId[] | null {
+  const ids = new Set<AgentSkillTargetId>();
+  for (const value of values) {
+    if (typeof value !== "string") return null;
+    const id = resolveAgentSkillTargetId(value);
+    if (!id || id !== value || agentSkillTarget(id).globalSkillPath === null || ids.has(id)) return null;
+    ids.add(id);
+  }
+  return globalAgentSkillTargets().filter((target) => ids.has(target.id)).map((target) => target.id);
+}
+
+async function writeGlobalSelection(
+  home: string,
+  selected: AgentSkillTargetId[],
+  report: IntegrationReport,
+): Promise<void> {
+  const state = await readGlobalSelection(home);
+  if (!state.writable) {
+    if (state.warning && !report.preserved.includes(state.warning)) report.preserved.push(state.warning);
+    return;
+  }
+  const path = globalSelectionPath(home);
+  if (await preserveUnsafeTarget(home, path, report)) return;
+  const manifest: GlobalSelectionManifest = {
+    schemaVersion: GLOBAL_SELECTION_SCHEMA,
+    managedBy: GLOBAL_SELECTION_OWNER,
+    catalogCommit: AGENT_CATALOG_SOURCE.commit,
+    selected,
+  };
+  const existed = await isFile(path);
+  if (existed) {
+    const current = await readFile(path, "utf8");
+    const desired = `${JSON.stringify(manifest, null, 2)}\n`;
+    if (current === desired) return;
+  }
+  await writeJsonAtomic(path, manifest);
+  (existed ? report.updated : report.created).push(relativeLabel(home, path));
 }
 
 async function isSafeRegularFile(root: string, path: string): Promise<boolean> {

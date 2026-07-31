@@ -48,6 +48,11 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
 
     const loopTool = listed.tools.find((tool) => tool.name === "empirical_loop");
     expect(Object.keys(loopTool?.inputSchema.properties ?? {})).toEqual(["root"]);
+    const initTool = listed.tools.find((tool) => tool.name === "empirical_init");
+    expect(Object.keys(initTool?.inputSchema.properties ?? {})).toEqual(expect.arrayContaining([
+      "evidenceRequired", "browserForUi", "screenshotForUi", "codeReview",
+      "isolation", "base", "worktreePath", "branchPattern", "decisions",
+    ]));
 
     const initialized = await client.callTool({
       name: "empirical_init",
@@ -130,6 +135,25 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
     });
     expect(idempotentFast.isError).not.toBe(true);
     expect(idempotentFast.structuredContent).toEqual(started.structuredContent);
+
+    const configured = await client.callTool({
+      name: "empirical_configure",
+      arguments: {
+        root,
+        evidenceRequired: false,
+        browserForUi: false,
+        screenshotForUi: true,
+        codeReview: true,
+        isolation: "off",
+        decisions: "off",
+      },
+    });
+    expect(configured.isError).not.toBe(true);
+    expect(configured.structuredContent).toMatchObject({
+      evidence: { required: false, browserForUi: false, screenshotForUi: true, codeReview: true },
+      isolation: { mode: "off" },
+      decisions: { complexRecords: "off" },
+    });
 
     const complexInitialized = await client.callTool({
       name: "empirical_init",

@@ -73,7 +73,7 @@ The product MUST expose the example behavior.
 
 describe("Empirical 0.20 core", () => {
   test("exports the alpha product and schema versions", () => {
-    expect(PRODUCT_VERSION).toBe("0.20.2");
+    expect(PRODUCT_VERSION).toBe("0.20.3");
     expect(SCHEMA_VERSION).toBe(4);
   });
 
@@ -89,6 +89,7 @@ describe("Empirical 0.20 core", () => {
     expect(initialized.state).toMatchObject({ phase: "idle", revision: 0, activeFeature: null });
     expect(await initialized.project.config()).toMatchObject({
       schemaVersion: 4,
+      evidence: { required: true, browserForUi: true, screenshotForUi: true, codeReview: true },
       isolation: { mode: "ask", baseBranch: "auto", worktreePath: "../{repo}-{feature}", branchPattern: "{type}/{feature}" },
       decisions: { complexRecords: "required" },
       setupComplete: true,
@@ -100,6 +101,7 @@ describe("Empirical 0.20 core", () => {
     const root = await temporaryProject();
     const first = await EmpiricalProject.initialize(root, {
       integrations: false,
+      evidence: { required: false, browserForUi: false, screenshotForUi: true, codeReview: true },
       isolation: { baseBranch: "develop", worktreePath: "../saved-{feature}" },
       decisions: { complexRecords: "required" },
       setupComplete: false,
@@ -113,11 +115,13 @@ describe("Empirical 0.20 core", () => {
     );
 
     const repaired = await EmpiricalProject.initialize(root, {
+      evidence: { codeReview: false },
       isolation: { mode: "off" },
       decisions: { complexRecords: "off" },
       setupComplete: true,
     });
     expect(await repaired.project.config()).toMatchObject({
+      evidence: { required: false, browserForUi: false, screenshotForUi: true, codeReview: false },
       isolation: { mode: "off", baseBranch: "develop", worktreePath: "../saved-{feature}" },
       decisions: { complexRecords: "off" },
       setupComplete: true,
@@ -145,12 +149,69 @@ describe("Empirical 0.20 core", () => {
     const root = await temporaryProject();
     const { project } = await EmpiricalProject.initialize(root, { integrations: false });
     const configured = await project.configure({
+      evidence: { required: false, browserForUi: false },
       isolation: { mode: "off", baseBranch: "main", worktreePath: "../sandbox-{feature}", branchPattern: "{type}/alpha-{feature}" },
       decisions: { complexRecords: "off" },
     });
     expect((await EmpiricalProject.open(root)).config()).resolves.toEqual(configured);
+    expect(configured.evidence).toEqual({
+      required: false,
+      browserForUi: false,
+      screenshotForUi: true,
+      codeReview: true,
+    });
     await expect(project.configure({ isolation: { worktreePath: "../fixed" } }))
       .rejects.toMatchObject({ code: "INVALID_CONFIG" });
+  });
+
+  test("schema-4 configuration missing evidence fields normalizes to strict defaults", async () => {
+    const root = await temporaryProject();
+    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
+    const config = JSON.parse(await readFile(project.store.configPath, "utf8")) as Record<string, unknown>;
+    config.evidence = { required: false, browserForUi: false };
+    await writeFile(project.store.configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+    expect(await (await EmpiricalProject.open(root)).config()).toMatchObject({
+      evidence: { required: false, browserForUi: false, screenshotForUi: true, codeReview: true },
+    });
+  });
+
+  test("criterion evidence can be disabled while review remains independently required", async () => {
+    const root = await temporaryProject();
+    const { project } = await EmpiricalProject.initialize(root, {
+      integrations: false,
+      evidence: { required: false, browserForUi: true, screenshotForUi: true, codeReview: true },
+    });
+    const started = action(await project.fast("Add one independently reviewed result"));
+    expect(started.requiredEvidence).toEqual(["review"]);
+    await expect(project.complete({
+      revision: started.revision,
+      outcome: "passed",
+      summary: "Implemented without criterion evidence",
+    })).rejects.toMatchObject({ code: "EVIDENCE_REQUIRED" });
+    const completed = await project.complete({
+      revision: started.revision,
+      outcome: "passed",
+      summary: "Implemented and reviewed",
+      evidence: [{ criterionId: "all", kind: "review", passed: true, summary: "Independent review passed" }],
+    });
+    expect(completed.phase).toBe("done");
+    expect((await project.config()).evidence).toEqual({
+      required: false,
+      browserForUi: true,
+      screenshotForUi: true,
+      codeReview: true,
+    });
+  });
+
+  test("UI evidence requirements reflect each configured sub-policy", async () => {
+    const root = await temporaryProject();
+    const { project } = await EmpiricalProject.initialize(root, {
+      integrations: false,
+      evidence: { required: true, browserForUi: false, screenshotForUi: true, codeReview: false },
+    });
+    const started = action(await project.fast("[UI] Show one local status result"));
+    expect(started.acceptanceCriteria[0]?.ui).toBe(true);
+    expect(started.requiredEvidence).toEqual(["test", "screenshot"]);
   });
 
   test("Fast owns its state, journal, lock boundary, spec, and evidence under the feature", async () => {
@@ -207,6 +268,38 @@ describe("Empirical 0.20 core", () => {
     await acceptedDecisions(root, feature);
     current = await project.complete({ revision: 2, outcome: "passed", summary: "Designed with accepted evidence" });
     expect(current).toMatchObject({ phase: "plan", revision: 3 });
+  });
+
+  test("required Complex decisions remain enforced when code-review evidence is off", async () => {
+    const root = await temporaryProject();
+    const { project } = await EmpiricalProject.initialize(root, {
+      integrations: false,
+      evidence: { required: false, codeReview: false },
+    });
+    let current = action(await project.complex("Keep decision policy independent from review evidence"));
+    const feature = current.feature!;
+    await writeFile(
+      join(root, ".empirical/specs", feature, "spec.md"),
+      "# Independent decisions\n\n## Acceptance Criteria\n\n- [ ] [AC-1] Required decisions remain enforced.\n",
+      "utf8",
+    );
+    await addedDelta(root, feature);
+    current = await project.complete({ revision: current.revision, outcome: "passed", summary: "Specified" });
+    await writeFile(join(root, ".empirical/specs", feature, "design.md"), "# Design\n\nKeep policy gates independent.\n", "utf8");
+    await acceptedDecisions(root, feature);
+    current = await project.complete({ revision: current.revision, outcome: "passed", summary: "Designed" });
+    await writeFile(join(root, ".empirical/specs", feature, "plan.md"), "# Plan\n\nImplement and verify.\n", "utf8");
+    current = await project.complete({ revision: current.revision, outcome: "passed", summary: "Planned" });
+    current = await project.complete({ revision: current.revision, outcome: "passed", summary: "Implemented" });
+    current = await project.complete({ revision: current.revision, outcome: "passed", summary: "Verified" });
+    expect(current).toMatchObject({ phase: "review" });
+
+    await writeFile(join(root, ".empirical/specs", feature, "decisions.md"), "# Decisions\n\nInvalid after Design.\n", "utf8");
+    await expect(project.complete({
+      revision: current.revision,
+      outcome: "passed",
+      summary: "Reviewed without evidence",
+    })).rejects.toMatchObject({ code: "DECISIONS_REQUIRED" });
   });
 
   test("decision validation rejects private-reasoning sections and broken supersession", () => {

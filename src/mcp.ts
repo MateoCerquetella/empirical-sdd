@@ -26,6 +26,10 @@ const socraticAnswerSchema = z.object({
   }).nullable(),
 });
 const configurationSchema = {
+  evidenceRequired: z.boolean().optional(),
+  browserForUi: z.boolean().optional(),
+  screenshotForUi: z.boolean().optional(),
+  codeReview: z.boolean().optional(),
   isolation: z.enum(["ask", "off"]).optional(),
   base: z.string().min(1).optional(),
   worktreePath: z.string().min(1).optional(),
@@ -75,9 +79,15 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     description: "Initialize or repair repository configuration, runtime bridges, and compact context without starting a feature.",
     inputSchema: { root: z.string().optional(), profile: profileSchema.optional(), ...configurationSchema },
     annotations: { destructiveHint: false, idempotentHint: true },
-  }, async ({ root, profile, isolation, base, worktreePath, branchPattern, decisions }) => toolResult(async () => {
+  }, async ({ root, profile, evidenceRequired, browserForUi, screenshotForUi, codeReview, isolation, base, worktreePath, branchPattern, decisions }) => toolResult(async () => {
     const initialized = await EmpiricalProject.initialize(root ?? defaultRoot, {
       ...(profile ? { profile } : {}),
+      evidence: {
+        ...(evidenceRequired !== undefined ? { required: evidenceRequired } : {}),
+        ...(browserForUi !== undefined ? { browserForUi } : {}),
+        ...(screenshotForUi !== undefined ? { screenshotForUi } : {}),
+        ...(codeReview !== undefined ? { codeReview } : {}),
+      },
       isolation: {
         ...(isolation ? { mode: isolation } : {}),
         ...(base ? { baseBranch: base } : {}),
@@ -121,12 +131,18 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
 
   server.registerTool("empirical_configure", {
     title: "Configure Empirical",
-    description: "Persist worktree isolation and Complex decision-record preferences.",
+    description: "Persist evidence, worktree isolation, and Complex decision-record preferences.",
     inputSchema: { root: z.string().optional(), ...configurationSchema },
     annotations: { destructiveHint: false, idempotentHint: true },
-  }, async ({ root, isolation, base, worktreePath, branchPattern, decisions }) => toolResult(async () => {
+  }, async ({ root, evidenceRequired, browserForUi, screenshotForUi, codeReview, isolation, base, worktreePath, branchPattern, decisions }) => toolResult(async () => {
     const project = await EmpiricalProject.open(root ?? defaultRoot);
     return project.configure({
+      evidence: {
+        ...(evidenceRequired !== undefined ? { required: evidenceRequired } : {}),
+        ...(browserForUi !== undefined ? { browserForUi } : {}),
+        ...(screenshotForUi !== undefined ? { screenshotForUi } : {}),
+        ...(codeReview !== undefined ? { codeReview } : {}),
+      },
       isolation: {
         ...(isolation ? { mode: isolation } : {}),
         ...(base ? { baseBranch: base } : {}),

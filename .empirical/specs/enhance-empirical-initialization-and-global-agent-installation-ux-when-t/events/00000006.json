@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 4,
+  "revision": 6,
+  "previousRevision": 5,
+  "actor": "codex",
+  "summary": "Full verification passed: bun run ci completed typecheck, 98 tests/751 assertions, bundled MCP and broad-installer smoke, and npm package dry-run; real TTY setup and selector sessions also passed, and git diff --check is clean.",
+  "createdAt": "2026-07-30T22:03:53.141Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 6,
+    "activeFeature": "enhance-empirical-initialization-and-global-agent-installation-ux-when-t",
+    "request": "Enhance Empirical initialization and global agent installation UX. When the empirical-init skill initializes or repairs a repository, present a polished settings wizard before persisting configuration. The wizard must expose evidence policy (required criterion evidence, real-browser checks for UI criteria, UI screenshots, and code review), Git/worktree isolation (mode, base branch, sibling path, and branch pattern), Complex decision records, and any other currently configurable safety settings that belong in setup, while keeping internal Fast/Complex routing hidden. Use safe recommended defaults, explain dependencies between toggles, allow review/edit before confirmation, preserve existing settings during repair, and retain equivalent non-interactive MCP/private-CLI inputs. Replace the current five-row empirical install picker with a searchable, scrollable, polished terminal selector modeled on the current vercel-labs/skills npx CLI experience. Expand global skill-install targets from five agents to the broad audited agent catalog supported by the npx skills ecosystem, including names, ids, native global skill roots, detection hints, and remembered/currently-managed selection. Show detected, installed, and destination-path status; preserve exact --agent, --all, --yes, --json reconciliation and marker/path safety. Keep broad skill-install compatibility separate from executable handoff/MCP capabilities so Empirical never claims it can launch or configure a runtime that only accepts skill files. First produce a reviewable specification and an accurate terminal/conversation mockup; do not implement until the user approves.",
+    "profile": "complex",
+    "phase": "review",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Full verification passed: bun run ci completed typecheck, 98 tests/751 assertions, bundled MCP and broad-installer smoke, and npm package dry-run; real TTY setup and selector sessions also passed, and git diff --check is clean.",
+    "implementationActor": "codex",
+    "specDigest": "0238faf694e32960fe8991f514df7b1a9f0bc4d299c726a7c85d9f5b9790d6fe",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "6a7e4c45209d77c010123c12a315230a2c658ebf7a0544e746502f3182ed400c",
+    "evidence": [
+      {
+        "criterionId": "AC-1",
+        "kind": "test",
+        "passed": true,
+        "summary": "CLI setup tests and a real TTY cancellation run proved the full summary/Apply-Customize-Cancel gate occurs before .empirical writes and creates no feature state."
+      },
+      {
+        "criterionId": "AC-2",
+        "kind": "test",
+        "passed": true,
+        "summary": "Setup, CLI, core, and MCP tests persisted all four evidence booleans with all-on first-run defaults."
+      },
+      {
+        "criterionId": "AC-3",
+        "kind": "test",
+        "passed": true,
+        "summary": "Setup rendering and interactive CLI tests covered isolation, resolved/base display, worktree/branch templates, and Complex decisions without profile or repair-limit prompts."
+      },
+      {
+        "criterionId": "AC-4",
+        "kind": "test",
+        "passed": true,
+        "summary": "Core and setup tests proved criterion-off leaves UI values stored/inactive while independent review remains required."
+      },
+      {
+        "criterionId": "AC-5",
+        "kind": "test",
+        "passed": true,
+        "summary": "Interactive CLI and setup validation tests covered section-by-section customization, effective Save/Edit/Cancel review, invalid templates, and mutation-free cancellation."
+      },
+      {
+        "criterionId": "AC-6",
+        "kind": "test",
+        "passed": true,
+        "summary": "Repair tests showed current/Keep presentation, unedited value preservation, and cancellation before integration/context repair."
+      },
+      {
+        "criterionId": "AC-7",
+        "kind": "test",
+        "passed": true,
+        "summary": "Typecheck plus core, private CLI, JSON, and stdio MCP tests passed for partial evidence/isolation/decision inputs and omitted-value preservation."
+      },
+      {
+        "criterionId": "AC-8",
+        "kind": "test",
+        "passed": true,
+        "summary": "Pure 40/80/120-column selector tests and real TTY search/select/Escape sessions verified bounded scrolling, statuses, paths, keys, cursor restoration, and cancellation."
+      },
+      {
+        "criterionId": "AC-9",
+        "kind": "test",
+        "passed": true,
+        "summary": "Catalog tests and a direct comparison to pinned upstream commit 7cb7db64 verified identical 75-id order/paths, 73 global targets, provenance, safe paths, exclusions, and offline runtime."
+      },
+      {
+        "criterionId": "AC-10",
+        "kind": "test",
+        "passed": true,
+        "summary": "Selector and integration tests covered remembered/detected priority, name/id/alias/path search, broad --yes reuse, and empty-selection refusal."
+      },
+      {
+        "criterionId": "AC-11",
+        "kind": "test",
+        "passed": true,
+        "summary": "Temporary-home integration tests passed for 65 unique roots, shared-root reference retention/removal, convergence, unmanaged files/directories, and symlink protection."
+      },
+      {
+        "criterionId": "AC-12",
+        "kind": "test",
+        "passed": true,
+        "summary": "CLI integration tests passed for repeatable --agent/-a, --all, --yes/-y, --json, legacy aliases, canonical reports, empty yes errors, and repeated convergence."
+      },
+      {
+        "criterionId": "AC-13",
+        "kind": "test",
+        "passed": true,
+        "summary": "Catalog and handoff tests proved skill-only CodeBuddy/Cline entries have no MCP/handoff claim and never broaden the five-entry executable handoff registry."
+      },
+      {
+        "criterionId": "AC-14",
+        "kind": "test",
+        "passed": true,
+        "summary": "Human/JSON report tests and bundled smoke verified canonical selected agents, 65 destinations, five skill names, outcomes, verified guidance for five runtimes, and honest unknown guidance."
+      },
+      {
+        "criterionId": "AC-15",
+        "kind": "test",
+        "passed": true,
+        "summary": "Documentation/generated-skill assertions, public help boundary tests, package dry-run, and bundled smoke all passed."
+      }
+    ],
+    "updatedAt": "2026-07-30T22:03:53.141Z"
+  }
+}

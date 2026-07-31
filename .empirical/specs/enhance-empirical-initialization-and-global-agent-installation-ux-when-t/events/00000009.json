@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 4,
+  "revision": 9,
+  "previousRevision": 8,
+  "actor": "agent",
+  "summary": "Final verification passed after review fixes: bun run ci completed typecheck, 100 tests/763 assertions, bundled CLI and MCP smoke, and package dry-run; git diff --check is clean. Selector terminal cleanup and human filesystem-outcome reporting regressions are covered.",
+  "createdAt": "2026-07-30T22:14:02.710Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 9,
+    "activeFeature": "enhance-empirical-initialization-and-global-agent-installation-ux-when-t",
+    "request": "Enhance Empirical initialization and global agent installation UX. When the empirical-init skill initializes or repairs a repository, present a polished settings wizard before persisting configuration. The wizard must expose evidence policy (required criterion evidence, real-browser checks for UI criteria, UI screenshots, and code review), Git/worktree isolation (mode, base branch, sibling path, and branch pattern), Complex decision records, and any other currently configurable safety settings that belong in setup, while keeping internal Fast/Complex routing hidden. Use safe recommended defaults, explain dependencies between toggles, allow review/edit before confirmation, preserve existing settings during repair, and retain equivalent non-interactive MCP/private-CLI inputs. Replace the current five-row empirical install picker with a searchable, scrollable, polished terminal selector modeled on the current vercel-labs/skills npx CLI experience. Expand global skill-install targets from five agents to the broad audited agent catalog supported by the npx skills ecosystem, including names, ids, native global skill roots, detection hints, and remembered/currently-managed selection. Show detected, installed, and destination-path status; preserve exact --agent, --all, --yes, --json reconciliation and marker/path safety. Keep broad skill-install compatibility separate from executable handoff/MCP capabilities so Empirical never claims it can launch or configure a runtime that only accepts skill files. First produce a reviewable specification and an accurate terminal/conversation mockup; do not implement until the user approves.",
+    "profile": "complex",
+    "phase": "review",
+    "status": "waiting",
+    "repairAttempts": 1,
+    "message": "Final verification passed after review fixes: bun run ci completed typecheck, 100 tests/763 assertions, bundled CLI and MCP smoke, and package dry-run; git diff --check is clean. Selector terminal cleanup and human filesystem-outcome reporting regressions are covered.",
+    "implementationActor": "codex",
+    "specDigest": "0238faf694e32960fe8991f514df7b1a9f0bc4d299c726a7c85d9f5b9790d6fe",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "6a7e4c45209d77c010123c12a315230a2c658ebf7a0544e746502f3182ed400c",
+    "evidence": [
+      {
+        "criterionId": "AC-1",
+        "kind": "test",
+        "passed": true,
+        "summary": "First-run forced-interactive tests prove the full recommended preview is shown before persistence, and Escape cancellation leaves both configuration and workflow state absent.",
+        "artifact": "tests/cli-config.test.ts"
+      },
+      {
+        "criterionId": "AC-2",
+        "kind": "test",
+        "passed": true,
+        "summary": "Setup, core, and MCP tests cover all four evidence toggles and verify strict enabled defaults plus durable persistence.",
+        "artifact": "tests/setup.test.ts; tests/core.test.ts; tests/mcp.test.ts"
+      },
+      {
+        "criterionId": "AC-3",
+        "kind": "test",
+        "passed": true,
+        "summary": "Wizard rendering and interaction tests cover isolation, base, sibling path, branch pattern, and decision policy while excluding routing profiles and repair limits.",
+        "artifact": "tests/setup.test.ts; tests/cli-config.test.ts"
+      },
+      {
+        "criterionId": "AC-4",
+        "kind": "test",
+        "passed": true,
+        "summary": "Tests verify criterion-evidence disablement makes test/browser/screenshot policies inactive without erasing stored values and leaves code review independently enforceable.",
+        "artifact": "tests/setup.test.ts; tests/core.test.ts"
+      },
+      {
+        "criterionId": "AC-5",
+        "kind": "test",
+        "passed": true,
+        "summary": "Section-by-section customization, validation, effective review, edit/save flow, and mutation-free cancellation are covered, including conflicting-mode rejection before writes.",
+        "artifact": "tests/cli-config.test.ts; tests/setup.test.ts"
+      },
+      {
+        "criterionId": "AC-6",
+        "kind": "test",
+        "passed": true,
+        "summary": "Repair tests preserve omitted/current values, preview before mutation, and repair integrations only after confirmation.",
+        "artifact": "tests/cli-config.test.ts; tests/core.test.ts"
+      },
+      {
+        "criterionId": "AC-7",
+        "kind": "test",
+        "passed": true,
+        "summary": "TypeScript/core, bundled MCP, JSON, and private CLI surfaces accept equivalent partial setup inputs with correct first-run and repair semantics.",
+        "artifact": "tests/core.test.ts; tests/mcp.test.ts; tests/cli-config.test.ts"
+      },
+      {
+        "criterionId": "AC-8",
+        "kind": "test",
+        "passed": true,
+        "summary": "Selector tests cover width-safe bounded rendering, scroll counts, status/path hints, summaries, filtering, arrows, space, Enter, Escape/Ctrl-C behavior, and terminal cleanup even when rendering throws; isolated real-TTY runs also confirmed search/install and Escape cleanup.",
+        "artifact": "tests/selector.test.ts"
+      },
+      {
+        "criterionId": "AC-9",
+        "kind": "test",
+        "passed": true,
+        "summary": "Catalog tests validate the pinned 7cb7db64 upstream provenance, all 73 global-capable targets, project-only rejection, safe paths, and a runtime with no catalog network or npx dependency.",
+        "artifact": "tests/agent-catalog.test.ts; src/agent-catalog.ts"
+      },
+      {
+        "criterionId": "AC-10",
+        "kind": "test",
+        "passed": true,
+        "summary": "Tests verify remembered/detected/managed prioritization, label/id/alias/path search, and no implicit select-all fallback.",
+        "artifact": "tests/selector.test.ts; tests/integrations.test.ts"
+      },
+      {
+        "criterionId": "AC-11",
+        "kind": "test",
+        "passed": true,
+        "summary": "Integration tests install five skills per selected native root, deduplicate 65 shared destinations, retain shared roots until the last dependent is removed, and preserve unmanaged, symlinked, and unsafe paths.",
+        "artifact": "tests/integrations.test.ts"
+      },
+      {
+        "criterionId": "AC-12",
+        "kind": "test",
+        "passed": true,
+        "summary": "CLI and catalog tests cover repeatable --agent/-a, --all, --yes, --json, original-id aliases, remembered selection, manifest migration, and convergent reruns.",
+        "artifact": "tests/integrations.test.ts; tests/agent-catalog.test.ts"
+      },
+      {
+        "criterionId": "AC-13",
+        "kind": "test",
+        "passed": true,
+        "summary": "Tests prove broad skill targets use a separate registry/type and skill-only targets do not acquire executable handoff or project-MCP claims.",
+        "artifact": "tests/agent-catalog.test.ts; tests/agents.test.ts"
+      },
+      {
+        "criterionId": "AC-14",
+        "kind": "test",
+        "passed": true,
+        "summary": "Human and JSON reports identify selected agents, unique destinations, filesystem outcomes, installed skills, verified guidance, and explicitly unverified capabilities.",
+        "artifact": "tests/integrations.test.ts; scripts/smoke-mcp.ts"
+      },
+      {
+        "criterionId": "AC-15",
+        "kind": "test",
+        "passed": true,
+        "summary": "Documentation/help/generated-skill smoke and npm pack dry-run verify the wizard, catalog, compatibility split, defaults, private equivalents, and packaged declarations are present.",
+        "artifact": "README.md; docs/demo.md; docs/architecture.md; docs/mcp.md; scripts/smoke-mcp.ts"
+      }
+    ],
+    "updatedAt": "2026-07-30T22:14:02.710Z"
+  }
+}
