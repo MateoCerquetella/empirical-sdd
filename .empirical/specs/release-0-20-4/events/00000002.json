@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 2,
+  "previousRevision": 1,
+  "actor": "codex",
+  "summary": "Defined the 0.20.4 public-release contract with six observable criteria covering scoped PR/merge, CI and package integrity, npm publication and latest tag, annotated git tag and GitHub release, clean registry consumption, and final cross-surface convergence. Added a package-distribution capability delta requiring public release surfaces to agree.",
+  "createdAt": "2026-07-31T15:24:55.281Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 2,
+    "activeFeature": "release-0-20-4",
+    "request": "Release the already implemented and verified Empirical CLI branding update as version 0.20.4. Include the complete intended working-tree changes, rerun release validation, commit them on a release branch, push and merge through GitHub with required checks passing, publish empirical-sdd@0.20.4 to npm with the latest dist-tag, create and push the matching annotated v0.20.4 git tag and GitHub release notes, then verify the public npm package, tag, GitHub release, and a clean install. Do not alter feature behavior or include unrelated changes.",
+    "profile": "complex",
+    "phase": "design",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Defined the 0.20.4 public-release contract with six observable criteria covering scoped PR/merge, CI and package integrity, npm publication and latest tag, annotated git tag and GitHub release, clean registry consumption, and final cross-surface convergence. Added a package-distribution capability delta requiring public release surfaces to agree.",
+    "implementationActor": null,
+    "specDigest": "481abe47b2a1f147bd1e35218ce1ccf8e0c13a591ff5c4e37a07baa59cc10749",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "d808a2553e52ea6bff14ea01cdcb4c79c6038241d89219083a7a5fb4462376f2",
+    "evidence": [],
+    "updatedAt": "2026-07-31T15:24:55.281Z"
+  }
+}

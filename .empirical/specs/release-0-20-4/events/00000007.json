@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 4,
+  "revision": 7,
+  "previousRevision": 6,
+  "actor": "codex",
+  "summary": "Completed the 0.20.4 release: PR #8 merged at d43b666 after all three platform checks; merged-source CI and 25-file package validation passed; annotated v0.20.4 peels to d43b666; npm published empirical-sdd@0.20.4 with latest and matching shasum/integrity; a clean registry install passed exact version and help checks; GitHub published the non-draft, non-prerelease Empirical 0.20.4 release; a fresh clean clone of main resolved to the same release commit and version.",
+  "createdAt": "2026-07-31T16:08:04.104Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 7,
+    "activeFeature": "release-0-20-4",
+    "request": "Release the already implemented and verified Empirical CLI branding update as version 0.20.4. Include the complete intended working-tree changes, rerun release validation, commit them on a release branch, push and merge through GitHub with required checks passing, publish empirical-sdd@0.20.4 to npm with the latest dist-tag, create and push the matching annotated v0.20.4 git tag and GitHub release notes, then verify the public npm package, tag, GitHub release, and a clean install. Do not alter feature behavior or include unrelated changes.",
+    "profile": "complex",
+    "phase": "verify",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Completed the 0.20.4 release: PR #8 merged at d43b666 after all three platform checks; merged-source CI and 25-file package validation passed; annotated v0.20.4 peels to d43b666; npm published empirical-sdd@0.20.4 with latest and matching shasum/integrity; a clean registry install passed exact version and help checks; GitHub published the non-draft, non-prerelease Empirical 0.20.4 release; a fresh clean clone of main resolved to the same release commit and version.",
+    "implementationActor": "codex",
+    "specDigest": "481abe47b2a1f147bd1e35218ce1ccf8e0c13a591ff5c4e37a07baa59cc10749",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "d808a2553e52ea6bff14ea01cdcb4c79c6038241d89219083a7a5fb4462376f2",
+    "evidence": [
+      {
+        "criterionId": "AC-1",
+        "kind": "review",
+        "passed": true,
+        "summary": "The 33-file scoped source PR merged normally at d43b666 after successful Ubuntu, macOS, and Windows CI.",
+        "artifact": "https://github.com/MateoCerquetella/empirical-sdd/pull/8"
+      },
+      {
+        "criterionId": "AC-2",
+        "kind": "test",
+        "passed": true,
+        "summary": "At merged commit d43b666, bun run ci and git diff --check exited 0; package/runtime versions were 0.20.4 and dry-run package inspection reported 25 files."
+      },
+      {
+        "criterionId": "AC-3",
+        "kind": "test",
+        "passed": true,
+        "summary": "npm exposes empirical-sdd@0.20.4 under latest with SHA-1 c54cf994b7ba7b96fbe2ceb9e68e0ec35e5969f4 and the tested SHA-512 integrity; registry tarball inspection found exactly the 25 declared files.",
+        "artifact": "https://www.npmjs.com/package/empirical-sdd/v/0.20.4"
+      },
+      {
+        "criterionId": "AC-4",
+        "kind": "review",
+        "passed": true,
+        "summary": "Remote annotated v0.20.4 peels to source merge d43b666 and the published GitHub Release documents identity, responsive color behavior, automation safety, validation, and installation.",
+        "artifact": "https://github.com/MateoCerquetella/empirical-sdd/releases/tag/v0.20.4"
+      },
+      {
+        "criterionId": "AC-5",
+        "kind": "test",
+        "passed": true,
+        "summary": "A fresh temporary npm consumer installed the exact public version; empirical --version returned only 0.20.4 and captured help contained one banner before lifecycle guidance with no ANSI bytes.",
+        "artifact": "https://registry.npmjs.org/empirical-sdd/-/empirical-sdd-0.20.4.tgz"
+      },
+      {
+        "criterionId": "AC-6",
+        "kind": "review",
+        "passed": true,
+        "summary": "A fresh clean clone had zero status bytes at d43b666, version 0.20.4, and contained the tagged merge; npm latest and the GitHub release/tag independently resolved to 0.20.4."
+      }
+    ],
+    "updatedAt": "2026-07-31T16:08:04.104Z"
+  }
+}

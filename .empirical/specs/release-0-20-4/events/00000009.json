@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 4,
+  "revision": 9,
+  "previousRevision": 8,
+  "actor": "codex",
+  "summary": "Reviewed the release diff, pull-request scope, public artifacts, and all accepted decisions. The source PR contains exactly 33 intended branding/version/evidence files and excludes the live release workflow; diff hygiene is clean; D-001 merge-source, D-002 follow-up evidence separation, and D-003 tag→npm→GitHub ordering were followed without contradiction. No blockers or release inconsistencies found.",
+  "createdAt": "2026-07-31T16:08:53.029Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 9,
+    "activeFeature": "release-0-20-4",
+    "request": "Release the already implemented and verified Empirical CLI branding update as version 0.20.4. Include the complete intended working-tree changes, rerun release validation, commit them on a release branch, push and merge through GitHub with required checks passing, publish empirical-sdd@0.20.4 to npm with the latest dist-tag, create and push the matching annotated v0.20.4 git tag and GitHub release notes, then verify the public npm package, tag, GitHub release, and a clean install. Do not alter feature behavior or include unrelated changes.",
+    "profile": "complex",
+    "phase": "archive",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Reviewed the release diff, pull-request scope, public artifacts, and all accepted decisions. The source PR contains exactly 33 intended branding/version/evidence files and excludes the live release workflow; diff hygiene is clean; D-001 merge-source, D-002 follow-up evidence separation, and D-003 tag→npm→GitHub ordering were followed without contradiction. No blockers or release inconsistencies found.",
+    "implementationActor": "codex",
+    "specDigest": "481abe47b2a1f147bd1e35218ce1ccf8e0c13a591ff5c4e37a07baa59cc10749",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "d808a2553e52ea6bff14ea01cdcb4c79c6038241d89219083a7a5fb4462376f2",
+    "evidence": [
+      {
+        "criterionId": "AC-1",
+        "kind": "review",
+        "passed": true,
+        "summary": "The 33-file scoped source PR merged normally at d43b666 after successful Ubuntu, macOS, and Windows CI.",
+        "artifact": "https://github.com/MateoCerquetella/empirical-sdd/pull/8"
+      },
+      {
+        "criterionId": "AC-2",
+        "kind": "test",
+        "passed": true,
+        "summary": "At merged commit d43b666, bun run ci and git diff --check exited 0; package/runtime versions were 0.20.4 and dry-run package inspection reported 25 files."
+      },
+      {
+        "criterionId": "AC-3",
+        "kind": "test",
+        "passed": true,
+        "summary": "npm exposes empirical-sdd@0.20.4 under latest with SHA-1 c54cf994b7ba7b96fbe2ceb9e68e0ec35e5969f4 and the tested SHA-512 integrity; registry tarball inspection found exactly the 25 declared files.",
+        "artifact": "https://www.npmjs.com/package/empirical-sdd/v/0.20.4"
+      },
+      {
+        "criterionId": "AC-4",
+        "kind": "review",
+        "passed": true,
+        "summary": "Remote annotated v0.20.4 peels to source merge d43b666 and the published GitHub Release documents identity, responsive color behavior, automation safety, validation, and installation.",
+        "artifact": "https://github.com/MateoCerquetella/empirical-sdd/releases/tag/v0.20.4"
+      },
+      {
+        "criterionId": "AC-5",
+        "kind": "test",
+        "passed": true,
+        "summary": "A fresh temporary npm consumer installed the exact public version; empirical --version returned only 0.20.4 and captured help contained one banner before lifecycle guidance with no ANSI bytes.",
+        "artifact": "https://registry.npmjs.org/empirical-sdd/-/empirical-sdd-0.20.4.tgz"
+      },
+      {
+        "criterionId": "AC-6",
+        "kind": "review",
+        "passed": true,
+        "summary": "A fresh clean clone had zero status bytes at d43b666, version 0.20.4, and contained the tagged merge; npm latest and the GitHub release/tag independently resolved to 0.20.4."
+      },
+      {
+        "criterionId": "AC-1",
+        "kind": "test",
+        "passed": true,
+        "summary": "Queried PR #8: state MERGED, merge d43b666, and completed SUCCESS results for Ubuntu, macOS, and Windows; reviewed file list remained the scoped 33-file release diff.",
+        "artifact": "https://github.com/MateoCerquetella/empirical-sdd/actions/runs/30643342332"
+      },
+      {
+        "criterionId": "AC-2",
+        "kind": "test",
+        "passed": true,
+        "summary": "Executed bun run ci and git diff --check at d43b666 with exit 0; package.json, dist CLI, and dry-run artifact all reported 0.20.4 and exactly 25 package files."
+      },
+      {
+        "criterionId": "AC-3",
+        "kind": "test",
+        "passed": true,
+        "summary": "Queried live npm metadata: exact version and latest are 0.20.4; downloaded tarball SHA-1 c54cf994b7ba7b96fbe2ceb9e68e0ec35e5969f4 and SHA-512 integrity match publication; tar listed 25 declared files.",
+        "artifact": "https://www.npmjs.com/package/empirical-sdd/v/0.20.4"
+      },
+      {
+        "criterionId": "AC-4",
+        "kind": "test",
+        "passed": true,
+        "summary": "git ls-remote proved annotated tag v0.20.4 peels to d43b666; gh release view proved the release is published, non-draft, non-prerelease, and includes the required feature/validation/install notes.",
+        "artifact": "https://github.com/MateoCerquetella/empirical-sdd/releases/tag/v0.20.4"
+      },
+      {
+        "criterionId": "AC-5",
+        "kind": "test",
+        "passed": true,
+        "summary": "Installed empirical-sdd@0.20.4 from npm into a newly created temporary consumer; installed empirical --version returned exactly 0.20.4 and help assertion found one version banner before Lifecycle with no ANSI bytes.",
+        "artifact": "https://registry.npmjs.org/empirical-sdd/-/empirical-sdd-0.20.4.tgz"
+      },
+      {
+        "criterionId": "AC-6",
+        "kind": "test",
+        "passed": true,
+        "summary": "Cloned public main into a new temporary checkout: HEAD was d43b666, git status emitted zero bytes, package version was 0.20.4, and tagged release commit was its ancestor; npm latest and GitHub release independently returned 0.20.4."
+      },
+      {
+        "criterionId": "AC-1",
+        "kind": "review",
+        "passed": true,
+        "summary": "PR file-list review found exactly 33 intended files, no release-0-20-4 workflow files, no unrelated changes, and three successful required checks before merge.",
+        "artifact": "https://github.com/MateoCerquetella/empirical-sdd/pull/8"
+      },
+      {
+        "criterionId": "AC-2",
+        "kind": "review",
+        "passed": true,
+        "summary": "Reviewed the merged commit and release outputs: CI, diff hygiene, version surfaces, package identifier, 25-file manifest, and integrity are consistent with 0.20.4."
+      },
+      {
+        "criterionId": "AC-3",
+        "kind": "review",
+        "passed": true,
+        "summary": "Reviewed live npm version/latest metadata, shasum, integrity, and tarball file list; all agree with the tested artifact.",
+        "artifact": "https://www.npmjs.com/package/empirical-sdd/v/0.20.4"
+      },
+      {
+        "criterionId": "AC-4",
+        "kind": "review",
+        "passed": true,
+        "summary": "Reviewed annotated-tag peel and published release metadata/notes; tag source and documented behavior match the accepted release decision.",
+        "artifact": "https://github.com/MateoCerquetella/empirical-sdd/releases/tag/v0.20.4"
+      },
+      {
+        "criterionId": "AC-5",
+        "kind": "review",
+        "passed": true,
+        "summary": "Reviewed the independent consumer assertions and outputs: exact version, one banner, correct ordering, lifecycle surface present, and no ANSI escapes."
+      },
+      {
+        "criterionId": "AC-6",
+        "kind": "review",
+        "passed": true,
+        "summary": "Reviewed cross-surface convergence and clean-clone evidence; D-001 through D-003 were implemented exactly and require no superseding decision."
+      }
+    ],
+    "updatedAt": "2026-07-31T16:08:53.029Z"
+  }
+}
