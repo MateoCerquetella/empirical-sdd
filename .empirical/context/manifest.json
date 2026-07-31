@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "digest": "e0ce9dd1f448663e0878c1e34d844c475a1be3b0a10a6f1ca757327e41895903",
+  "digest": "2903df8ae0aa1682689f9b0dc6ef962dddee936b07fd0b4b2b882a3819b6450c",
   "files": [
     {
       "path": ".codex/config.toml",
@@ -100,7 +100,7 @@
     {
       "path": "package.json",
       "size": 1430,
-      "digest": "b66471f28b56a693832c39fa8510a313540756a85facfdb49009c45e41dbd1b3"
+      "digest": "ce04854708c650b6e115e90955d8c77c3c8324e042dadd6ba6411022c90a4e21"
     },
     {
       "path": "scripts/build.ts",
@@ -119,8 +119,8 @@
     },
     {
       "path": "scripts/smoke-mcp.ts",
-      "size": 12453,
-      "digest": "1b38f5feccba57078b93b114d1b3e9f6ff7b75e7b4493591840331acf5ad69fb"
+      "size": 12805,
+      "digest": "9af5cb9055f88208131c3ce2ad497bfa08d566e6e7064bdb5bd21c1e83a7a234"
     },
     {
       "path": "scripts/test-package.ts",
@@ -138,14 +138,19 @@
       "digest": "f2a8f3812d7b7f818841426ea352ea310cfbfcf10510c7be29664de8740b9740"
     },
     {
+      "path": "src/branding.ts",
+      "size": 2900,
+      "digest": "bb2a810891ebd1144a4a8b674ee7f4598f88d703b5d042f36bd1971a1f02f0fb"
+    },
+    {
       "path": "src/checkouts.ts",
       "size": 5319,
       "digest": "3d38bce5c0b391623c14799a31d57416bd98c07489ad4ca00e9db3dceecbe722"
     },
     {
       "path": "src/cli.ts",
-      "size": 57058,
-      "digest": "07cb997508e4c9f5e8b5241d606c71c93f6dae8f440bf4a64ef9927e183b87e7"
+      "size": 57135,
+      "digest": "b20e3c6e04b3f319c1a21327e0787018a9f813d04aeeca18f2debb8e77561a22"
     },
     {
       "path": "src/core.ts",
@@ -215,7 +220,7 @@
     {
       "path": "src/types.ts",
       "size": 8929,
-      "digest": "c625f744f91cb9a6a1d3a54e84de02685c3effbd42bbf82bdebce184ed356cf1"
+      "digest": "f97c56be22917e6fe6d22914b3c108654834672d93c61024aec6362501fe0cb6"
     },
     {
       "path": "src/worktrees.ts",
@@ -229,8 +234,13 @@
     },
     {
       "path": "tests/agents.test.ts",
-      "size": 4967,
-      "digest": "4d3e1ffdeba4bc325b03083e78309a6cd695b4821ad5f59c788b1be52c597f13"
+      "size": 5085,
+      "digest": "7b7acc702cbf8429e3389faf82042d4ebb36467ac32c09104812e60503cd8966"
+    },
+    {
+      "path": "tests/branding.test.ts",
+      "size": 2791,
+      "digest": "ddae54c376d25b6b820d0c312d23fc15b9481c3403f08a1f25213f4240aef08d"
     },
     {
       "path": "tests/cli-config.test.ts",
@@ -240,7 +250,7 @@
     {
       "path": "tests/core.test.ts",
       "size": 31451,
-      "digest": "ce05804a47127932b56932702298a3c9a575d27b39c304a7e312d340de931e1f"
+      "digest": "0820aace0373aeae51c3daf89e324dd8e3bc1ff0c007e2b1323566df196ec349"
     },
     {
       "path": "tests/discovery.test.ts",
@@ -249,8 +259,8 @@
     },
     {
       "path": "tests/integrations.test.ts",
-      "size": 21962,
-      "digest": "2302a84a77c15aaee18cbab408e001bd330e8a2100b72e163b8515f2beb797a0"
+      "size": 22787,
+      "digest": "a6d5f368752dff8dae6d38316d568af196061d2263fcfa596d98c1204c3dba80"
     },
     {
       "path": "tests/knowledge.test.ts",
@@ -284,8 +294,8 @@
     },
     {
       "path": "tests/worktree-isolation.test.ts",
-      "size": 12047,
-      "digest": "927d572085cdb33de4b58f80a9524c03ec6a4047a63a3ec240b0d81d8a78c666"
+      "size": 12136,
+      "digest": "c3369ca5d258e247bcea8735658a996404421d7dbda733875e47f100dc5297db"
     },
     {
       "path": "tsconfig.json",

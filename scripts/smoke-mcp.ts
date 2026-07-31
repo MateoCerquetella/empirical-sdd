@@ -20,7 +20,7 @@ const transport = new StdioClientTransport({
 const client = new Client({ name: "empirical-dist-smoke", version: "1.0.0" });
 
 async function runCli(directory: string, args: string[], env?: Record<string, string>) {
-  const publicCommand = ["help", "--help", "-h", "--version", "-v", "install", "update"].includes(args[0] ?? "");
+  const publicCommand = args.length === 0 || ["help", "--help", "-h", "version", "--version", "-v", "install", "update"].includes(args[0] ?? "");
   const child = Bun.spawn(["node", cli, ...(publicCommand ? args : ["__internal", ...args]), "--root", directory], {
     stdout: "pipe",
     stderr: "pipe",
@@ -179,15 +179,25 @@ Run existing and new sign-in tests.
     throw new Error(`Bundled real-worktree handoff failed: ${gitCli.stderr}`);
   }
 
-  const version = await runCli(root, ["--version"]);
   const packageJson = JSON.parse(await readFile(resolve(import.meta.dir, "../package.json"), "utf8")) as { version: string };
-  if (version.stdout.trim() !== packageJson.version || packageJson.version !== "0.20.3") {
-    throw new Error(`Bundled/package version mismatch: cli=${JSON.stringify(version.stdout.trim())} package=${JSON.stringify(packageJson.version)} stderr=${JSON.stringify(version.stderr)}`);
+  for (const args of [["version"], ["--version"], ["-v"]]) {
+    const version = await runCli(root, args);
+    if (version.stdout !== "0.20.4\n" || packageJson.version !== "0.20.4") {
+      throw new Error(`Bundled/package version mismatch: cli=${JSON.stringify(version.stdout)} package=${JSON.stringify(packageJson.version)} stderr=${JSON.stringify(version.stderr)}`);
+    }
   }
-  const help = await runCli(root, ["help"]);
-  if (!help.stdout.includes("empirical install") || !help.stdout.includes("empirical update")) throw new Error("Bundled help omitted lifecycle UX");
-  for (const hidden of ["empirical init", "empirical explore", "empirical fast", "empirical complex", "empirical loop"]) {
-    if (help.stdout.includes(hidden)) throw new Error(`Bundled help exposed internal operation ${hidden}`);
+  for (const args of [[], ["help"], ["--help"], ["-h"]]) {
+    const help = await runCli(root, args);
+    if (
+      !help.stdout.includes("╭───╯    ╰───╮")
+      || !help.stdout.includes("empirical v0.20.4")
+      || help.stdout.includes("\u001b[")
+      || !help.stdout.includes("empirical install")
+      || !help.stdout.includes("empirical update")
+    ) throw new Error(`Bundled help omitted plain branded lifecycle UX: ${help.stdout}`);
+    for (const hidden of ["empirical init", "empirical explore", "empirical fast", "empirical complex", "empirical loop"]) {
+      if (help.stdout.includes(hidden)) throw new Error(`Bundled help exposed internal operation ${hidden}`);
+    }
   }
 
   const installed = await runCli(root, ["install", "--all", "--json"], {

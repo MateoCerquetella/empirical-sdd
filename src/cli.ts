@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 import { createInterface } from "node:readline";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { renderBrandBannerForOutput } from "./branding.js";
 import { EmpiricalProject } from "./core.js";
 import {
   buildRefinedRequest,
@@ -1132,7 +1133,7 @@ async function readStdin(): Promise<string> {
 }
 
 function printHelp(): void {
-  console.log(`Empirical v${PRODUCT_VERSION}
+  console.log(`${renderBrandBannerForOutput(PRODUCT_VERSION)}
 
 Install once: npm install -g empirical-sdd
 

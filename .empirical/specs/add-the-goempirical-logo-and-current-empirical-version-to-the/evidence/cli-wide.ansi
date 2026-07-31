@@ -1,0 +1,33 @@
+^D[38;2;74;92;255m       ╭────╮[0m
+[38;2;74;92;255m       │    │[0m
+[38;2;255;205;21m   ╭───[0m[38;2;74;92;255m╯    ╰[0m[38;2;244;55;55m───╮[0m    empirical
+[38;2;255;205;21m   │[0m            [38;2;244;55;55m│[0m    v0.20.4
+[38;2;255;205;21m   ╰───╮[0m    [38;2;244;55;55m╭───╯[0m
+       [38;2;255;205;21m╰──[0m[38;2;244;55;55m──╯[0m
+
+Install once: npm install -g empirical-sdd
+
+Lifecycle:
+  empirical install            Choose agents in an interactive selector
+  empirical update             Update the package and refresh installed skills
+
+Installer automation:
+  empirical install --agent codex --agent cursor   (repeatable; -a alias)
+  empirical install --agent claude        Legacy alias for claude-code
+  empirical install --all
+  empirical install --yes                 Remembered/detected set (-y alias)
+  empirical install --all --json          Structured deterministic report
+
+The searchable installer uses a pinned local catalog of 73 global skill targets,
+remembers explicit selections, and performs no runtime network or npx calls.
+
+Repository work happens inside your coding agent through five installed skills:
+  empirical                    Automatic end-to-end routing and execution
+  empirical-init               Initialize or repair repository setup only
+  empirical-spec               Draft a concrete specification, then stop
+  empirical-socratic           Interview, draft a specification, then stop
+  empirical-loop               Resume an approved specification to completion
+
+Agents use native syntax such as $empirical in Codex, /empirical in Claude Code,
+and @empirical in Windsurf. Init, Spec, Socratic, and Loop are agent skills, not
+terminal commands. Fast and Complex remain internal routing profiles.
