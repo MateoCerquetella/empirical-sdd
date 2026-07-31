@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 3,
+  "previousRevision": 2,
+  "actor": "codex",
+  "summary": "Designed a two-PR release flow: ship only the completed product diff through a checked source PR, tag and publish its merge commit, verify npm/GitHub/clean-install surfaces, then preserve post-publication Empirical evidence in a no-runtime follow-up PR. Accepted decisions require a reviewed merge source, immutable annotated tag before npm, and GitHub release creation only after registry success.",
+  "createdAt": "2026-07-31T15:27:28.090Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 3,
+    "activeFeature": "release-0-20-4",
+    "request": "Release the already implemented and verified Empirical CLI branding update as version 0.20.4. Include the complete intended working-tree changes, rerun release validation, commit them on a release branch, push and merge through GitHub with required checks passing, publish empirical-sdd@0.20.4 to npm with the latest dist-tag, create and push the matching annotated v0.20.4 git tag and GitHub release notes, then verify the public npm package, tag, GitHub release, and a clean install. Do not alter feature behavior or include unrelated changes.",
+    "profile": "complex",
+    "phase": "plan",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Designed a two-PR release flow: ship only the completed product diff through a checked source PR, tag and publish its merge commit, verify npm/GitHub/clean-install surfaces, then preserve post-publication Empirical evidence in a no-runtime follow-up PR. Accepted decisions require a reviewed merge source, immutable annotated tag before npm, and GitHub release creation only after registry success.",
+    "implementationActor": null,
+    "specDigest": "481abe47b2a1f147bd1e35218ce1ccf8e0c13a591ff5c4e37a07baa59cc10749",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "d808a2553e52ea6bff14ea01cdcb4c79c6038241d89219083a7a5fb4462376f2",
+    "evidence": [],
+    "updatedAt": "2026-07-31T15:27:28.090Z"
+  }
+}
