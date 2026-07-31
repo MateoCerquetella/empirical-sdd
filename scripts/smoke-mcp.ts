@@ -181,7 +181,7 @@ Run existing and new sign-in tests.
 
   const version = await runCli(root, ["--version"]);
   const packageJson = JSON.parse(await readFile(resolve(import.meta.dir, "../package.json"), "utf8")) as { version: string };
-  if (version.stdout.trim() !== packageJson.version || packageJson.version !== "0.20.2") {
+  if (version.stdout.trim() !== packageJson.version || packageJson.version !== "0.20.3") {
     throw new Error(`Bundled/package version mismatch: cli=${JSON.stringify(version.stdout.trim())} package=${JSON.stringify(packageJson.version)} stderr=${JSON.stringify(version.stderr)}`);
   }
   const help = await runCli(root, ["help"]);
@@ -194,9 +194,21 @@ Run existing and new sign-in tests.
     HOME: skillHome,
     USERPROFILE: skillHome,
   });
-  const integration = JSON.parse(installed.stdout) as { created?: string[]; entrypoints?: Array<{ invocations: string[] }> };
-  if (installed.code !== 0 || integration.created?.length !== 25 || integration.entrypoints?.some((entry) => entry.invocations.length !== 5)) {
-    throw new Error(`Bundled five-skill install failed: ${installed.stderr}`);
+  const integration = JSON.parse(installed.stdout) as {
+    created?: string[];
+    selected?: string[];
+    destinations?: string[];
+    entrypoints?: Array<{ skills: string[]; invocations: string[]; guidanceVerified: boolean }>;
+  };
+  if (
+    installed.code !== 0
+    || integration.created?.length !== 326
+    || integration.selected?.length !== 73
+    || integration.destinations?.length !== 65
+    || integration.entrypoints?.filter((entry) => entry.guidanceVerified).length !== 5
+    || integration.entrypoints?.some((entry) => entry.skills.length !== 5)
+  ) {
+    throw new Error(`Bundled broad five-skill install failed: ${installed.stderr}`);
   }
   for (const name of ["empirical", "empirical-init", "empirical-spec", "empirical-socratic", "empirical-loop"]) {
     const skill = await readFile(join(skillHome, ".codex", "skills", name, "SKILL.md"), "utf8");
@@ -205,7 +217,7 @@ Run existing and new sign-in tests.
     }
   }
 
-  console.log("Bundled 0.20 five-skill help, discovery, workflow, context, handoff, worktree, CLI, and MCP smoke passed.");
+  console.log("Bundled 0.20 broad five-skill help, discovery, workflow, context, handoff, worktree, CLI, and MCP smoke passed.");
 } finally {
   await client.close();
   await Promise.all([...createdWorktrees, root, complexRoot, gitRoot, skillHome].map((path) => rm(path, { recursive: true, force: true })));

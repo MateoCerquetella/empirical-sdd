@@ -8,6 +8,7 @@ import { EmpiricalError } from "../src/errors.js";
 import {
   EMPIRICAL_AGENT_SKILL_NAMES,
   installGlobalAgentSkills,
+  managedGlobalAgentIds,
 } from "../src/integrations.js";
 import type { IntegrationReport } from "../src/types.js";
 
@@ -101,17 +102,22 @@ describe("agent integrations", () => {
     const report = await installGlobalAgentSkills(home, { all: true, pathValue: "" });
 
     expect(report.scope).toBe("global");
-    expect(report.created).toHaveLength(25);
+    expect(report.selected).toHaveLength(73);
+    expect(report.destinations).toHaveLength(65);
+    expect(report.created).toHaveLength(326);
     expect(report.updated).toEqual([]);
     expect(report.removed).toEqual([]);
     expect(report.preserved).toEqual([]);
-    expect(report.entrypoints.map((entrypoint) => entrypoint.artifactRoot)).toEqual(
-      globalRoots.map((segments) => join(home, ...segments)),
-    );
-    expect(report.entrypoints.every((entrypoint) => entrypoint.invocations.length === 5)).toBe(true);
+    expect(report.entrypoints).toHaveLength(73);
+    expect(report.entrypoints.filter((entrypoint) => entrypoint.guidanceVerified)).toHaveLength(5);
+    expect(report.entrypoints.filter((entrypoint) => entrypoint.guidanceVerified)
+      .every((entrypoint) => entrypoint.invocations.length === 5)).toBe(true);
+    expect(report.entrypoints.find((entrypoint) => entrypoint.id === "codebuddy")).toMatchObject({
+      invocations: [], guidanceVerified: false, projectMcp: false, handoff: false,
+    });
     expect(report.entrypoints.find((entrypoint) => entrypoint.id === "codex")?.invocations)
       .toEqual(["$empirical", "$empirical-init", "$empirical-spec", "$empirical-socratic", "$empirical-loop"]);
-    expect(report.entrypoints.find((entrypoint) => entrypoint.id === "claude")?.invocations)
+    expect(report.entrypoints.find((entrypoint) => entrypoint.id === "claude-code")?.invocations)
       .toEqual(["/empirical", "/empirical-init", "/empirical-spec", "/empirical-socratic", "/empirical-loop"]);
     expect(report.entrypoints.find((entrypoint) => entrypoint.id === "windsurf")?.invocations)
       .toEqual(["@empirical", "@empirical-init", "@empirical-spec", "@empirical-socratic", "@empirical-loop"]);
@@ -129,6 +135,10 @@ describe("agent integrations", () => {
         .toContain("automatic end-to-end path");
       expect(await readFile(join(home, ...segments, "empirical-init", "SKILL.md"), "utf8"))
         .toMatch(/must not create a\s+feature/);
+      expect(await readFile(join(home, ...segments, "empirical-init", "SKILL.md"), "utf8"))
+        .toContain("Apply recommended settings, Customize, and Cancel");
+      expect(await readFile(join(home, ...segments, "empirical-init", "SKILL.md"), "utf8"))
+        .toContain("evidenceRequired, browserForUi, screenshotForUi, codeReview");
       expect(await readFile(join(home, ...segments, "empirical-spec", "SKILL.md"), "utf8"))
         .toMatch(/Do not call\s+empirical_complete/);
       expect(await readFile(join(home, ...segments, "empirical-socratic", "SKILL.md"), "utf8"))
@@ -148,6 +158,8 @@ describe("agent integrations", () => {
     expect(repeated.updated).toEqual([]);
     expect(repeated.removed).toEqual([]);
     expect(repeated.preserved).toEqual([]);
+    expect(JSON.parse(await readFile(join(home, ".empirical-sdd", "integrations.json"), "utf8")))
+      .toMatchObject({ managedBy: "empirical-sdd", selected: report.selected });
   });
 
   test("global refresh updates current managed skills, removes managed legacy skills, and preserves unmanaged collisions", async () => {
@@ -197,7 +209,7 @@ describe("agent integrations", () => {
 
     const report = await installGlobalAgentSkills(home, { agents: ["codex", "cursor"], pathValue: "" });
     expect(report.entrypoints.map((entrypoint) => entrypoint.id)).toEqual(["codex", "cursor"]);
-    expect(report.removed).toHaveLength(15);
+    expect(report.removed).toHaveLength(315);
     expect(report.removed).toEqual(expect.arrayContaining([
       ".claude/skills/empirical/SKILL.md",
       ".claude/skills/empirical-init/SKILL.md",
@@ -212,6 +224,45 @@ describe("agent integrations", () => {
       .toContain("name: empirical");
     await expect(readFile(join(home, ".claude", "skills", "empirical", "SKILL.md"), "utf8"))
       .rejects.toBeDefined();
+  });
+
+  test("shared roots are reconciled once and remain until the last selected target leaves", async () => {
+    const home = await temporaryDirectory("empirical-global-shared-");
+    const shared = join(home, ".config", "agents", "skills");
+    const first = await installGlobalAgentSkills(home, { agents: ["amp", "replit"], pathValue: "" });
+    expect(first.entrypoints.map((entrypoint) => entrypoint.id)).toEqual(["amp", "replit"]);
+    expect(first.destinations).toEqual([shared]);
+    expect(first.created).toHaveLength(6);
+
+    const survivor = await installGlobalAgentSkills(home, { agents: ["amp"], pathValue: "" });
+    expect(survivor.removed).toEqual([]);
+    expect(await readFile(join(shared, "empirical", "SKILL.md"), "utf8")).toContain("name: empirical");
+    expect(await managedGlobalAgentIds(home)).toEqual(["amp"]);
+
+    const metadataPath = join(home, ".empirical-sdd", "integrations.json");
+    const previousCatalog = JSON.parse(await readFile(metadataPath, "utf8")) as Record<string, unknown>;
+    previousCatalog.catalogCommit = "0000000000000000000000000000000000000000";
+    await writeFile(metadataPath, `${JSON.stringify(previousCatalog, null, 2)}\n`, "utf8");
+    expect(await managedGlobalAgentIds(home)).toEqual(["amp"]);
+    const migratedMetadata = await installGlobalAgentSkills(home, { agents: ["amp"], pathValue: "" });
+    expect(migratedMetadata.updated).toContain(".empirical-sdd/integrations.json");
+
+    const lastRemoved = await installGlobalAgentSkills(home, { agents: ["codex"], pathValue: "" });
+    expect(lastRemoved.removed).toHaveLength(5);
+    await expect(readFile(join(shared, "empirical", "SKILL.md"), "utf8")).rejects.toBeDefined();
+  });
+
+  test("legacy aliases canonicalize, project-only targets fail, and unmanaged selection metadata is preserved", async () => {
+    const home = await temporaryDirectory("empirical-global-aliases-");
+    const metadata = join(home, ".empirical-sdd", "integrations.json");
+    await mkdir(join(metadata, ".."), { recursive: true });
+    await writeFile(metadata, "{\"owner\":\"mine\"}\n", "utf8");
+    const report = await installGlobalAgentSkills(home, { agents: ["claude", "gemini"], pathValue: "" });
+    expect(report.selected).toEqual(["claude-code", "gemini-cli"]);
+    expect(report.preserved).toContain(".empirical-sdd/integrations.json (unmanaged or incompatible selection metadata)");
+    expect(await readFile(metadata, "utf8")).toBe("{\"owner\":\"mine\"}\n");
+    await expect(installGlobalAgentSkills(home, { agents: ["eve"], pathValue: "" }))
+      .rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
   });
 
   test("global refresh does not follow skill or parent-directory symbolic links", async () => {
@@ -256,9 +307,12 @@ describe("agent integrations", () => {
     });
     expect(human.status).toBe(0);
     expect(human.stderr).toBe("");
-    expect(human.stdout).toContain("reconciled 5 selected agents (25 created");
+    expect(human.stdout).toContain("reconciled 73 selected agents (326 created");
+    expect(human.stdout).toContain("Filesystem outcomes:");
+    expect(human.stdout).toContain("Created (326)");
     expect(human.stdout).toContain("Installed Empirical agent skills:");
-    expect(human.stdout).toContain(`Codex (${join(home, ".codex", "skills")}): $empirical`);
+    expect(human.stdout).toContain(`Codex (${join(home, ".codex", "skills")})`);
+    expect(human.stdout).toContain("Invoke: $empirical");
     expect(human.stdout).toContain("$empirical-socratic, $empirical-loop");
     expect(human.stdout).toContain("Windsurf");
     expect(human.stdout).not.toContain("$empirical-explore");
@@ -272,8 +326,9 @@ describe("agent integrations", () => {
     const report = JSON.parse(json.stdout) as Awaited<ReturnType<typeof installGlobalAgentSkills>>;
     expect(report.scope).toBe("global");
     expect(report.created).toEqual([]);
-    expect(report.entrypoints).toHaveLength(5);
-    expect(report.entrypoints.every((entrypoint) => entrypoint.invocations.length === 5)).toBe(true);
+    expect(report.entrypoints).toHaveLength(73);
+    expect(report.destinations).toHaveLength(65);
+    expect(report.entrypoints.filter((entrypoint) => entrypoint.guidanceVerified)).toHaveLength(5);
     await expect(lstat(join(cwd, ".empirical"))).rejects.toBeDefined();
   });
 
@@ -314,6 +369,12 @@ describe("agent integrations", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("AGENT_SELECTION_REQUIRED");
     expect(result.stderr).toContain("--agent <name>");
+    const yes = spawnSync(process.execPath, [cli, "install", "--yes"], {
+      encoding: "utf8",
+      env: { ...process.env, HOME: home, USERPROFILE: home, PATH: "" },
+    });
+    expect(yes.status).toBe(1);
+    expect(yes.stderr).toContain("AGENT_SELECTION_REQUIRED");
   });
 
   test("repeatable agent flags install the exact selection", async () => {
@@ -327,7 +388,7 @@ describe("agent integrations", () => {
     });
     expect(result.status).toBe(0);
     const report = JSON.parse(result.stdout) as Awaited<ReturnType<typeof installGlobalAgentSkills>>;
-    expect(report.entrypoints.map((entrypoint) => entrypoint.id)).toEqual(["codex", "gemini"]);
+    expect(report.entrypoints.map((entrypoint) => entrypoint.id)).toEqual(["codex", "gemini-cli"]);
   });
 
   test("yes mode preserves detected agents without prompting", async () => {
@@ -341,5 +402,20 @@ describe("agent integrations", () => {
     expect(result.status).toBe(0);
     expect((JSON.parse(result.stdout) as IntegrationReport).entrypoints.map((entrypoint) => entrypoint.id))
       .toEqual(["codex"]);
+  });
+
+  test("yes mode reuses a remembered broad selection without detecting it", async () => {
+    const home = await temporaryDirectory("empirical-global-remembered-");
+    const cli = join(import.meta.dir, "..", "src", "cli.ts");
+    const env = { ...process.env, HOME: home, USERPROFILE: home, PATH: "" };
+    const selected = spawnSync(process.execPath, [cli, "install", "--agent", "codebuddy", "--json"], {
+      encoding: "utf8", env,
+    });
+    expect(selected.status).toBe(0);
+    const refreshed = spawnSync(process.execPath, [cli, "install", "--yes", "--json"], {
+      encoding: "utf8", env,
+    });
+    expect(refreshed.status).toBe(0);
+    expect((JSON.parse(refreshed.stdout) as IntegrationReport).selected).toEqual(["codebuddy"]);
   });
 });

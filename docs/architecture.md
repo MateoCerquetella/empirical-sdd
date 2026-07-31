@@ -19,13 +19,20 @@ one committed `.empirical/` model.
   durable drafts, and exact approved briefs.
 - `src/agents.ts` owns supported-agent detection, launch capability metadata,
   approval-bound handoff options, and integrity tokens.
+- `src/agent-catalog.ts` owns the pinned 75-entry skill-install compatibility
+  snapshot (73 global targets), aliases, safe native roots, and conservative
+  detection hints. It performs no fetch or telemetry.
 - `src/checkouts.ts` owns checkout-local feature selection in per-worktree Git
   metadata and cross-checkout claim discovery.
 - `src/knowledge.ts` owns the bounded, deterministic, secret-safe repository
   inventory and compact Markdown context set.
-- `src/integrations.ts` reconciles the installer's exact agent selection,
-  removes marker-owned legacy commands, and preserves project runtime bridges.
-- `src/selector.ts` owns the dependency-free interactive multi-agent selector.
+- `src/integrations.ts` reconciles canonical selected ids and unique physical
+  destinations, records `~/.empirical-sdd/integrations.json`, removes
+  marker-owned legacy commands, and preserves project runtime bridges.
+- `src/selector.ts` owns the dependency-free searchable, bounded, width-safe
+  multi-agent selector.
+- `src/setup.ts` owns strict setup defaults, validation, and the shared summary
+  model used before private interactive initialization.
 - `src/lifecycle.ts` owns the package-update then integration-refresh sequence.
 - `src/cli.ts` and `src/mcp.ts` adapt the same core API; they do not implement a
   second workflow.
@@ -66,10 +73,23 @@ and Complex remain internal profiles. The public CLI exposes only installation
 and update; MCP and the TypeScript API expose workflow operations as automation
 primitives.
 
-The generated catalog is reconciled into each native global skill root. Current
-and legacy names share marker ownership and path-safety checks, so repository
-initialization can remove stale managed local shadows without deleting unmanaged
-extensions.
+The global skill catalog, project MCP bridges, and executable handoff registry
+are separate compatibility layers. A selected skill-only target receives the
+five generated files but gains no inferred command syntax, MCP configuration,
+or launch capability. Canonical selected ids are persisted separately from
+marker-owned files because several ids share `.agents/skills`,
+`.config/agents/skills`, or `.zencoder/skills`. Reconciliation groups normalized
+roots and removes a root only when no selected id references it. Current and
+legacy names share marker ownership and path-safety checks, so initialization
+can remove stale managed local shadows without deleting unmanaged extensions.
+
+Before in-agent initialization mutates a repository, the generated Init
+contract renders recommended or current Verification, Parallel work, and
+Decisions settings. Apply/Keep, Customize, and Cancel form the first gate;
+customization ends with Save/Edit/Cancel. The TypeScript API, MCP tools, and
+private CLI carry the same partial evidence, isolation, and decision fields.
+All four evidence settings default on. Criterion evidence controls test and UI
+sub-gates, while code review remains independent.
 
 Repository knowledge is file-backed under `.empirical/context/`. The generated
 manifest includes only normalized paths, sizes, and content digests from a

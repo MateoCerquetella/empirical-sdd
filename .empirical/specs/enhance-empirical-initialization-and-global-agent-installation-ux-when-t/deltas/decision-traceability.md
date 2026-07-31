@@ -1,11 +1,11 @@
-# Decision Traceability Specification
+# Decision Traceability
 
 ## Purpose
 
 Make material implementation decisions explainable and reviewable without
-capturing private model reasoning.
+capturing private model reasoning, under an explicit project policy.
 
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Complex changes record material decisions
 
@@ -28,24 +28,3 @@ transcripts, or token-level reasoning.
 - **WHEN** setup or reconfiguration saves Complex decision records as `off`
 - **THEN** later Complex transitions honor that persisted choice
 - **AND** no unrelated evidence or acceptance gate is weakened
-
-### Requirement: Review enforces decision alignment
-
-Review MUST compare the implementation with accepted decisions and MUST require
-an explicit superseding entry when later evidence changes a material choice.
-
-#### Scenario: Implementation deviates from an accepted decision
-
-- **WHEN** Review finds a contradictory implementation without a superseding decision
-- **THEN** completion is rejected and routed back to implementation
-
-### Requirement: Explain exposes deterministic rationale
-
-Empirical SHALL expose a read-only human and structured explanation of current
-state, next-action reason, required and missing context, stop/proceed gate, and
-accepted decision summaries.
-
-#### Scenario: A developer asks why Empirical is waiting
-
-- **WHEN** the developer invokes Explain
-- **THEN** the result identifies the observable gate and evidence without disclosing hidden model reasoning

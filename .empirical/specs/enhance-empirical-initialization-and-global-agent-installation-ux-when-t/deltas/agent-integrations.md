@@ -1,12 +1,11 @@
-# Agent Integrations Specification
+# Agent Integrations
 
 ## Purpose
 
-Make Empirical workflows discoverable and safely invocable either from one
-repository or globally across a developer's projects using each supported
-agent's native extension mechanism.
+Make Empirical workflows discoverable and safely invocable across a broad set
+of agent skill hosts without confusing file compatibility with runtime control.
 
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Explicit global skill installation
 
@@ -73,37 +72,6 @@ from the ability to read skill files.
 - **THEN** the report confirms the five installed skills and destination
 - **AND** it makes no launch or MCP claim and does not invent invocation syntax
 
-### Requirement: Native user-invocable workflow entrypoints
-
-The system SHALL expose five global Empirical skills per selected agent. The
-automatic `empirical` skill MUST route end to end. `empirical-init` MUST only
-initialize or repair repository context. `empirical-spec` MUST draft concrete
-Complex specification artifacts and wait for approval. `empirical-socratic`
-MUST conduct and persist five-pass discovery, draft the approved Complex
-specification, and wait for approval. `empirical-loop` MUST only resume selected
-work through a terminal workflow result. Every skill MUST use MCP first and MAY
-use only the private internal transport as fallback.
-
-#### Scenario: A developer chooses an explicit specification path
-
-- **WHEN** the developer invokes Spec or Socratic in a supported agent
-- **THEN** the current agent produces a reviewable specification and stops
-- **AND** Loop can continue it after explicit approval without rerouting the request
-
-### Requirement: Honest command discovery report
-
-Normal help and README MUST present only `empirical install`, `empirical
-update`, and native in-agent skill invocations. Direct state-machine verbs MUST
-be rejected as human terminal commands. MCP, the TypeScript API, and a private
-internal CLI transport MAY retain workflow operations for installed agents and
-compatibility.
-
-#### Scenario: A developer asks for terminal help
-
-- **WHEN** the developer runs `empirical --help`
-- **THEN** terminal commands remain limited to Install and Update
-- **AND** Init, Spec, Socratic, and Loop are described as in-agent skills rather than CLI verbs
-
 ### Requirement: Update converges package and integrations
 
 `empirical update` MUST install `empirical-sdd@latest` and invoke the newly
@@ -133,6 +101,8 @@ no active workflow exists.
 - **WHEN** the user invokes `empirical-init` in a supported host
 - **THEN** the host presents the effective settings and waits for confirmation
 - **AND** cancelling leaves configuration and workflow state unchanged
+
+## ADDED Requirements
 
 ### Requirement: Installation, MCP, and handoff capabilities are distinct
 

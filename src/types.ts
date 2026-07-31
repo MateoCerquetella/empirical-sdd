@@ -1,5 +1,5 @@
 export const SCHEMA_VERSION = 4 as const;
-export const PRODUCT_VERSION = "0.20.2";
+export const PRODUCT_VERSION = "0.20.3";
 export const POLICY_SCHEMA_VERSION = 1 as const;
 
 export type Workflow = "fast" | "complex";
@@ -55,6 +55,7 @@ export interface ProjectConfig {
 }
 
 export interface ProjectConfigurationInput {
+  evidence?: Partial<ProjectConfig["evidence"]>;
   isolation?: Partial<IsolationConfig>;
   decisions?: Partial<DecisionConfig>;
   setupComplete?: boolean;
@@ -292,6 +293,8 @@ export interface TransitionEvent {
 
 export interface IntegrationReport {
   scope: "project" | "global";
+  selected: import("./agent-catalog.js").AgentSkillTargetId[];
+  destinations: string[];
   created: string[];
   updated: string[];
   removed: string[];
@@ -302,12 +305,16 @@ export interface IntegrationReport {
 export type AgentIntegrationId = "codex" | "claude" | "cursor" | "gemini" | "windsurf";
 
 export interface AgentEntrypointReport {
-  id: AgentIntegrationId;
+  id: import("./agent-catalog.js").AgentSkillTargetId;
   agent: string;
   kind: "skill" | "slash-command";
   artifactRoot: string;
+  skills: string[];
   invocations: string[];
   reload: string;
+  guidanceVerified: boolean;
+  projectMcp: boolean;
+  handoff: boolean;
 }
 
 export type AgentLaunchCapability = "prompt" | "workspace";

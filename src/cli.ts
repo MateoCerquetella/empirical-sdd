@@ -20,11 +20,31 @@ import {
   type SocraticAnswer,
 } from "./discovery.js";
 import { EmpiricalError, asErrorMessage } from "./errors.js";
-import { SUPPORTED_AGENTS, detectSupportedAgents } from "./agents.js";
-import { installGlobalAgentSkills, managedGlobalAgentIds } from "./integrations.js";
+import {
+  agentSkillTarget,
+  detectAgentSkillTargets,
+  globalAgentSkillTargets,
+  resolveAgentSkillTargetId,
+  type AgentSkillTargetDefinition,
+  type AgentSkillTargetId,
+} from "./agent-catalog.js";
+import {
+  installGlobalAgentSkills,
+  installedGlobalAgentIds,
+  managedGlobalAgentIds,
+} from "./integrations.js";
 import { updateEmpirical } from "./lifecycle.js";
 import { runMcpServer } from "./mcp.js";
 import { selectAgentsInteractive, type AgentSelectorItem } from "./selector.js";
+import {
+  recommendedSetupSettings,
+  renderSetupSummary,
+  setupConfigurationInput,
+  setupSettingsFromConfig,
+  validateSetupSettings,
+  type SetupSettings,
+} from "./setup.js";
+import { ProjectStore } from "./storage.js";
 import { detectBase } from "./worktrees.js";
 import {
   PRODUCT_VERSION,
@@ -76,20 +96,18 @@ async function main(): Promise<void> {
         throw new EmpiricalError("INVALID_ARGUMENT", "Choose only one of --agent, --all, or --yes");
       }
       assertNoArgs(context.args, "install");
-      const supportedIds = new Set(SUPPORTED_AGENTS.map((agent) => agent.id));
-      const invalid = requested.find((id) => !supportedIds.has(id as AgentIntegrationId));
-      if (invalid) throw new EmpiricalError("INVALID_ARGUMENT", `Unsupported agent '${invalid}'`);
       const home = homedir();
-      const detectedIds = new Set((await detectSupportedAgents({ homeRoot: home })).map((agent) => agent.id));
-      const managedIds = new Set(await managedGlobalAgentIds(home));
-      let agents: AgentIntegrationId[];
+      const detectedIds = new Set(await detectAgentSkillTargets({ homeRoot: home }));
+      const rememberedIds = new Set(await managedGlobalAgentIds(home));
+      const installedIds = new Set(await installedGlobalAgentIds(home));
+      let agents: AgentSkillTargetId[];
       if (requested.length > 0) {
-        agents = [...new Set(requested)] as AgentIntegrationId[];
+        agents = resolveCliAgentIds(requested);
       } else if (all) {
-        agents = SUPPORTED_AGENTS.map((agent) => agent.id);
+        agents = globalAgentSkillTargets().map((agent) => agent.id);
       } else if (yes) {
-        agents = SUPPORTED_AGENTS
-          .filter((agent) => detectedIds.has(agent.id) || managedIds.has(agent.id))
+        agents = globalAgentSkillTargets()
+          .filter((agent) => detectedIds.has(agent.id) || rememberedIds.has(agent.id))
           .map((agent) => agent.id);
         if (agents.length === 0) {
           throw new EmpiricalError("AGENT_SELECTION_REQUIRED", "No detected or previously installed agents. Use empirical install --agent <name> or --all.");
@@ -101,15 +119,18 @@ async function main(): Promise<void> {
             "Interactive selection requires a terminal. Use --agent <name> (repeatable), --all, or --yes.",
           );
         }
-        const items: AgentSelectorItem[] = SUPPORTED_AGENTS.map((agent) => ({
+        const items: AgentSelectorItem[] = globalAgentSkillTargets().map((agent) => ({
           id: agent.id,
-          label: agent.agent,
+          label: agent.label,
+          aliases: (agent as AgentSkillTargetDefinition).aliases ?? [],
+          destination: agent.globalSkillPath,
           detected: detectedIds.has(agent.id),
-          managed: managedIds.has(agent.id),
+          managed: installedIds.has(agent.id),
+          remembered: rememberedIds.has(agent.id),
         }));
         try {
-          agents = await selectAgentsInteractive(items, SUPPORTED_AGENTS
-            .filter((agent) => detectedIds.has(agent.id) || managedIds.has(agent.id))
+          agents = await selectAgentsInteractive(items, globalAgentSkillTargets()
+            .filter((agent) => detectedIds.has(agent.id) || rememberedIds.has(agent.id))
             .map((agent) => agent.id));
         } catch (error) {
           throw new EmpiricalError("INSTALL_CANCELLED", asErrorMessage(error));
@@ -131,34 +152,39 @@ async function main(): Promise<void> {
         throw new EmpiricalError("INVALID_ARGUMENT", "--interactive cannot be combined with --defaults or --json");
       }
       const configuration = readConfigurationFlags(context.args);
+      if (forceInteractive && configuration.explicit) {
+        throw new EmpiricalError("INVALID_ARGUMENT", "--interactive cannot be combined with configuration flags");
+      }
+      if (defaults && configuration.explicit) {
+        throw new EmpiricalError("INVALID_ARGUMENT", "--defaults cannot be combined with configuration flags");
+      }
       assertNoArgs(context.args, "init");
       const existingConfiguration = await readFile(
         join(context.root, ".empirical", "config.json"),
         "utf8",
       ).then(() => true, () => false);
-      const setupComplete = forceInteractive
-        ? existingConfiguration ? undefined : false
-        : defaults || configuration.explicit || context.json
-          || !(process.stdin.isTTY && process.stdout.isTTY);
+      const interactive = !context.json
+        && !defaults
+        && !configuration.explicit
+        && (forceInteractive || Boolean(process.stdin.isTTY && process.stdout.isTTY));
+      const chosenConfiguration = interactive
+        ? await interactiveConfiguration(
+          context.root,
+          existingConfiguration ? await new ProjectStore(context.root).loadConfig() : null,
+        )
+        : configuration.input;
       const initialized = await EmpiricalProject.initialize(context.root, {
         ...(profile ? { profile } : {}),
         integrations,
-        ...configuration.input,
-        ...(setupComplete !== undefined ? { setupComplete } : {}),
+        ...chosenConfiguration,
+        setupComplete: true,
       });
-      let config = await initialized.project.config();
-      if (
-        !config.setupComplete
-        && !context.json
-        && (forceInteractive || Boolean(process.stdin.isTTY && process.stdout.isTTY))
-      ) {
-        config = await initialized.project.configure(await interactiveConfiguration(initialized.project, config));
-      }
+      const config = await initialized.project.config();
       emit(
         { state: initialized.state, config, integrations: initialized.integrations, next: await initialized.project.next() },
         context.json,
         () => renderIntegrationReport(`Empirical ${PRODUCT_VERSION} is ready in ${initialized.project.store.root}.`, initialized.integrations)
-          + `\n\nIsolation: ${config.isolation.mode}; base: ${config.isolation.baseBranch}; path: ${config.isolation.worktreePath}; branch: ${config.isolation.branchPattern}; Complex decisions: ${config.decisions.complexRecords}.`,
+          + `\n\n${renderSetupSummary(setupSettingsFromConfig(config), { current: true })}`,
       );
       return;
     }
@@ -169,15 +195,21 @@ async function main(): Promise<void> {
         throw new EmpiricalError("INVALID_ARGUMENT", "--interactive cannot be combined with --defaults or --json");
       }
       const configuration = readConfigurationFlags(context.args);
+      if (forceInteractive && configuration.explicit) {
+        throw new EmpiricalError("INVALID_ARGUMENT", "--interactive cannot be combined with configuration flags");
+      }
+      if (defaults && configuration.explicit) {
+        throw new EmpiricalError("INVALID_ARGUMENT", "--defaults cannot be combined with configuration flags");
+      }
       assertNoArgs(context.args, "config");
       const project = await EmpiricalProject.open(context.root);
       const current = await project.config();
       const input = defaults
         ? defaultConfiguration()
         : configuration.explicit
-          ? { ...configuration.input, setupComplete: true }
+            ? { ...configuration.input, setupComplete: true }
           : (forceInteractive || Boolean(process.stdin.isTTY && process.stdout.isTTY)) && !context.json
-            ? await interactiveConfiguration(project, current)
+            ? await interactiveConfiguration(project.store.root, current)
             : (() => { throw new EmpiricalError("CONFIG_REQUIRED", "Use configuration flags, --defaults, or an interactive terminal"); })();
       const config = await project.configure(input);
       emit(config, context.json, renderConfig);
@@ -495,31 +527,117 @@ class LinePrompter {
 }
 
 async function interactiveConfiguration(
-  project: EmpiricalProject,
-  current: Awaited<ReturnType<EmpiricalProject["config"]>>,
+  root: string,
+  current: Awaited<ReturnType<EmpiricalProject["config"]>> | null,
 ): Promise<ProjectConfigurationInput> {
   const prompt = new LinePrompter();
-  let detected = current.isolation.baseBranch;
-  if (detected === "auto") {
-    try { detected = detectBase(project.store.root); } catch { detected = "auto"; }
+  let settings = current ? setupSettingsFromConfig(current) : recommendedSetupSettings();
+  let resolvedBase: string | undefined;
+  if (settings.isolation.baseBranch === "auto") {
+    try { resolvedBase = detectBase(root); } catch { resolvedBase = undefined; }
   }
-  console.log("\nEmpirical first-run setup · press Enter to keep each shown value.");
+  console.log(`\n${renderSetupSummary(settings, { current: Boolean(current), ...(resolvedBase ? { resolvedBase } : {}) })}`);
   try {
-    const mode = await askDefault(prompt, `Isolation when another feature is active [${current.isolation.mode}] (ask/off): `, current.isolation.mode);
-    if (mode !== "ask" && mode !== "off") throw new EmpiricalError("INVALID_CONFIG", "Isolation must be ask or off");
-    const baseBranch = await askDefault(prompt, `Default Git base [${detected}]: `, detected);
-    const worktreePath = await askDefault(prompt, `Sibling worktree path [${current.isolation.worktreePath}]: `, current.isolation.worktreePath);
-    const branchPattern = await askDefault(prompt, `Branch pattern [${current.isolation.branchPattern}]: `, current.isolation.branchPattern);
-    const complexRecords = await askDefault(prompt, `Complex decision records [${current.decisions.complexRecords}] (required/off): `, current.decisions.complexRecords);
-    if (complexRecords !== "required" && complexRecords !== "off") throw new EmpiricalError("INVALID_CONFIG", "Complex decisions must be required or off");
-    return {
-      isolation: { mode, baseBranch, worktreePath, branchPattern },
-      decisions: { complexRecords },
-      setupComplete: true,
-    };
+    const primary = current ? "keep" : "apply";
+    console.log("\n◇ Use these settings?");
+    console.log(`│  ● ${current ? "Keep current settings" : "Apply recommended settings"} (default)`);
+    console.log("│  ○ Customize");
+    console.log("│  ○ Cancel");
+    const firstChoice = await askEnumDefault(
+      prompt,
+      `Choice [${primary}]: `,
+      primary,
+      new Set([primary, current ? "k" : "a", "customize", "c", "cancel", "x", "q"]),
+    );
+    if (["cancel", "x", "q"].includes(firstChoice)) throw setupCancelled();
+    if (firstChoice === primary || firstChoice === (current ? "k" : "a")) {
+      return setupConfigurationInput(settings);
+    }
+
+    while (true) {
+      settings = await customizeSetup(prompt, settings);
+      try {
+        validateSetupSettings(settings);
+      } catch (error) {
+        console.log(`\n! ${asErrorMessage(error)}\nPlease review the setup sections again.`);
+        continue;
+      }
+      console.log(`\n${renderSetupSummary(settings, { current: false, effective: true, ...(resolvedBase ? { resolvedBase } : {}) })}`);
+      console.log("\n◇ Save these effective settings?");
+      console.log("│  ● Save (default)");
+      console.log("│  ○ Edit");
+      console.log("│  ○ Cancel");
+      const finalChoice = await askEnumDefault(
+        prompt,
+        "Choice [save]: ",
+        "save",
+        new Set(["save", "s", "edit", "e", "cancel", "x", "q"]),
+      );
+      if (finalChoice === "save" || finalChoice === "s") return setupConfigurationInput(settings);
+      if (["cancel", "x", "q"].includes(finalChoice)) throw setupCancelled();
+    }
   } finally {
     prompt.close();
   }
+}
+
+async function customizeSetup(prompt: LinePrompter, current: SetupSettings): Promise<SetupSettings> {
+  console.log("\n◆ Verification policy · enter on or off; stored UI values remain when criterion evidence is off.");
+  const required = await askOnOff(prompt, "Acceptance-test evidence", current.evidence.required);
+  const browserForUi = await askOnOff(prompt, "Browser evidence for [UI]", current.evidence.browserForUi);
+  const screenshotForUi = await askOnOff(prompt, "Screenshot artifacts for [UI]", current.evidence.screenshotForUi);
+  const codeReview = await askOnOff(prompt, "Independent code-review evidence", current.evidence.codeReview);
+
+  console.log("\n◆ Parallel work");
+  const mode = await askEnumDefault(
+    prompt,
+    `Isolation when another feature is active [${current.isolation.mode}] (ask/off): `,
+    current.isolation.mode,
+    new Set(["ask", "off"]),
+  ) as "ask" | "off";
+  let { baseBranch, worktreePath, branchPattern } = current.isolation;
+  if (mode === "ask") {
+    baseBranch = await askDefault(prompt, `Default Git base [${baseBranch}]: `, baseBranch);
+    worktreePath = await askDefault(prompt, `Sibling worktree path [${worktreePath}]: `, worktreePath);
+    branchPattern = await askDefault(prompt, `Branch pattern [${branchPattern}]: `, branchPattern);
+  } else {
+    console.log("Worktree base and templates are inactive and will keep their stored values.");
+  }
+
+  console.log("\n◆ Decisions");
+  const complexRecords = await askEnumDefault(
+    prompt,
+    `Complex decision records [${current.decisions.complexRecords}] (required/off): `,
+    current.decisions.complexRecords,
+    new Set(["required", "off"]),
+  ) as "required" | "off";
+  return {
+    evidence: { required, browserForUi, screenshotForUi, codeReview },
+    isolation: { mode, baseBranch, worktreePath, branchPattern },
+    decisions: { complexRecords },
+  };
+}
+
+async function askOnOff(prompt: LinePrompter, label: string, current: boolean): Promise<boolean> {
+  const fallback = current ? "on" : "off";
+  return await askEnumDefault(prompt, `${label} [${fallback}] (on/off): `, fallback, new Set(["on", "off"])) === "on";
+}
+
+async function askEnumDefault(
+  prompt: LinePrompter,
+  question: string,
+  fallback: string,
+  allowed: Set<string>,
+): Promise<string> {
+  while (true) {
+    const answer = (await prompt.ask(question)).toLowerCase() || fallback;
+    if (allowed.has(answer)) return answer;
+    console.log(`! Choose one of: ${[...allowed].join(", ")}.`);
+  }
+}
+
+function setupCancelled(): EmpiricalError {
+  return new EmpiricalError("SETUP_CANCELLED", "Empirical setup was cancelled before any repository changes were made");
 }
 
 async function runSocraticInterview(
@@ -749,6 +867,10 @@ function parseGlobals(argv: string[]): CliContext {
 }
 
 function readConfigurationFlags(args: string[]): { input: ProjectConfigurationInput; explicit: boolean } {
+  const evidenceRequired = takeOnOffOption(args, "--evidence");
+  const browserForUi = takeOnOffOption(args, "--ui-browser");
+  const screenshotForUi = takeOnOffOption(args, "--ui-screenshot");
+  const codeReview = takeOnOffOption(args, "--code-review");
   const mode = takeOption(args, "--isolation");
   if (mode && mode !== "ask" && mode !== "off") throw new EmpiricalError("INVALID_CONFIG", "--isolation must be ask or off");
   const baseBranch = takeOption(args, "--base");
@@ -756,10 +878,21 @@ function readConfigurationFlags(args: string[]): { input: ProjectConfigurationIn
   const branchPattern = takeOption(args, "--branch-pattern");
   const complexRecords = takeOption(args, "--decisions");
   if (complexRecords && complexRecords !== "required" && complexRecords !== "off") throw new EmpiricalError("INVALID_CONFIG", "--decisions must be required or off");
-  const explicit = Boolean(mode || baseBranch || worktreePath || branchPattern || complexRecords);
+  const explicit = [evidenceRequired, browserForUi, screenshotForUi, codeReview]
+    .some((value) => value !== undefined)
+    || Boolean(mode || baseBranch || worktreePath || branchPattern || complexRecords);
   return {
     explicit,
     input: {
+      ...(evidenceRequired !== undefined || browserForUi !== undefined
+        || screenshotForUi !== undefined || codeReview !== undefined
+        ? { evidence: {
+          ...(evidenceRequired !== undefined ? { required: evidenceRequired } : {}),
+          ...(browserForUi !== undefined ? { browserForUi } : {}),
+          ...(screenshotForUi !== undefined ? { screenshotForUi } : {}),
+          ...(codeReview !== undefined ? { codeReview } : {}),
+        } }
+        : {}),
       ...(mode || baseBranch || worktreePath || branchPattern ? { isolation: {
         ...(mode ? { mode: mode as "ask" | "off" } : {}),
         ...(baseBranch ? { baseBranch } : {}),
@@ -771,12 +904,34 @@ function readConfigurationFlags(args: string[]): { input: ProjectConfigurationIn
   };
 }
 
+function resolveCliAgentIds(values: string[]): AgentSkillTargetId[] {
+  const resolved = new Set<AgentSkillTargetId>();
+  for (const value of values) {
+    const id = resolveAgentSkillTargetId(value);
+    if (!id) throw new EmpiricalError("INVALID_ARGUMENT", `Unsupported agent '${value}'`);
+    const target = agentSkillTarget(id);
+    if (target.globalSkillPath === null) {
+      throw new EmpiricalError(
+        "INVALID_ARGUMENT",
+        `Agent '${value}' cannot be installed globally: ${target.exclusionReason}`,
+      );
+    }
+    resolved.add(id);
+  }
+  return globalAgentSkillTargets().filter((target) => resolved.has(target.id)).map((target) => target.id);
+}
+
 function defaultConfiguration(): ProjectConfigurationInput {
-  return {
-    isolation: { mode: "ask", baseBranch: "auto", worktreePath: "../{repo}-{feature}", branchPattern: "{type}/{feature}" },
-    decisions: { complexRecords: "required" },
-    setupComplete: true,
-  };
+  return setupConfigurationInput(recommendedSetupSettings());
+}
+
+function takeOnOffOption(args: string[], name: string): boolean | undefined {
+  const value = takeOption(args, name);
+  if (value === undefined) return undefined;
+  if (value !== "on" && value !== "off") {
+    throw new EmpiricalError("INVALID_CONFIG", `${name} must be on or off`);
+  }
+  return value === "on";
 }
 
 async function completionInput(args: string[]): Promise<CompletionInput> {
@@ -862,16 +1017,55 @@ function renderIntegrationReport(summary: string, report: IntegrationReport): st
       ? `${summary}\n\nNo supported agents were detected. Install an agent or run empirical install --all.`
       : `${summary}\n\nNo project-local workflow skills are installed; the global Empirical skills own the UX.`;
   }
-  const lines = [summary, "", "Installed Empirical agent skills:"];
+  const lines = [
+    summary,
+    "",
+    `Selected agents (${report.selected.length}): ${report.entrypoints.map((entry) => entry.agent).join(", ")}`,
+    `Unique destinations (${report.destinations.length}):`,
+    ...report.destinations.map((destination) => `- ${destination}`),
+    "",
+    "Filesystem outcomes:",
+    renderOutcome("Created", report.created),
+    renderOutcome("Updated", report.updated),
+    renderOutcome("Removed", report.removed),
+    renderOutcome("Preserved", report.preserved, true),
+    "",
+    "Installed Empirical agent skills:",
+  ];
   for (const entry of report.entrypoints) {
-    lines.push(`- ${entry.agent} (${entry.artifactRoot}): ${entry.invocations.join(", ")}`, `  Reload: ${entry.reload}`);
+    lines.push(`- ${entry.agent} (${entry.artifactRoot})`);
+    lines.push(`  Skills: ${entry.skills.join(", ")}`);
+    if (entry.guidanceVerified) {
+      lines.push(`  Invoke: ${entry.invocations.join(", ")}`, `  Reload: ${entry.reload}`);
+    } else {
+      lines.push(`  ${entry.reload}`);
+    }
+    lines.push(`  Project MCP support: ${entry.projectMcp ? "verified" : "not claimed"}; executable handoff: ${entry.handoff ? "verified" : "not claimed"}.`);
   }
   return lines.join("\n");
 }
 
+function renderOutcome(label: string, paths: string[], includeAll = false): string {
+  if (paths.length === 0) return `- ${label} (0): none`;
+  const shown = includeAll ? paths : paths.slice(0, 5);
+  const remaining = paths.length - shown.length;
+  return `- ${label} (${paths.length}): ${shown.join(", ")}${remaining > 0 ? ` … +${remaining} more (use --json for every path)` : ""}`;
+}
+
 function renderConfig(value: unknown): string {
   const config = value as Awaited<ReturnType<EmpiricalProject["config"]>>;
-  return `Empirical configuration saved.\nIsolation: ${config.isolation.mode}\nBase: ${config.isolation.baseBranch}\nWorktree path: ${config.isolation.worktreePath}\nBranch pattern: ${config.isolation.branchPattern}\nComplex decisions: ${config.decisions.complexRecords}`;
+  return [
+    "Empirical configuration saved.",
+    `Criterion evidence: ${config.evidence.required ? "on" : "off"}`,
+    `UI browser evidence: ${config.evidence.browserForUi ? "on" : "off"}${config.evidence.required ? "" : " (inactive while criterion evidence is off)"}`,
+    `UI screenshot evidence: ${config.evidence.screenshotForUi ? "on" : "off"}${config.evidence.required ? "" : " (inactive while criterion evidence is off)"}`,
+    `Code review evidence: ${config.evidence.codeReview ? "on" : "off"}`,
+    `Isolation: ${config.isolation.mode}`,
+    `Base: ${config.isolation.baseBranch}`,
+    `Worktree path: ${config.isolation.worktreePath}`,
+    `Branch pattern: ${config.isolation.branchPattern}`,
+    `Complex decisions: ${config.decisions.complexRecords}`,
+  ].join("\n");
 }
 
 function renderAgentHandoffOffer(value: unknown): string {
@@ -947,9 +1141,14 @@ Lifecycle:
   empirical update             Update the package and refresh installed skills
 
 Installer automation:
-  empirical install --agent codex --agent cursor
+  empirical install --agent codex --agent cursor   (repeatable; -a alias)
+  empirical install --agent claude        Legacy alias for claude-code
   empirical install --all
-  empirical install --yes
+  empirical install --yes                 Remembered/detected set (-y alias)
+  empirical install --all --json          Structured deterministic report
+
+The searchable installer uses a pinned local catalog of 73 global skill targets,
+remembers explicit selections, and performs no runtime network or npx calls.
 
 Repository work happens inside your coding agent through five installed skills:
   empirical                    Automatic end-to-end routing and execution

@@ -7,8 +7,11 @@ npm install -g empirical-sdd
 empirical install
 ```
 
-Select agents, reload them, and use one of the five installed skills. No
-project-local workflow skill is added.
+Type to search the 73-target local catalog, use arrows and Space to choose, and
+press Enter. Detected, remembered, and already installed targets appear first
+with their native destinations. Empirical writes the five skills once per
+unique root; no project-local workflow skill is added and installation performs
+no runtime network request.
 
 ## Initialize deliberately
 
@@ -16,9 +19,20 @@ In Codex:
 
 > `$empirical-init`
 
-The agent inspects the repository, asks only material isolation or decision
-questions, repairs partial setup, builds compact context, and stops without
-creating feature state.
+The agent first inspects without writing and shows:
+
+```text
+◆ Empirical setup
+│  Verification: criterion tests, UI browser, UI screenshots, code review
+│  Parallel work: ask; base auto; ../{repo}-{feature}; {type}/{feature}
+│  Decisions: require reviewable Complex decision records
+◇ Apply recommended settings · Customize · Cancel
+```
+
+Customize visits each section and finishes with Save, Edit, or Cancel. Existing
+repositories show current values and default to Keep. Only after confirmation
+does the agent repair runtime bridges, persist settings, build compact context,
+and stop without creating feature state. Cancellation writes nothing.
 
 ## Small concrete contract
 
@@ -69,6 +83,7 @@ only in its original checkout.
 empirical update
 ```
 
-This upgrades the package and refreshes all five managed skills for detected or
-already managed agents. The only other public terminal command is
+This upgrades the package and refreshes all five managed skills for remembered,
+detected, or legacy-managed agents without selecting new catalog entries. The
+only other public terminal command is
 `empirical install`.

@@ -18,9 +18,10 @@ async function temporaryDirectory(prefix: string): Promise<string> {
 }
 
 async function executable(directory: string, name: string): Promise<string> {
-  const path = join(directory, name);
-  await writeFile(path, "#!/bin/sh\nexit 99\n", "utf8");
-  await chmod(path, 0o755);
+  const windows = process.platform === "win32";
+  const path = join(directory, windows ? `${name}.CMD` : name);
+  await writeFile(path, windows ? "@exit /b 99\r\n" : "#!/bin/sh\nexit 99\n", "utf8");
+  if (!windows) await chmod(path, 0o755);
   return path;
 }
 

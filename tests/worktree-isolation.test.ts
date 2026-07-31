@@ -116,7 +116,8 @@ describe("Git worktree isolation", () => {
       revision: 1,
       action: { kind: "action", request, phase: "implement" },
     });
-    expect(git(root, ["worktree", "list", "--porcelain"])).toContain(`worktree ${proposed.path}`);
+    const listedWorktrees = git(root, ["worktree", "list", "--porcelain"]).replaceAll("\\", "/");
+    expect(listedWorktrees).toContain(`worktree ${proposed.path.replaceAll("\\", "/")}`);
     expect(git(proposed.path, ["branch", "--show-current"])).toBe(proposed.branch);
     expect(JSON.parse(await readFile(join(proposed.path, ".empirical/specs", proposed.feature, "state.json"), "utf8")))
       .toMatchObject({ activeFeature: proposed.feature, request, revision: 1 });

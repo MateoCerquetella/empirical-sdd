@@ -13,9 +13,10 @@ Empirical exposes its internal workflow API over stdio:
 }
 ```
 
-The five globally installed agent skills own the user experience. Project
-initialization preserves or creates runtime MCP configuration but does not add
-project-local workflow skills.
+The five Empirical skills can be installed into 73 global agent targets. Skill
+file compatibility does not imply MCP or executable handoff support. Project
+initialization preserves or creates the explicitly supported runtime MCP
+configuration but does not add project-local workflow skills.
 
 ## Tool groups
 
@@ -34,8 +35,11 @@ project-local workflow skills.
 
 ## Agent contract
 
-1. Initialize in the current runtime when needed, then retrieve only relevant
-   compact repository context.
+1. Before initialization, inspect current/default settings without writing,
+   show Verification, Parallel work, and Decisions, and offer Apply/Keep,
+   Customize, or Cancel. Customize ends with a complete Save/Edit/Cancel review.
+   Only after confirmation call `empirical_init`, then retrieve relevant compact
+   repository context.
 2. Resume selected non-terminal work before interpreting attached request text
    as new work.
 3. For genuine ambiguity or explicit Socratic use, conduct the five passes one
@@ -66,3 +70,18 @@ material follow-up when another answer is required.
 Worktree proposal, Explain, and handoff proposal are read-only. Worktree
 creation is destructive and requires literal approval. API/MCP setup uses
 deterministic defaults and never opens a terminal prompt.
+
+## Setup configuration
+
+`empirical_init` and `empirical_configure` accept equivalent optional fields:
+
+- `evidenceRequired`, `browserForUi`, `screenshotForUi`, and `codeReview`
+  booleans;
+- `isolation` (`ask` or `off`), `base`, `worktreePath`, and `branchPattern`;
+- `decisions` (`required` or `off`).
+
+Omitted fields preserve current schema-4 values during repair and use strict
+defaults for a new repository. The private CLI fallback carries the same values
+as `--evidence`, `--ui-browser`, `--ui-screenshot`, `--code-review` (`on|off`),
+plus `--isolation`, `--base`, `--worktree-path`, `--branch-pattern`, and
+`--decisions`. These are automation transports, not public workflow commands.

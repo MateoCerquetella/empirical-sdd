@@ -216,6 +216,7 @@ export class EmpiricalProject {
     const current = await this.store.loadConfig();
     return this.store.configure({
       ...current,
+      evidence: { ...current.evidence, ...input.evidence },
       isolation: { ...current.isolation, ...input.isolation },
       decisions: { ...current.decisions, ...input.decisions },
       setupComplete: input.setupComplete ?? true,
@@ -1005,13 +1006,15 @@ export class EmpiricalProject {
       }
       await validateEvidenceArtifacts(this.store.root, evidence);
     }
-    if (state.phase === "review" && config.evidence.codeReview) {
+    if (state.phase === "review") {
       if (config.decisions.complexRecords === "required" && state.profile === "complex") {
         await requireValidDecisions(this.store, state.activeFeature!);
       }
-      const review = input.evidence?.some((record) => record.kind === "review" && record.passed);
-      if (!review) {
-        throw new EmpiricalError("REVIEW_REQUIRED", "Review completion needs passing review evidence");
+      if (config.evidence.codeReview) {
+        const review = input.evidence?.some((record) => record.kind === "review" && record.passed);
+        if (!review) {
+          throw new EmpiricalError("REVIEW_REQUIRED", "Review completion needs passing review evidence");
+        }
       }
     }
     if (state.profile === "fast" && state.phase === "implement") {
@@ -1075,6 +1078,7 @@ export class EmpiricalProject {
       capabilities.map((capability) => capability.path),
       artifacts,
       missingArtifacts,
+      config,
     );
   }
 }
@@ -1125,10 +1129,10 @@ function defaultConfig(
     profile,
     maxRepairAttempts: 2,
     evidence: {
-      required: true,
-      browserForUi: true,
-      screenshotForUi: true,
-      codeReview: true,
+      required: options.evidence?.required ?? true,
+      browserForUi: options.evidence?.browserForUi ?? true,
+      screenshotForUi: options.evidence?.screenshotForUi ?? true,
+      codeReview: options.evidence?.codeReview ?? true,
     },
     isolation: {
       mode: options.isolation?.mode ?? "ask",
@@ -1145,14 +1149,18 @@ function defaultConfig(
 }
 
 function initializationConfiguration(options: InitOptions): ProjectConfigurationInput | null {
+  const evidence = options.evidence && Object.keys(options.evidence).length > 0
+    ? options.evidence
+    : undefined;
   const isolation = options.isolation && Object.keys(options.isolation).length > 0
     ? options.isolation
     : undefined;
   const decisions = options.decisions && Object.keys(options.decisions).length > 0
     ? options.decisions
     : undefined;
-  if (!isolation && !decisions && options.setupComplete === undefined) return null;
+  if (!evidence && !isolation && !decisions && options.setupComplete === undefined) return null;
   return {
+    ...(evidence ? { evidence } : {}),
     ...(isolation ? { isolation } : {}),
     ...(decisions ? { decisions } : {}),
     ...(options.setupComplete !== undefined ? { setupComplete: options.setupComplete } : {}),
@@ -1293,8 +1301,9 @@ function actionPacket(
   capabilityContext: string[],
   artifacts: string[],
   missingArtifacts: string[],
+  config: ProjectConfig,
 ): ActionPacket {
-  const evidence = requiredEvidence(state, criteria);
+  const evidence = requiredEvidence(state, criteria, config);
   const completionAvailable = state.status === "waiting"
     && state.phase !== "idle"
     && state.phase !== "done";
@@ -1316,7 +1325,7 @@ function actionPacket(
     phase: state.phase,
     status: state.status,
     revision: state.revision,
-    instructions: instructionsFor(state, policy),
+    instructions: instructionsFor(state, policy, config),
     rationale: rationaleFor(state, artifacts, missingArtifacts, evidence),
     acceptanceCriteria: criteria,
     requiredEvidence: evidence,
@@ -1403,12 +1412,24 @@ function assertStartAction(
   return action;
 }
 
-function instructionsFor(state: WorkflowState, policy: ProjectPolicy): string {
+function instructionsFor(state: WorkflowState, policy: ProjectPolicy, config: ProjectConfig): string {
   if (state.status === "blocked") return appendPolicy(`Stop. Resolve this blocker before retrying: ${state.message ?? "unknown"}`, state, policy);
   if (state.status === "awaiting_human") return appendPolicy(`Stop and ask the user: ${state.message ?? "a decision is required"}`, state, policy);
   if (state.phase === "idle") return appendPolicy("No feature is active. Loop does not create or route new work. Use the installed empirical skill for automatic routing, empirical-spec for a concrete contract, or empirical-socratic for five-pass discovery.", state, policy);
   if (state.phase === "done") return appendPolicy("The feature passed verification, review, and required capability archive. Report completion; delivery is manual.", state, policy);
   const feature = state.activeFeature ?? "current feature";
+  const verifyInstruction = config.evidence.required
+    ? `Run real tests for every criterion.${config.evidence.browserForUi ? " For [UI] criteria, use a real browser." : ""}${config.evidence.screenshotForUi ? " Capture a screenshot artifact for [UI] criteria." : ""} Return the configured structured evidence.`
+    : "Criterion evidence is disabled. Run appropriate verification checks, but test/browser/screenshot records do not gate this transition; code-review policy remains independent.";
+  const reviewInstruction = [
+    "Review the implementation against every criterion and the diff.",
+    ...(config.decisions.complexRecords === "required"
+      ? [`Review accepted decisions in .empirical/specs/${feature}/decisions.md; contradictions require an explicit accepted superseding entry.`]
+      : []),
+    config.evidence.codeReview
+      ? "Return passing review evidence or route failures back to implementation."
+      : "Code-review evidence is disabled; still report material findings and route failures back to implementation.",
+  ].join(" ");
   const instructions: Record<Exclude<Phase, "idle" | "done">, string> = {
     shape: `Read the request, edit ${relativeSpec(feature)}, and define concise observable acceptance criteria. Do not implement yet.`,
     specify: `Refine ${relativeSpec(feature)} into a complete contract with observable acceptance criteria, scope, non-goals, risks, and verification. Declare current-behavior changes in .empirical/specs/${feature}/deltas/<capability>.md using ADDED, MODIFIED, or REMOVED requirement blocks with scenarios.`,
@@ -1417,8 +1438,8 @@ function instructionsFor(state: WorkflowState, policy: ProjectPolicy): string {
     implement: state.profile === "fast"
       ? "Fast lane: the packet already contains the complete generated criterion. Inspect only the relevant project files, implement in one focused pass, combine the smallest real test and diff review when practical, then run the returned completion command. Do not reread Empirical state or add redundant checks. If the work is no longer small and low-risk, report failure so Empirical can escalate it."
       : "Implement the current acceptance criteria. Preserve unrelated work and run focused checks while editing.",
-    verify: "Run real tests for every criterion. For [UI] criteria, use a real browser and capture a screenshot. Return structured evidence.",
-    review: `Review the implementation against every criterion, the diff, and accepted decisions in .empirical/specs/${feature}/decisions.md. Contradictions require an explicit accepted superseding entry. Return passing review evidence or route failures back to implementation.`,
+    verify: verifyInstruction,
+    review: reviewInstruction,
     archive: "Apply the reviewed capability deltas to the living specifications with the returned empirical_archive operation. Do not edit capability specs manually during archive.",
   };
   return appendPolicy(instructions[state.phase], state, policy);
@@ -1446,16 +1467,20 @@ function expectedArtifacts(state: WorkflowState, decisionsRequired: boolean): st
   return [];
 }
 
-function requiredEvidence(state: WorkflowState, criteria: Criterion[]): EvidenceKind[] {
+function requiredEvidence(
+  state: WorkflowState,
+  criteria: Criterion[],
+  config: ProjectConfig,
+): EvidenceKind[] {
   const fast = state.profile === "fast" && state.phase === "implement";
   if (state.phase !== "verify" && state.phase !== "review" && !fast) return [];
   const kinds = new Set<EvidenceKind>();
-  if (state.phase === "verify" || fast) kinds.add("test");
-  if ((state.phase === "verify" || fast) && criteria.some((criterion) => criterion.ui)) {
-    kinds.add("browser");
-    kinds.add("screenshot");
+  if (config.evidence.required && (state.phase === "verify" || fast)) kinds.add("test");
+  if (config.evidence.required && (state.phase === "verify" || fast) && criteria.some((criterion) => criterion.ui)) {
+    if (config.evidence.browserForUi) kinds.add("browser");
+    if (config.evidence.screenshotForUi) kinds.add("screenshot");
   }
-  if (state.phase === "review" || fast) kinds.add("review");
+  if (config.evidence.codeReview && (state.phase === "review" || fast)) kinds.add("review");
   return [...kinds];
 }
 
@@ -1465,23 +1490,24 @@ function validateEvidence(
   config: ProjectConfig,
   includeReview: boolean,
 ): string[] {
-  if (!config.evidence.required) return [];
   const missing: string[] = [];
-  if (criteria.length === 0) missing.push("No acceptance criteria are defined");
-  for (const criterion of criteria) {
-    const records = evidence.filter((record) => record.criterionId === criterion.id && record.passed);
-    if (!records.some((record) => record.kind === "test")) {
-      missing.push(`${criterion.id} has no passing test evidence`);
-    }
-    if (criterion.ui && config.evidence.browserForUi && !records.some((record) => record.kind === "browser")) {
-      missing.push(`${criterion.id} has no browser evidence`);
-    }
-    if (
-      criterion.ui
-      && config.evidence.screenshotForUi
-      && !records.some((record) => record.kind === "screenshot" && record.artifact)
-    ) {
-      missing.push(`${criterion.id} has no screenshot artifact`);
+  if (config.evidence.required) {
+    if (criteria.length === 0) missing.push("No acceptance criteria are defined");
+    for (const criterion of criteria) {
+      const records = evidence.filter((record) => record.criterionId === criterion.id && record.passed);
+      if (!records.some((record) => record.kind === "test")) {
+        missing.push(`${criterion.id} has no passing test evidence`);
+      }
+      if (criterion.ui && config.evidence.browserForUi && !records.some((record) => record.kind === "browser")) {
+        missing.push(`${criterion.id} has no browser evidence`);
+      }
+      if (
+        criterion.ui
+        && config.evidence.screenshotForUi
+        && !records.some((record) => record.kind === "screenshot" && record.artifact)
+      ) {
+        missing.push(`${criterion.id} has no screenshot artifact`);
+      }
     }
   }
   if (includeReview && config.evidence.codeReview && !evidence.some((record) => record.kind === "review" && record.passed)) {
@@ -1609,7 +1635,7 @@ function digest(contents: string): string {
 }
 
 function emptyIntegrationReport(): IntegrationReport {
-  return { scope: "project", created: [], updated: [], removed: [], preserved: [], entrypoints: [] };
+  return { scope: "project", selected: [], destinations: [], created: [], updated: [], removed: [], preserved: [], entrypoints: [] };
 }
 
 async function existingKnowledgePaths(root: string): Promise<string[]> {

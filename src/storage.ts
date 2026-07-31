@@ -170,6 +170,7 @@ export class ProjectStore {
       const next = normalizeConfig({
         ...current,
         ...update,
+        evidence: { ...current.evidence, ...update.evidence },
         isolation: { ...current.isolation, ...update.isolation },
         decisions: { ...current.decisions, ...update.decisions },
       } as ProjectConfig);
@@ -1003,6 +1004,7 @@ function normalizeConfig(config: ProjectConfig): ProjectConfig {
   const value = config as unknown as Record<string, unknown>;
   const isolation = isRecord(value.isolation) ? value.isolation : {};
   const decisions = isRecord(value.decisions) ? value.decisions : {};
+  const evidence = isRecord(value.evidence) ? value.evidence : {};
   const mode = isolation.mode === "off" ? "off" : "ask";
   const baseBranch = typeof isolation.baseBranch === "string" && isolation.baseBranch.trim()
     ? isolation.baseBranch.trim()
@@ -1018,6 +1020,12 @@ function normalizeConfig(config: ProjectConfig): ProjectConfig {
     ...config,
     schemaVersion: SCHEMA_VERSION,
     profile: normalizeProfile((config as { profile?: unknown }).profile),
+    evidence: {
+      required: typeof evidence.required === "boolean" ? evidence.required : true,
+      browserForUi: typeof evidence.browserForUi === "boolean" ? evidence.browserForUi : true,
+      screenshotForUi: typeof evidence.screenshotForUi === "boolean" ? evidence.screenshotForUi : true,
+      codeReview: typeof evidence.codeReview === "boolean" ? evidence.codeReview : true,
+    },
     isolation: { mode, baseBranch, worktreePath, branchPattern },
     decisions: { complexRecords: decisions.complexRecords === "off" ? "off" : "required" },
     setupComplete: typeof value.setupComplete === "boolean" ? value.setupComplete : false,
