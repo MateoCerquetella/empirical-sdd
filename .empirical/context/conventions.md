@@ -14,7 +14,7 @@
   worktrees where isolation behavior matters.
 - Changes must pass type checking, the full suite, built distribution smoke,
   npm package inspection, and `git diff --check`.
-- Version `0.20.1` remains alpha; publication is a separate explicit action.
+- Version `0.20.4` remains alpha; publication is a separate explicit action.
 
 ## Repository-specific constraints
 

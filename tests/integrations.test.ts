@@ -334,19 +334,36 @@ describe("agent integrations", () => {
 
   test("primary help exposes only install and update as normal terminal commands", () => {
     const cli = join(import.meta.dir, "..", "src", "cli.ts");
-    const cwd = spawnSync(process.execPath, [cli, "help"], {
-      encoding: "utf8",
-    });
-    expect(cwd.status).toBe(0);
-    expect(cwd.stdout).toContain("empirical install");
-    expect(cwd.stdout).toContain("empirical update");
-    for (const hidden of [
-      "init", "config", "explore", "fast", "complex", "loop", "complete",
-      "archive", "status", "integrate", "doctor", "migrate",
-    ]) expect(cwd.stdout).not.toContain(`empirical ${hidden}`);
-    const empty = spawnSync(process.execPath, [cli], { encoding: "utf8" });
-    expect(empty.status).toBe(0);
-    expect(empty.stdout).toBe(cwd.stdout);
+    const outputs = [[], ["help"], ["--help"], ["-h"]].map((args) => spawnSync(
+      process.execPath,
+      [cli, ...args],
+      { encoding: "utf8" },
+    ));
+    for (const result of outputs) {
+      expect(result.status).toBe(0);
+      expect(result.stderr).toBe("");
+      expect(result.stdout).toContain("╭───╯    ╰───╮");
+      expect(result.stdout.match(/empirical v0\.20\.4/g)).toHaveLength(1);
+      expect(result.stdout.indexOf("empirical v0.20.4")).toBeLessThan(result.stdout.indexOf("Lifecycle:"));
+      expect(result.stdout).not.toContain("\u001b[");
+      expect(result.stdout).toContain("empirical install");
+      expect(result.stdout).toContain("empirical update");
+      for (const hidden of [
+        "init", "config", "explore", "fast", "complex", "loop", "complete",
+        "archive", "status", "integrate", "doctor", "migrate",
+      ]) expect(result.stdout).not.toContain(`empirical ${hidden}`);
+    }
+    expect(outputs.every((result) => result.stdout === outputs[0]!.stdout)).toBe(true);
+  });
+
+  test("version aliases remain exact and unbranded", () => {
+    const cli = join(import.meta.dir, "..", "src", "cli.ts");
+    for (const alias of ["version", "--version", "-v"]) {
+      const result = spawnSync(process.execPath, [cli, alias], { encoding: "utf8" });
+      expect(result.status).toBe(0);
+      expect(result.stdout).toBe("0.20.4\n");
+      expect(result.stderr).toBe("");
+    }
   });
 
   test("public workflow verbs are rejected before project discovery", () => {

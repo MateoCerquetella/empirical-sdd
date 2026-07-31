@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 5,
+  "previousRevision": 4,
+  "actor": "codex",
+  "summary": "Implemented a responsive dependency-free GoEmpirical banner on all public startup/help aliases, preserved exact automation output, prepared version 0.20.4, and added focused source and bundled regression coverage.",
+  "createdAt": "2026-07-31T14:45:04.262Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 5,
+    "activeFeature": "add-the-goempirical-logo-and-current-empirical-version-to-the",
+    "request": "Add the GoEmpirical logo and current Empirical version to the human-facing CLI, modeled on the Hermes CLI presentation referenced by the user, while preserving machine-readable CLI behavior; publish this work as the next patch version.",
+    "profile": "complex",
+    "phase": "verify",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Implemented a responsive dependency-free GoEmpirical banner on all public startup/help aliases, preserved exact automation output, prepared version 0.20.4, and added focused source and bundled regression coverage.",
+    "implementationActor": "codex",
+    "specDigest": "f8febc17fe8769094a0997573bfb3861053b827b9ad7f551c94e23c782486225",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "e2814039dfa951a756128974f67a6736321a4a8f9700cf2558e303af9726373d",
+    "evidence": [],
+    "updatedAt": "2026-07-31T14:45:04.262Z"
+  }
+}

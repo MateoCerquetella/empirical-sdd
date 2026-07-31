@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 7,
+  "previousRevision": 6,
+  "actor": "codex",
+  "summary": "Restored the immutable approved specification after the failed Playwright MCP attempt; retained the verified implementation and terminal capture artifacts for a separate real-browser fallback.",
+  "createdAt": "2026-07-31T14:52:43.049Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 7,
+    "activeFeature": "add-the-goempirical-logo-and-current-empirical-version-to-the",
+    "request": "Add the GoEmpirical logo and current Empirical version to the human-facing CLI, modeled on the Hermes CLI presentation referenced by the user, while preserving machine-readable CLI behavior; publish this work as the next patch version.",
+    "profile": "complex",
+    "phase": "verify",
+    "status": "waiting",
+    "repairAttempts": 1,
+    "message": "Restored the immutable approved specification after the failed Playwright MCP attempt; retained the verified implementation and terminal capture artifacts for a separate real-browser fallback.",
+    "implementationActor": "codex",
+    "specDigest": "f8febc17fe8769094a0997573bfb3861053b827b9ad7f551c94e23c782486225",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "e2814039dfa951a756128974f67a6736321a4a8f9700cf2558e303af9726373d",
+    "evidence": [],
+    "updatedAt": "2026-07-31T14:52:43.049Z"
+  }
+}

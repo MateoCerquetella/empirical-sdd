@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 6,
+  "previousRevision": 5,
+  "actor": "codex",
+  "summary": "Browser verification could not run because the required Playwright MCP server is not connected; the web-browser gate is not applicable to a native terminal banner and must be repaired to terminal-specific visual evidence.",
+  "createdAt": "2026-07-31T14:45:51.753Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 6,
+    "activeFeature": "add-the-goempirical-logo-and-current-empirical-version-to-the",
+    "request": "Add the GoEmpirical logo and current Empirical version to the human-facing CLI, modeled on the Hermes CLI presentation referenced by the user, while preserving machine-readable CLI behavior; publish this work as the next patch version.",
+    "profile": "complex",
+    "phase": "implement",
+    "status": "waiting",
+    "repairAttempts": 1,
+    "message": "Browser verification could not run because the required Playwright MCP server is not connected; the web-browser gate is not applicable to a native terminal banner and must be repaired to terminal-specific visual evidence.",
+    "implementationActor": "codex",
+    "specDigest": "f8febc17fe8769094a0997573bfb3861053b827b9ad7f551c94e23c782486225",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "e2814039dfa951a756128974f67a6736321a4a8f9700cf2558e303af9726373d",
+    "evidence": [],
+    "updatedAt": "2026-07-31T14:45:51.753Z"
+  }
+}

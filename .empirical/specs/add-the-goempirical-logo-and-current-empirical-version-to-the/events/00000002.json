@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 4,
+  "revision": 2,
+  "previousRevision": 1,
+  "actor": "codex",
+  "summary": "Specified responsive GoEmpirical CLI branding, automation-safe output boundaries, and consistent 0.20.4 package preparation with a new cli-branding capability delta.",
+  "createdAt": "2026-07-31T14:35:52.642Z",
+  "state": {
+    "schemaVersion": 4,
+    "revision": 2,
+    "activeFeature": "add-the-goempirical-logo-and-current-empirical-version-to-the",
+    "request": "Add the GoEmpirical logo and current Empirical version to the human-facing CLI, modeled on the Hermes CLI presentation referenced by the user, while preserving machine-readable CLI behavior; publish this work as the next patch version.",
+    "profile": "complex",
+    "phase": "design",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Specified responsive GoEmpirical CLI branding, automation-safe output boundaries, and consistent 0.20.4 package preparation with a new cli-branding capability delta.",
+    "implementationActor": null,
+    "specDigest": "f8febc17fe8769094a0997573bfb3861053b827b9ad7f551c94e23c782486225",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "e2814039dfa951a756128974f67a6736321a4a8f9700cf2558e303af9726373d",
+    "evidence": [],
+    "updatedAt": "2026-07-31T14:35:52.642Z"
+  }
+}
