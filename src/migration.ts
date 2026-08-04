@@ -740,7 +740,7 @@ async function finalizeMigration(
     features: validation.features,
     sourceDigest: marker.sourceDigest,
     resultDigest,
-    receipt: relative(repositoryRoot, receiptPath),
+    receipt: relative(repositoryRoot, receiptPath).replaceAll("\\", "/"),
   };
 }
 

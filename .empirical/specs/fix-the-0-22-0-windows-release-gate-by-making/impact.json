@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "classification": "behavioral",
+  "capabilities": [
+    "living-specifications",
+    "migration-integrity"
+  ],
+  "surfaces": [
+    "workflow"
+  ],
+  "regressionRationale": null,
+  "digest": "sha256:ed10b900d642eb9b02a7d907dafa1bce78f84b558e05c152600a4d6426aa02f2"
+}

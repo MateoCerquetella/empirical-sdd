@@ -162,9 +162,9 @@ describe("Git common-directory capability coordination", () => {
     await rm(fixture.target, { recursive: true, force: true });
     const inspected = await inspectCapabilityClaims(fixture.root);
     expect(inspected.stale.map((claim) => claim.id)).toContain(claimed.claim.id);
-    expect(
-      git(fixture.root, ["worktree", "list", "--porcelain"]),
-    ).toContain(fixture.target);
+    const registrations = git(fixture.root, ["worktree", "list", "--porcelain"]);
+    expect(registrations).toContain("branch refs/heads/target");
+    expect(registrations).toContain("prunable ");
   });
 
   test("replays touched requirements onto an independently advanced target", async () => {

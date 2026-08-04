@@ -6,8 +6,11 @@ import { dirname, join, resolve } from "node:path";
 
 import { EmpiricalProject } from "../src/core.js";
 import {
+  captureCapabilityBase,
+  capabilityMarkdownDigest,
   parseCapabilityDelta,
   planCapabilityArchive,
+  replayCapabilityDeltas,
   validateFeatureDeltas,
 } from "../src/specifications.js";
 
@@ -150,6 +153,70 @@ async function advanceToIntegrate(
 }
 
 describe("living capability specifications", () => {
+  test("capability replay canonicalizes line endings without hiding semantic changes", () => {
+    const original = `# Example Specification
+
+## Purpose
+
+Describe stable example behavior across supported checkout conventions.
+
+## Requirements
+
+### Requirement: Portable replay
+
+The product MUST preserve the original value.
+
+#### Scenario: Original
+
+- **WHEN** replay runs
+- **THEN** the original value is retained
+`;
+    const change = parseCapabilityDelta("example", `## MODIFIED Requirements
+
+### Requirement: Portable replay
+
+The product MUST return the revised value.
+
+#### Scenario: Revised
+
+- **WHEN** replay runs
+- **THEN** the revised value is returned
+`);
+    const base = captureCapabilityBase("example", original, [change]);
+    const crlfBase = captureCapabilityBase(
+      "example",
+      original.replaceAll("\n", "\r\n"),
+      [change],
+    );
+    expect(crlfBase.digest).toBe(base.digest);
+    expect(crlfBase.requirements).toEqual(base.requirements);
+
+    const canonical = replayCapabilityDeltas("example", original, [change], base);
+    const equivalent = replayCapabilityDeltas(
+      "example",
+      original.replaceAll("\n", "\r\n"),
+      [change],
+      base,
+    );
+    expect(equivalent.issues).toEqual([]);
+    expect(equivalent.next).toContain("revised value");
+    expect(equivalent.next).not.toContain("\r");
+    expect(equivalent.resultDigest).toBe(canonical.resultDigest);
+    expect(capabilityMarkdownDigest(original.replaceAll("\n", "\r\n"))).toBe(
+      capabilityMarkdownDigest(original),
+    );
+
+    const changed = replayCapabilityDeltas(
+      "example",
+      original.replace("original value", "concurrent value"),
+      [change],
+      base,
+    );
+    expect(changed.issues).toContain(
+      "example.md: requirement 'Portable replay' changed since the feature base",
+    );
+  });
+
   test("Explore is pure and returns fresh project and capability context", async () => {
     const root = await temporaryProject();
     const { project } = await EmpiricalProject.initialize(root, { integrations: false });

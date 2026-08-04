@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -534,7 +534,7 @@ describe("Empirical 0.22 Schema-5 core", () => {
     await symlink(outside, join(root, ".empirical/specs/redirected-feature"), "dir");
     await expect(project.fast("Create redirected feature", { id: "redirected-feature" }))
       .rejects.toMatchObject({ code: "UNSAFE_SPEC_PATH" });
-    await rm(join(root, ".empirical/specs/redirected-feature"));
+    await unlink(join(root, ".empirical/specs/redirected-feature"));
     const started = action(await project.fast("Fix a first comments-only typo"));
     const first = join(root, ".empirical/specs", started.feature!);
     const secondFeature = "second-unclaimed-feature";

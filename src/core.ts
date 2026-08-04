@@ -66,6 +66,7 @@ import { parsePolicy } from "./policy.js";
 import { isMigrationScratchPath } from "./migration-scratch.js";
 import {
   capabilityDeltaDigest,
+  capabilityMarkdownDigest,
   listCapabilities,
   loadCapabilityDeltas,
   validateFeatureDeltas,
@@ -1267,7 +1268,7 @@ export class EmpiricalProject {
           }
           for (const [capability, expectedDigest] of Object.entries(typedReceipt.resultDigests)) {
             const projection = await this.store.readCapability(capability);
-            if (projection === null || sha256(projection) !== expectedDigest) {
+            if (projection === null || capabilityMarkdownDigest(projection) !== expectedDigest) {
               throw new EmpiricalError(
                 "INTEGRATION_RECEIPT_CONFLICT",
                 `Living capability ${capability} does not match the integration receipt`,

@@ -216,7 +216,8 @@ describe("read-only Doctor diagnostics", () => {
       expect.objectContaining({ code: "WORKTREE_REGISTRATION_PRUNABLE" }),
     );
     expect(git(root, ["worktree", "list", "--porcelain"])).toBe(before);
-    expect(before).toContain(stale);
+    expect(before).toContain("branch refs/heads/stale");
+    expect(before).toContain("prunable ");
   });
 
   test("reports orphan migration scratch without changing it", async () => {

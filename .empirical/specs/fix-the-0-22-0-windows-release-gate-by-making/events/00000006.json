@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "sequence": 6,
+  "previousDigest": "sha256:49f19f9447235ae43d96d9286a5ca55b4698569ede8f749cf17c0ee3eed34d73",
+  "actor": "agent",
+  "type": "transition",
+  "summary": "Verified all four cross-platform release criteria with the complete immutable CI receipt: 170 tests, coverage, bundled smoke, clean package consumer, and consistency gate.",
+  "createdAt": "2026-08-04T02:33:39.094Z",
+  "stateBeforeDigest": "sha256:0d2a7d4ea0ff9087fd05132f6ce4a95bae00af82dfc0d3e2408ecc07189a58e5",
+  "stateAfterDigest": "sha256:7c8f6129a5120448dc3282268e72567595d2e62af0ec09630991856cc15d07d3",
+  "state": {
+    "schemaVersion": 5,
+    "revision": 6,
+    "activeFeature": "fix-the-0-22-0-windows-release-gate-by-making",
+    "request": "Fix the 0.22.0 Windows release gate by making capability base/replay hashing newline-stable, returning portable migration receipt paths, and making cross-platform symlink/worktree assertions robust without weakening safety.",
+    "profile": "complex",
+    "workflow": "complex",
+    "mode": "normal",
+    "phase": "review",
+    "status": "waiting",
+    "repairAttempts": 0,
+    "message": "Verified all four cross-platform release criteria with the complete immutable CI receipt: 170 tests, coverage, bundled smoke, clean package consumer, and consistency gate.",
+    "implementationActor": "agent",
+    "specDigest": "sha256:8477d012949632c90f8b359dbc68c8a92a6ec490c530a41a918c93fc7dd5216a",
+    "approvedSpecRevision": 2,
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "sha256:265ecc50aa80e2c3b1fe6679d0a0724f80a94bab06c6e28211a96d9e5769993a",
+    "impactDigest": "sha256:ed10b900d642eb9b02a7d907dafa1bce78f84b558e05c152600a4d6426aa02f2",
+    "capabilityClaimId": "fix-the-0-22-0-windows-release-gate-by-making-92e63111cfac",
+    "authorizationDigest": null,
+    "evidence": [],
+    "evidenceReceiptIds": [
+      "executed-804b395e6c2a7014d9add5c3"
+    ],
+    "legacyEvidenceCount": 0,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": false,
+      "delivered": false,
+      "published": false,
+      "highest": "verified",
+      "reasons": {
+        "integrated": "integrated has not been proven by a durable receipt.",
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    },
+    "updatedAt": "2026-08-04T02:33:39.094Z"
+  },
+  "digest": "sha256:10b0451c88ef8a79482895b9c57309f8a307116238f963ec31dae41f989d622a"
+}

@@ -38,6 +38,10 @@ export interface CapabilityArchivePlan {
   commit: () => Promise<() => Promise<void>>;
 }
 
+export function capabilityMarkdownDigest(markdown: string | null): string {
+  return sha256(canonicalMarkdown(markdown ?? ""));
+}
+
 export async function loadCapabilityDeltas(
   store: ProjectStore,
   feature: string,
@@ -107,8 +111,9 @@ export function captureCapabilityBase(
   deltas: readonly CapabilityDelta[],
 ): CapabilityBaseSnapshot {
   assertCapabilityId(capability);
+  const canonical = canonicalMarkdown(markdown ?? "");
   const current = new Map(
-    requirementBlocks(markdown ?? "").map((block) => [normalizedName(block.name), block]),
+    requirementBlocks(canonical).map((block) => [normalizedName(block.name), block]),
   );
   const requirements: Record<string, string | null> = {};
   for (const delta of deltas) {
@@ -121,13 +126,13 @@ export function captureCapabilityBase(
     for (const requirement of delta.requirements) {
       const key = normalizedName(requirement.name);
       requirements[key] = current.has(key)
-        ? sha256(current.get(key)!.contents)
+        ? sha256(canonicalMarkdown(current.get(key)!.contents))
         : null;
     }
   }
   return {
     capability,
-    digest: sha256(markdown ?? ""),
+    digest: capabilityMarkdownDigest(canonical),
     requirements,
   };
 }
@@ -145,12 +150,13 @@ export function replayCapabilityDeltas(
       `Capability base ${base.capability} cannot replay ${capability}`,
     );
   }
+  const canonicalCurrent = canonicalMarkdown(currentMarkdown ?? "");
   const current = new Map(
-    requirementBlocks(currentMarkdown ?? "").map((block) => [normalizedName(block.name), block]),
+    requirementBlocks(canonicalCurrent).map((block) => [normalizedName(block.name), block]),
   );
   const touched = new Set<string>();
   const issues: string[] = [];
-  let purpose = currentMarkdown ? sectionContents(currentMarkdown, "Purpose") : null;
+  let purpose = currentMarkdown ? sectionContents(canonicalCurrent, "Purpose") : null;
   for (const delta of deltas) {
     if (delta.capability !== capability) {
       issues.push(`Delta ${delta.source} targets ${delta.capability}, not ${capability}`);
@@ -169,7 +175,7 @@ export function replayCapabilityDeltas(
         continue;
       }
       const existing = current.get(key);
-      const actual = existing ? sha256(existing.contents) : null;
+      const actual = existing ? sha256(canonicalMarkdown(existing.contents)) : null;
       const expected = base.requirements[key] ?? null;
       if (actual !== expected) {
         issues.push(
@@ -193,16 +199,18 @@ export function replayCapabilityDeltas(
   if (!currentMarkdown && (!purpose || purpose.trim().length < 20)) {
     issues.push(`${capability}: new capability needs a meaningful ## Purpose`);
   }
-  const next = renderCapability(
-    capability,
-    purpose,
-    [...current.values()].map((block) => block.contents),
+  const next = canonicalMarkdown(
+    renderCapability(
+      capability,
+      purpose,
+      [...current.values()].map((block) => block.contents),
+    ),
   );
   return {
     capability,
     next,
     baseDigest: base.digest,
-    resultDigest: sha256(next),
+    resultDigest: capabilityMarkdownDigest(next),
     issues,
   };
 }
@@ -409,6 +417,10 @@ function renderCapability(capability: string, purpose: string | null, requiremen
 
 function normalizedName(name: string): string {
   return name.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function canonicalMarkdown(markdown: string): string {
+  return markdown.replace(/\r\n?/g, "\n");
 }
 
 function digestCapabilityDeltas(deltas: CapabilityDelta[]): string {
