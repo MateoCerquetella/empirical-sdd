@@ -4,7 +4,11 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 import { EmpiricalError } from "./errors.js";
 import { buildHandoffOption, detectSupportedAgents } from "./agents.js";
 import { installProjectIntegrations } from "./integrations.js";
-import { freshRepositoryKnowledgePaths, refreshRepositoryKnowledge } from "./knowledge.js";
+import {
+  freshRepositoryKnowledgePaths,
+  inspectRepositoryKnowledge,
+  refreshRepositoryKnowledge,
+} from "./knowledge.js";
 import { ProjectStore, discoverProject, isFile, readJson, writeJsonAtomic } from "./storage.js";
 import { createDecisionTemplate, requireValidDecisions, validateDecisions } from "./decisions.js";
 import {
@@ -114,13 +118,14 @@ import {
   type YoloOptions,
 } from "./types.js";
 
-const FAST_PHASES: Phase[] = ["implement", "done"];
-const QUICK_PHASES: Phase[] = ["shape", "implement", "verify", "review", "done"];
+const FAST_PHASES: Phase[] = ["implement", "context", "done"];
+const QUICK_PHASES: Phase[] = ["shape", "implement", "context", "verify", "review", "done"];
 const COMPLEX_PHASES: Phase[] = [
   "specify",
   "design",
   "plan",
   "implement",
+  "context",
   "verify",
   "review",
   "integrate",
@@ -1099,7 +1104,14 @@ export class EmpiricalProject {
           });
         }
         state.evidenceReceiptIds = [...new Set(receiptIds)];
-        state.phase = followingPhase(state.profile, state.phase);
+        if (state.phase === "implement") {
+          const knowledge = await inspectRepositoryKnowledge(this.store.root);
+          state.phase = knowledge.valid
+            ? followingPhase(state.profile, "context")
+            : "context";
+        } else {
+          state.phase = followingPhase(state.profile, state.phase);
+        }
         state.status = state.phase === "done" ? "done" : "waiting";
         state.message = summary;
         if (state.phase === "done") state.repairAttempts = 0;
@@ -2060,6 +2072,23 @@ export class EmpiricalProject {
     if (state.phase === "plan") {
       await requireArtifact(this.store.specDirectory(state.activeFeature!), "plan.md");
     }
+    if (state.phase === "context") {
+      const knowledge = await inspectRepositoryKnowledge(this.store.root);
+      if (!knowledge.valid) {
+        const reasons = [
+          ...(knowledge.issues.length > 0 ? [`invalid manifest: ${knowledge.issues.join("; ")}`] : []),
+          ...(knowledge.missing.length > 0 ? [`missing: ${knowledge.missing.join(", ")}`] : []),
+          ...(knowledge.stale.length > 0 ? [`stale: ${knowledge.stale.join(", ")}`] : []),
+          ...(knowledge.refinementRequired.length > 0
+            ? [`refinement required: ${knowledge.refinementRequired.join(", ")}`]
+            : []),
+        ];
+        throw new EmpiricalError(
+          "CONTEXT_REFINEMENT_REQUIRED",
+          `Repository knowledge is not ready: ${reasons.join("; ")}. Refresh inventory, inspect repository evidence, replace placeholder topic content, remove the managed marker from refined pages, refresh again, and retry this Context revision.`,
+        );
+      }
+    }
     if (state.phase === "verify") {
       const receipts = await this.receiptRecords(state, criteria, receiptIds);
       const missing = validateReceiptEvidence(criteria, receipts, config, false);
@@ -2147,6 +2176,15 @@ export class EmpiricalProject {
         missingArtifacts.push(artifact);
       }
     }
+    if (state.phase === "context") {
+      const knowledge = await inspectRepositoryKnowledge(this.store.root);
+      missingArtifacts.push(
+        ...knowledge.missing,
+        ...knowledge.stale,
+        ...knowledge.refinementRequired,
+        ...knowledge.issues.map(() => ".empirical/context/manifest.json"),
+      );
+    }
     return actionPacket(
       this.store.root,
       state,
@@ -2155,7 +2193,7 @@ export class EmpiricalProject {
       await existingKnowledgePaths(this.store.root),
       capabilities.map((capability) => capability.path),
       artifacts,
-      missingArtifacts,
+      [...new Set(missingArtifacts)],
       config,
     );
   }
@@ -2562,6 +2600,7 @@ function instructionsFor(state: WorkflowState, policy: ProjectPolicy, config: Pr
     implement: state.profile === "fast"
       ? "Fast lane: the packet already contains the complete generated criterion. Inspect only the relevant project files, implement in one focused pass, combine the smallest real test and diff review when practical, then run the returned completion command. Do not reread Empirical state or add redundant checks. If the work is no longer small and low-risk, report failure so Empirical can escalate it."
       : "Implement the current acceptance criteria. Preserve unrelated work and run focused checks while editing.",
+    context: "Refresh repository knowledge, inspect current repository evidence, replace every refinement-required TODO topic with concise evidence-backed content, remove the managed marker from refined pages, then refresh again to record the custom page digests. Complete this exact Context revision only when the context report has no stale, missing, invalid, or refinement-required paths.",
     verify: verifyInstruction,
     review: reviewInstruction,
     integrate: "Replay validated capability deltas against an independently resolved target, run Policy v2 verification there, and persist the integration receipt before advancing.",
@@ -2589,6 +2628,13 @@ function expectedArtifacts(state: WorkflowState, decisionsRequired: boolean): st
   if (state.phase === "specify") return [`${base}/spec.md`, `${base}/deltas/<capability>.md`];
   if (state.phase === "design") return [`${base}/design.md`, ...(decisionsRequired ? [`${base}/decisions.md`] : [])];
   if (state.phase === "plan") return [`${base}/plan.md`];
+  if (state.phase === "context") return [
+    ".empirical/context/index.md",
+    ".empirical/context/overview.md",
+    ".empirical/context/architecture.md",
+    ".empirical/context/commands.md",
+    ".empirical/context/conventions.md",
+  ];
   if (state.phase === "review") return decisionsRequired ? [`${base}/decisions.md`] : [];
   if (state.phase === "integrate" || state.phase === "archive") {
     return [".empirical/capabilities/<capability>/spec.md", `${base}/integration-receipt.json`];
@@ -2739,6 +2785,7 @@ function mapLegacyPhase(value: string | null, profile: Profile): Phase {
   if (/done|complete|ready/.test(phase)) return "done";
   if (profile === "fast") return "implement";
   if (/review/.test(phase)) return "review";
+  if (/context|knowledge/.test(phase)) return "context";
   if (/test|verify|qa/.test(phase)) return "verify";
   if (/develop|implement|dev/.test(phase)) return "implement";
   if (profile === "quick") return "shape";

@@ -9,22 +9,16 @@ a clean consumer.
 
 ### Requirement: Published release integrity
 
-Every published Empirical version MUST use one matching immutable version across
-its manifest, lockfile, runtime diagnostics, tests, tags, releases, npm package,
-dist-tag, and release-facing documentation. The release source MUST contain the
-complete explicitly approved candidate and its integrated capability evidence,
-while excluding generated coverage, build output, temporary archives, and
-credentials. It MUST pass repository CI, coverage gates, package dry-run,
-supported Node 22, 24, and 26 checks, and clean-consumer verification before
-publication. Protected delivery and publication receipts MUST bind the exact
-source commit to the evidence commit and public artifacts.
+The context-refinement fix release candidate MUST use version `0.22.1` across
+all public surfaces and pass every existing release gate. Delivery and npm
+publication MUST remain pending until exact source, evidence, and publication
+authorizations are present.
 
-#### Scenario: A complete minor release candidate is explicitly requested
+#### Scenario: The context-refinement patch is prepared
 
-- **WHEN** the exact unused minor version and intended working-tree scope are approved
-- **THEN** every public version surface and supported-runtime check converges
-- **AND** generated output and unrelated files are absent from the package and source commit
-- **AND** publication remains pending until exact source, evidence, and publication authorizations are present
+- **WHEN** the repository produces the `0.22.1` candidate
+- **THEN** tests, packed-consumer checks, runtime diagnostics, and manifest versions agree
+- **AND** no protected delivery or publication step is bypassed
 
 ### Requirement: Clean registry consumption
 

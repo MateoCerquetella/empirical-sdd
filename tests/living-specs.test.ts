@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
 import { EmpiricalProject } from "../src/core.js";
+import { refreshRepositoryKnowledge } from "../src/knowledge.js";
 import {
   captureCapabilityBase,
   capabilityMarkdownDigest,
@@ -37,6 +38,14 @@ async function initializeRepository(root: string): Promise<EmpiricalProject> {
   git(root, ["config", "user.email", "empirical@example.test"]);
   await writeFile(join(root, "README.md"), "# Fixture\n", "utf8");
   const { project } = await EmpiricalProject.initialize(root, { integrations: false });
+  await Promise.all(["overview", "architecture", "commands", "conventions"].map((page) =>
+    writeFile(
+      join(root, ".empirical", "context", `${page}.md`),
+      `# ${page}\n\nVerified living-spec fixture context.\n`,
+      "utf8",
+    )
+  ));
+  await refreshRepositoryKnowledge(root);
   await project.configurePolicy({
     schemaVersion: 2,
     context: [],
@@ -127,6 +136,9 @@ async function advanceToIntegrate(
   await writeFile(join(directory, "plan.md"), "# Plan\n\n1. Implement and verify export.\n", "utf8");
   action = await project.complete({ revision: action.revision, outcome: "passed", summary: "Planned" });
   action = await project.complete({ revision: action.revision, outcome: "passed", summary: "Implemented", actor: "builder" });
+  expect(action).toMatchObject({ phase: "context", status: "waiting" });
+  await project.context();
+  action = await project.complete({ revision: action.revision, outcome: "passed", summary: "Repository knowledge refreshed" });
   const verification = await project.executeEvidence({
     commandId: "verify",
     criteria: ["AC-1"],

@@ -281,6 +281,17 @@ async function inspectKnowledge(root: string, findings: DoctorFinding[]): Promis
         ),
       );
     }
+    if (inspection.refinementRequired.length > 0) {
+      findings.push(
+        finding(
+          "warning",
+          "KNOWLEDGE_REFINEMENT_REQUIRED",
+          "knowledge",
+          `Context pages require evidence-backed refinement: ${inspection.refinementRequired.join(", ")}.`,
+          "Inspect repository evidence, replace placeholder topics, remove the managed marker, and refresh context again.",
+        ),
+      );
+    }
     if (inspection.valid) {
       findings.push(
         finding(

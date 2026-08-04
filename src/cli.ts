@@ -659,7 +659,13 @@ async function main(): Promise<void> {
       assertNoArgs(context.args, "context");
       const project = await EmpiricalProject.open(context.root);
       const report = await project.context();
-      emit(report, context.json, () => `Repository knowledge ${report.status}: ${report.files} files, digest ${report.digest}.\n${report.context.join("\n")}`);
+      emit(report, context.json, () => [
+        `Repository knowledge ${report.status}: ${report.files} files, digest ${report.digest}.`,
+        ...report.context,
+        ...(report.refinementRequired.length > 0
+          ? [`Refinement required:\n${report.refinementRequired.join("\n")}`]
+          : []),
+      ].join("\n"));
       return;
     }
     case "handoff": {
@@ -1358,7 +1364,7 @@ function renderAction(value: unknown): string {
 
 function phaseProgress(profile: ActionPacket["profile"], phase: ActionPacket["phase"]): string | null {
   if (phase === "idle" || phase === "done") return null;
-  const phases = profile === "fast" ? ["implement"] : profile === "quick" ? ["shape", "implement", "verify", "review"] : ["specify", "design", "plan", "implement", "verify", "review", "integrate", "deliver", "publish"];
+  const phases = profile === "fast" ? ["implement", "context"] : profile === "quick" ? ["shape", "implement", "context", "verify", "review"] : ["specify", "design", "plan", "implement", "context", "verify", "review", "integrate", "deliver", "publish"];
   const index = phases.indexOf(phase);
   return index < 0 ? null : `step ${index + 1}/${phases.length}`;
 }

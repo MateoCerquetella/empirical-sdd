@@ -16,6 +16,7 @@ import { appendJournalEvent } from "../src/journal.js";
 import { migrateSchema4To5 } from "../src/migration.js";
 import { digestJson, sha256, type JsonValue } from "../src/protocol.js";
 import { EmpiricalProject } from "../src/core.js";
+import { refreshRepositoryKnowledge } from "../src/knowledge.js";
 
 const parents: string[] = [];
 afterEach(async () => {
@@ -39,6 +40,14 @@ async function fixture(): Promise<{ parent: string; root: string }> {
   await writeFile(join(root, "README.md"), "doctor fixture\n", "utf8");
   await writeFile(join(root, "package.json"), '{"scripts":{"test":"bun test"}}\n', "utf8");
   await EmpiricalProject.initialize(root, { integrations: false, setupComplete: true });
+  await Promise.all(["overview", "architecture", "commands", "conventions"].map((page) =>
+    writeFile(
+      join(root, ".empirical", "context", `${page}.md`),
+      `# ${page}\n\nVerified fixture context.\n`,
+      "utf8",
+    )
+  ));
+  await refreshRepositoryKnowledge(root);
   git(root, ["add", "."]);
   git(root, ["commit", "-m", "schema 5 fixture"]);
   return { parent, root };
@@ -103,6 +112,28 @@ describe("read-only Doctor diagnostics", () => {
     );
     expect(await fileSnapshot(root)).toEqual(beforeFiles);
     expect(gitSnapshot(root)).toEqual(beforeGit);
+  });
+
+  test("reports placeholder context as refinement-required without mutating it", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "empirical-doctor-refinement-"));
+    parents.push(parent);
+    const root = join(parent, "repository");
+    await mkdir(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "Empirical Test"]);
+    await writeFile(join(root, "index.html"), "<!doctype html><title>Fixture</title>\n", "utf8");
+    await EmpiricalProject.initialize(root, { integrations: false, setupComplete: true });
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "placeholder context fixture"]);
+    const before = await fileSnapshot(root);
+    const report = await doctorRepository(root);
+    expect(report.status).toBe("warnings");
+    expect(report.findings).toContainEqual(expect.objectContaining({
+      code: "KNOWLEDGE_REFINEMENT_REQUIRED",
+      severity: "warning",
+    }));
+    expect(await fileSnapshot(root)).toEqual(before);
   });
 
   test("remains read-only when command execution provides no home or XDG directories", async () => {

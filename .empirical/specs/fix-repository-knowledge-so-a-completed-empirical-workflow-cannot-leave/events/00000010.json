@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "sequence": 10,
+  "previousDigest": "sha256:29d462f1a59b6066707d8541f70c61cacb9c96d647cf40168ceef8e1d268c6bd",
+  "actor": "empirical-integrate",
+  "type": "compaction-boundary",
+  "summary": "Compacted through journal event 9",
+  "createdAt": "2026-08-04T14:22:31.286Z",
+  "stateBeforeDigest": "sha256:15c1a16279e57daf1224b8e4a381c6741ac2c4de2b259b480b79526633513fd0",
+  "stateAfterDigest": "sha256:15c1a16279e57daf1224b8e4a381c6741ac2c4de2b259b480b79526633513fd0",
+  "state": {
+    "schemaVersion": 5,
+    "revision": 9,
+    "activeFeature": "fix-repository-knowledge-so-a-completed-empirical-workflow-cannot-leave",
+    "request": "Fix repository knowledge so a completed Empirical workflow cannot leave nonempty repositories with TODO-only or stale semantic context. Detect refinement-required pages explicitly, preserve deliberate agent-maintained content, handle legacy template migration safely, route a mandatory context-refinement action after source-changing work before terminal completion, add regression tests and documentation, bump the package to the next patch version, run full release verification, and prepare the exact release without bypassing protected delivery or publication approvals.",
+    "profile": "complex",
+    "workflow": "complex",
+    "mode": "normal",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Integrated capability changes: migration-integrity, package-distribution, repository-knowledge, workflow-routing",
+    "implementationActor": "agent",
+    "specDigest": "sha256:4ecaacc6201ae0ef688d649c0b564d299b282b094f7d8e899051443c3784142d",
+    "approvedSpecRevision": 2,
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "sha256:37481db64f426db613206257e572e18abf27da907098c40cc0d2c849ec3a862f",
+    "impactDigest": "sha256:4e4f3302a6b707253e6bd10749c9f141be1dd89129bf5e572270b3318df341ca",
+    "capabilityClaimId": "fix-repository-knowledge-so-a-completed-empirical-workflow-cannot-leave-92e63111cfac",
+    "authorizationDigest": null,
+    "evidence": [],
+    "evidenceReceiptIds": [
+      "executed-93bd128469e8f99432ca7109"
+    ],
+    "legacyEvidenceCount": 0,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": true,
+      "delivered": false,
+      "published": false,
+      "highest": "integrated",
+      "reasons": {
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    },
+    "updatedAt": "2026-08-04T14:22:31.261Z"
+  },
+  "digest": "sha256:2d90ede0afa86f4d0de996eaf17b86cf33031a784924576877d07692bd1f8622"
+}

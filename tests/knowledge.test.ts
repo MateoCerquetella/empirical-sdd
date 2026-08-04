@@ -23,6 +23,20 @@ async function temporaryRepository(): Promise<string> {
   return root;
 }
 
+const topicPages = ["overview", "architecture", "commands", "conventions"] as const;
+
+async function refineTopicPages(root: string): Promise<void> {
+  await Promise.all(topicPages.map((page) =>
+    writeFile(
+      join(root, ".empirical", "context", `${page}.md`),
+      `# ${page[0]!.toUpperCase()}${page.slice(1)}\n\nEvidence-backed ${page} context.\n`,
+      "utf8",
+    )
+  ));
+  const report = await refreshRepositoryKnowledge(root);
+  expect(report.refinementRequired).toEqual([]);
+}
+
 describe("repository knowledge", () => {
   test("initialization creates bounded file-backed context without source contents or secrets", async () => {
     const root = await temporaryRepository();
@@ -36,7 +50,11 @@ describe("repository knowledge", () => {
     const manifestText = await readFile(join(root, report.manifest), "utf8");
     const manifest = JSON.parse(manifestText) as RepositoryKnowledgeManifest;
 
-    expect(report.status).toBe("current");
+    expect(report.status).toBe("stale");
+    expect(report.context).toEqual([".empirical/context/index.md"]);
+    expect(report.refinementRequired).toEqual(topicPages.map(
+      (page) => `.empirical/context/${page}.md`,
+    ));
     expect(manifest.files.map((file) => file.path)).toContain("README.md");
     expect(manifest.files.map((file) => file.path)).toContain("package.json");
     expect(manifest.files.map((file) => file.path)).not.toContain(".env");
@@ -51,6 +69,7 @@ describe("repository knowledge", () => {
     const root = await temporaryRepository();
     await writeFile(join(root, "README.md"), "one\n", "utf8");
     await EmpiricalProject.initialize(root, { integrations: false });
+    await refineTopicPages(root);
     const manifestPath = join(root, ".empirical/context/manifest.json");
     const overviewPath = join(root, ".empirical/context/overview.md");
     const before = await readFile(manifestPath, "utf8");
@@ -98,6 +117,7 @@ describe("repository knowledge", () => {
     );
     await writeFile(join(root, "CONTRIBUTING.md"), "Conventions stay stable.\n", "utf8");
     await EmpiricalProject.initialize(root, { integrations: false });
+    await refineTopicPages(root);
     const current = await inspectRepositoryKnowledge(root);
     expect(current.valid).toBe(true);
     expect(current.fresh).toEqual(expect.arrayContaining([
@@ -123,6 +143,26 @@ describe("repository knowledge", () => {
       ".empirical/context/commands.md",
     );
     expect((await refreshRepositoryKnowledge(root)).status).toBe("refreshed");
+    expect((await inspectRepositoryKnowledge(root)).valid).toBe(true);
+  });
+
+  test("empty initialization becomes refinement-required after source is added and converges after agent refinement", async () => {
+    const root = await temporaryRepository();
+    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
+    expect((await project.context()).refinementRequired).toEqual([]);
+
+    await writeFile(join(root, "index.html"), "<!doctype html><title>Example</title>\n", "utf8");
+    const refreshed = await project.context();
+    expect(refreshed.status).toBe("stale");
+    expect(refreshed.context).toEqual([".empirical/context/index.md"]);
+    expect(refreshed.refinementRequired).toHaveLength(4);
+    expect(await freshRepositoryKnowledgePaths(root)).toEqual([".empirical/context/index.md"]);
+
+    await refineTopicPages(root);
+    const current = await project.context();
+    expect(current.status).toBe("current");
+    expect(current.refinementRequired).toEqual([]);
+    expect(current.context).toHaveLength(5);
     expect((await inspectRepositoryKnowledge(root)).valid).toBe(true);
   });
 

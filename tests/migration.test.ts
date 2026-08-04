@@ -89,7 +89,27 @@ async function schema4Fixture(): Promise<string> {
     files: [{ path: "README.md", size: 5, digest: "d".repeat(64) }],
     truncated: false,
   });
-  for (const page of ["overview", "architecture", "commands", "conventions"]) {
+  await writeFile(
+    join(empirical, "context", "overview.md"),
+    `# Project Overview
+
+Maintain this page from repository evidence.
+
+## Purpose
+
+- TODO: What the project does and who it serves.
+
+## Boundaries
+
+- TODO: Major scope boundaries and explicit non-goals.
+
+## Evidence
+
+- TODO: Link the manifests, documentation, and entrypoints used.
+`,
+    "utf8",
+  );
+  for (const page of ["architecture", "commands", "conventions"]) {
     await writeFile(join(empirical, "context", `${page}.md`), `# ${page}\n`, "utf8");
   }
 
@@ -204,11 +224,23 @@ describe("atomic Schema-4 to Schema-5 migration", () => {
     });
     expect(await json(join(empirical, "context", "manifest.json"))).toMatchObject({
       schemaVersion: 2,
-      generator: "empirical-0.22.0",
+      generator: "empirical-0.22.1",
       pages: expect.arrayContaining([
-        expect.objectContaining({ path: ".empirical/context/overview.md", freshness: "fresh" }),
+        expect.objectContaining({
+          path: ".empirical/context/overview.md",
+          freshness: "fresh",
+          managed: true,
+        }),
+        expect.objectContaining({
+          path: ".empirical/context/architecture.md",
+          managed: false,
+        }),
       ]),
     });
+    expect((await readFile(join(empirical, "context", "overview.md"), "utf8"))
+      .startsWith("<!-- empirical-sdd:managed-context-v2 -->\n")).toBe(true);
+    expect(await readFile(join(empirical, "context", "architecture.md"), "utf8"))
+      .toBe("# architecture\n");
     const state = await json(join(empirical, "specs", "complex-feature", "state.json"));
     expect(state).toMatchObject({
       schemaVersion: 5,

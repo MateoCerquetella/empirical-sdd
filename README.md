@@ -69,8 +69,8 @@ protection, force-writes Git, extracts credentials, deletes real worktrees or
 branches, replaces immutable releases, or infers publication.
 
 Fast is contract-neutral and ends at verified. Complex records an impact
-manifest and proceeds through Specify, Design, Plan, Implement, Verify, Review,
-and independent Integrate. An authorized delivery may continue through two
+manifest and proceeds through Specify, Design, Plan, Implement, conditional
+Context refinement, Verify, Review, and independent Integrate. An authorized delivery may continue through two
 protected GitHub PRs. Publication is always a separate explicit operation bound
 to an exact version, commit, tag, and dist-tag.
 

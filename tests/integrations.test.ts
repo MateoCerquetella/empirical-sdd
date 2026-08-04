@@ -141,6 +141,8 @@ describe("agent integrations", () => {
         .toContain("Apply recommended settings, Customize, and Cancel");
       expect(await readFile(join(home, ...segments, "empirical-init", "SKILL.md"), "utf8"))
         .toContain("evidenceRequired, browserForUi, screenshotForUi, codeReview");
+      expect(await readFile(join(home, ...segments, "empirical-init", "SKILL.md"), "utf8"))
+        .toContain("refinementRequired");
       expect(await readFile(join(home, ...segments, "empirical-spec", "SKILL.md"), "utf8"))
         .toMatch(/Do not call\s+empirical_complete/);
       expect(await readFile(join(home, ...segments, "empirical-socratic", "SKILL.md"), "utf8"))
@@ -149,6 +151,8 @@ describe("agent integrations", () => {
         .toMatch(/does not accept or\s+route a new feature request/);
       expect(await readFile(join(home, ...segments, "empirical-loop", "SKILL.md"), "utf8"))
         .toContain("Continue here, Save for later");
+      expect(await readFile(join(home, ...segments, "empirical-loop", "SKILL.md"), "utf8"))
+        .toContain("For Context, refresh, inspect evidence");
       expect(await readFile(join(home, ...segments, "empirical-yolo", "SKILL.md"), "utf8"))
         .toContain("Never suppress host or operating-system prompts");
       for (const obsolete of obsoleteSkillNames) {
@@ -413,8 +417,8 @@ describe("agent integrations", () => {
       expect(result.status).toBe(0);
       expect(result.stderr).toBe("");
       expect(result.stdout).toContain("╭───╯    ╰───╮");
-      expect(result.stdout.match(/empirical v0\.22\.0/g)).toHaveLength(1);
-      expect(result.stdout.indexOf("empirical v0.22.0")).toBeLessThan(result.stdout.indexOf("Lifecycle:"));
+      expect(result.stdout.match(/empirical v0\.22\.1/g)).toHaveLength(1);
+      expect(result.stdout.indexOf("empirical v0.22.1")).toBeLessThan(result.stdout.indexOf("Lifecycle:"));
       expect(result.stdout).not.toContain("\u001b[");
       expect(result.stdout).toContain("empirical install");
       expect(result.stdout).toContain("empirical update");
@@ -462,7 +466,7 @@ describe("agent integrations", () => {
     for (const alias of ["version", "--version", "-v"]) {
       const result = spawnSync(process.execPath, [cli, alias], { encoding: "utf8" });
       expect(result.status).toBe(0);
-      expect(result.stdout).toBe("0.22.0\n");
+      expect(result.stdout).toBe("0.22.1\n");
       expect(result.stderr).toBe("");
     }
   });

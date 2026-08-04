@@ -71,8 +71,12 @@ Complex and do not ask them to run hidden terminal commands.
 6. Execute every returned action, create immutable evidence receipts with the
    configured commands or collected artifacts, complete its exact revision with
    receipt ids, consume the response as the next action, and integrate reviewed
-   capability deltas against an independent target. Report the exact highest
-   completion level. Stop only at Done, Blocked, or Awaiting Human.
+   capability deltas against an independent target. When Context is returned,
+   call empirical_context, inspect repository evidence, replace every reported
+   refinement-required topic, remove its managed marker, call empirical_context
+   again, and complete only when stale, missing, and refinementRequired are all
+   empty. Report the exact highest completion level. Stop only at Done, Blocked,
+   or Awaiting Human.
 7. After Complex Specify passes, empirical_handoff may offer Continue here,
    Save for later, or one detected agent. Detection and Save launch nothing;
    another runtime requires explicit approval of its exact target, cwd, and argv.
@@ -121,8 +125,10 @@ feature, specification, workflow revision, worktree, or external agent session.
    project-local Empirical skills and installs MCP bridges; report preserved
    unmanaged collisions.
 6. Call empirical_context, or empirical __internal context as fallback, and
-   refine overview, architecture, commands, and conventions only from inspected
-   evidence. Confirm setupComplete is true and context is current.
+   inspect its refinementRequired field. Refine overview, architecture,
+   commands, and conventions only from inspected evidence, remove the managed
+   marker from refined pages, then call context again. Confirm setupComplete is
+   true and stale, missing, and refinementRequired are all empty.
 7. Stop with a concise setup report and the valid next choices: empirical for
    automatic work, empirical-spec for a concrete contract, or
    empirical-socratic for an interview.
@@ -216,8 +222,11 @@ route a new feature request.
    preserve approved decisions and acceptance criteria, create required
    artifacts, execute configured commands or collect immutable evidence
    receipts, call empirical_complete with the exact revision and receipt ids,
-   and continue from its response. Use empirical_retry only for a returned
-   repair path and empirical_integrate only after reviewed deltas pass.
+   and continue from its response. For Context, refresh, inspect evidence,
+   replace reported placeholder topics, remove their managed markers, refresh
+   again, and complete only when the report is current and refinement-complete.
+   Use empirical_retry only for a returned repair path and empirical_integrate
+   only after reviewed deltas pass.
 6. Show worktree or external-agent proposals exactly and wait for explicit
    approval before any authorized operation. Stop only at Done, Blocked, or
    Awaiting Human.
@@ -243,8 +252,11 @@ does not weaken host, Git, credential, release, evidence, or deletion safety.
 3. Follow the returned deterministic route and risk floor. Fast remains
    contract-neutral only. Autonomously draft and approve complete specification,
    design, planning, implementation, verification, review, and integration
-   artifacts while the authorization covers them. Create executed or collected
-   immutable evidence receipts and pass only receipt ids to completion.
+   artifacts while the authorization covers them. Complete any returned Context
+   phase by refreshing inventory, refining reported placeholder topics from
+   inspected evidence, removing managed markers, and refreshing again. Create
+   executed or collected immutable evidence receipts and pass only receipt ids
+   to completion.
 4. Ask a product question only when two or more materially different correct
    outcomes remain and repository facts, Policy v2, accepted decisions, and a
    safe default cannot resolve them. Persist the blocker and stop. Do not ask

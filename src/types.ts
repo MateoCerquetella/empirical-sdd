@@ -23,6 +23,7 @@ export type Phase =
   | "design"
   | "plan"
   | "implement"
+  | "context"
   | "verify"
   | "review"
   | "integrate"
@@ -498,6 +499,7 @@ export interface RepositoryKnowledgeReport {
   context: string[];
   stale: string[];
   missing: string[];
+  refinementRequired: string[];
 }
 
 export interface InitOptions extends ProjectConfigurationInput {

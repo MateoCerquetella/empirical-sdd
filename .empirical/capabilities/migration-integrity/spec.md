@@ -38,3 +38,15 @@ forward-slash relative paths regardless of the host operating system.
 - **WHEN** migration writes its immutable Schema-4-to-Schema-5 receipt
 - **THEN** the report returns `.empirical/migrations/schema-4-to-5.json`
 - **AND** the same observable path is returned on macOS and Linux
+
+### Requirement: Legacy placeholder context remains managed
+
+Schema migration MUST distinguish exact legacy placeholder topic templates from
+custom agent-maintained content. Placeholder templates MUST remain managed and
+refinement-required; custom content MUST be preserved as unmanaged.
+
+#### Scenario: Schema 4 contains untouched TODO templates
+
+- **WHEN** the project migrates to Schema 5
+- **THEN** those templates are marked as managed/refinement-required
+- **AND** custom non-placeholder topic pages remain unmodified

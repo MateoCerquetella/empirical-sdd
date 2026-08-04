@@ -13,6 +13,7 @@ import {
   type PublicationReceipt,
 } from "../src/delivery.js";
 import { readJournal } from "../src/journal.js";
+import { refreshRepositoryKnowledge } from "../src/knowledge.js";
 import { createAuthorization, deriveCompletion, digestJson } from "../src/protocol.js";
 import { PRODUCT_VERSION, SCHEMA_VERSION, type ActionPacket, type WorkflowState } from "../src/types.js";
 
@@ -48,6 +49,17 @@ async function initializeGit(root: string): Promise<void> {
 async function commitAll(root: string, message = "fixture"): Promise<void> {
   git(root, ["add", "."]);
   git(root, ["commit", "-m", message]);
+}
+
+async function refineKnowledge(root: string): Promise<void> {
+  await Promise.all(["overview", "architecture", "commands", "conventions"].map((page) =>
+    writeFile(
+      join(root, ".empirical", "context", `${page}.md`),
+      `# ${page}\n\nEvidence-backed fixture context.\n`,
+      "utf8",
+    )
+  ));
+  await refreshRepositoryKnowledge(root);
 }
 
 async function configureCommand(
@@ -126,7 +138,7 @@ The product MUST expose the example behavior.
 
 describe("Empirical 0.22 Schema-5 core", () => {
   test("exports one product/schema version and parses stable criteria", () => {
-    expect(PRODUCT_VERSION).toBe("0.22.0");
+    expect(PRODUCT_VERSION).toBe("0.22.1");
     expect(SCHEMA_VERSION).toBe(5);
     expect(parseCriteria("<!--\n- [ ] [AC-X] Example only\n-->\n")).toEqual([]);
     expect(parseCriteria("- [ ] [AC-1] The result is returned\n  without losing context.\n"))
@@ -225,11 +237,29 @@ describe("Empirical 0.22 Schema-5 core", () => {
       evidenceKinds: ["test", "review"],
       summary: "Focused verification and independent diff review passed",
     });
-    const completed = await project.complete({
+    const context = await project.complete({
       revision: started.revision,
       outcome: "passed",
       summary: "Implemented and verified",
       receiptIds: [receipt.id],
+    });
+    expect(context).toMatchObject({
+      phase: "context",
+      status: "waiting",
+      completionLevel: { highest: "verified" },
+    });
+    expect(context.instructions).toContain("refinement-required TODO topic");
+    await expect(project.complete({
+      revision: context.revision,
+      outcome: "passed",
+      summary: "Context is not refined",
+    })).rejects.toMatchObject({ code: "CONTEXT_REFINEMENT_REQUIRED" });
+    expect((await project.context()).refinementRequired).toHaveLength(4);
+    await refineKnowledge(root);
+    const completed = await project.complete({
+      revision: context.revision,
+      outcome: "passed",
+      summary: "Refreshed and refined repository knowledge",
     });
     expect(completed).toMatchObject({ phase: "done", status: "done", completionLevel: { highest: "verified" } });
     const featureDirectory = join(root, ".empirical/specs", started.feature!);
@@ -250,6 +280,26 @@ describe("Empirical 0.22 Schema-5 core", () => {
       summary: "The change affects observable behavior",
     });
     expect(promoted).toMatchObject({ profile: "complex", phase: "specify", completionLevel: { highest: "none" } });
+  });
+
+  test("source-neutral Fast work skips the Context phase", async () => {
+    const root = await temporaryProject();
+    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
+    await configureCommand(project);
+    const started = action(await project.fast("Normalize internal metadata only"));
+    const receipt = await project.executeEvidence({
+      commandId: "verify",
+      criteria: ["AC-1"],
+      evidenceKinds: ["test", "review"],
+      summary: "Source-neutral verification passed",
+    });
+    const completed = await project.complete({
+      revision: started.revision,
+      outcome: "passed",
+      summary: "Changed only excluded Empirical state",
+      receiptIds: [receipt.id],
+    });
+    expect(completed).toMatchObject({ phase: "done", status: "done" });
   });
 
   test("UI evidence reflects configured browser and screenshot policy", async () => {
@@ -284,6 +334,44 @@ describe("Empirical 0.22 Schema-5 core", () => {
       .rejects.toMatchObject({ code: "DECISIONS_REQUIRED" });
     await acceptedDecisions(root, feature);
     expect((await project.complete({ revision: current.revision, outcome: "passed", summary: "Designed" })).phase).toBe("plan");
+  });
+
+  test("Complex source changes route through Context before Verify", async () => {
+    const root = await temporaryProject();
+    await initializeGit(root);
+    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
+    await refineKnowledge(root);
+    await commitAll(root, "initialize refined context");
+    let current = action(await project.complex("Add a context-gated example behavior"));
+    const feature = current.feature!;
+    await writeFile(
+      join(root, ".empirical/specs", feature, "spec.md"),
+      "# Context gate\n\n## Acceptance Criteria\n\n- [ ] [AC-1] Source changes require current context.\n",
+      "utf8",
+    );
+    await addedDelta(root, feature);
+    current = await project.complete({ revision: current.revision, outcome: "passed", summary: "Specified" });
+    await acceptedDecisions(root, feature);
+    await writeFile(join(root, ".empirical/specs", feature, "design.md"), "# Design\n\nUse the existing workflow.\n", "utf8");
+    current = await project.complete({ revision: current.revision, outcome: "passed", summary: "Designed" });
+    await writeFile(join(root, ".empirical/specs", feature, "plan.md"), "# Plan\n\nImplement and refresh context.\n", "utf8");
+    current = await project.complete({ revision: current.revision, outcome: "passed", summary: "Planned" });
+    await mkdir(join(root, "src"), { recursive: true });
+    await writeFile(join(root, "src", "example.ts"), "export const example = true;\n", "utf8");
+    current = await project.complete({ revision: current.revision, outcome: "passed", summary: "Implemented" });
+    expect(current).toMatchObject({ phase: "context", status: "waiting" });
+    await expect(project.complete({
+      revision: current.revision,
+      outcome: "passed",
+      summary: "Skipped refresh",
+    })).rejects.toMatchObject({ code: "CONTEXT_REFINEMENT_REQUIRED" });
+    expect((await project.context()).refinementRequired).toEqual([]);
+    current = await project.complete({
+      revision: current.revision,
+      outcome: "passed",
+      summary: "Refreshed current context",
+    });
+    expect(current.phase).toBe("verify");
   });
 
   test("non-Git behavioral Specify stops at the capability-claim safety boundary", async () => {

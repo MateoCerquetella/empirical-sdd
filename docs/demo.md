@@ -24,13 +24,15 @@ state.
 
 Routing assigns the contract-neutral floor, so Fast implements the change,
 executes configured verification, records immutable test/review receipts, and
+conditionally refines repository Context when source fingerprints changed, and
 finishes at `verified`.
 
 > `$empirical` Add expiring team invitations with revocation and audit history.
 
 Routing assigns at least the behavioral floor. Complex freezes an impact
 manifest and capability deltas, then advances through Specify, Design, Plan,
-Implement, Verify, Review, and independent Integrate. If the request is
+Implement, conditional Context refinement, Verify, Review, and independent
+Integrate. If the request is
 materially ambiguous, the agent conducts and persists the five Socratic passes
 before drafting the contract.
 

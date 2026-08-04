@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "feature": "fix-repository-knowledge-so-a-completed-empirical-workflow-cannot-leave",
+  "claimId": "fix-repository-knowledge-so-a-completed-empirical-workflow-cannot-leave-92e63111cfac",
+  "repositoryId": "sha256:28b611fbe37d347c519ab3d25297c1747e77c067df41cf6a321e72b9cdddc4eb",
+  "baseCommit": "588edc949290b470b3b18a478182ae22fc1a8dad",
+  "baseTree": "37d7e3d9b03e0d34455eecc7098f6ff8736f1abc",
+  "featureTree": "sha256:7e57b5fd91bcf9dc2e23d0818f62bf73bbd9675d6ad990a05871d58200f05a91",
+  "targetCommit": "588edc949290b470b3b18a478182ae22fc1a8dad",
+  "targetTree": "37d7e3d9b03e0d34455eecc7098f6ff8736f1abc",
+  "capabilityBaseDigests": {
+    "migration-integrity": "sha256:8caab7fc67246a6db2c3e0dc76cc15ac9d0eae41c592bd7a3e8c09735e19a136",
+    "package-distribution": "sha256:14988f5ee59bf85e2bbbc5f74b31c9daa8da696a527fda05c9559b8819af3bd7",
+    "repository-knowledge": "sha256:bf1f239c281ece00ed983babef6060aff02c33b7a803d0124e4ea3c16cea1648",
+    "workflow-routing": "sha256:a73978b5c63e1e20899f60c792eb5236daa75bb62acb0b4580d727ba1d79ae23"
+  },
+  "deltaDigest": "sha256:11e44e3fdcf6ccd075d18245f5c37a7da17caac88718c66379a7c0c8a650fdae",
+  "resultDigests": {
+    "migration-integrity": "sha256:435b7800ca42028b1af44bb17d9056123dab18d0288ce4ce05755263f9f64463",
+    "package-distribution": "sha256:5238178a8809da67bc2b6221d63f28cc9ba6b75a2d70f20e3b0336579568d78f",
+    "repository-knowledge": "sha256:f0446a1673aab7ce9faf66f3e5435778bbc8b1930fba4be70dc02ed883de68dc",
+    "workflow-routing": "sha256:6bf709b943762546199d6dcc9f1d3d12444bbb6c9f92077959214692c3eb66e4"
+  },
+  "verificationReceiptDigests": [
+    "sha256:a275329f365ba302ff835245c13fe85682bdf579b40c73169f28a9f989eff832"
+  ],
+  "integratedAt": "2026-08-04T14:22:31.237Z",
+  "digest": "sha256:ee2cd57c51761f1d053a821076ede6d1f1ba62ef096d56ff48bb4d574a9c2299"
+}
