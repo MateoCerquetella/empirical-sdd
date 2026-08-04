@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "kind": "external-publication-verification",
+  "feature": "release-0-22-0",
+  "observedAt": "2026-08-04T04:02:52Z",
+  "satisfiesEmpiricalCompletion": false,
+  "note": "This append-only artifact records independently observed external facts. It is not an Empirical delivery receipt, publication authorization, or publication receipt, and it does not alter the terminal feature lifecycle state.",
+  "source": {
+    "repository": "MateoCerquetella/empirical-sdd",
+    "targetBranch": "main",
+    "pullRequest": {
+      "number": 10,
+      "url": "https://github.com/MateoCerquetella/empirical-sdd/pull/10",
+      "headCommit": "b4e6a693ada020854c9d615e580e2b1414875f86",
+      "mergeCommit": "26fce8053e9cc0230a3b3e1d6563c07a48efb32b",
+      "mergedAt": "2026-08-04T03:48:42Z"
+    },
+    "pullRequestCi": {
+      "runId": 30874637995,
+      "url": "https://github.com/MateoCerquetella/empirical-sdd/actions/runs/30874637995",
+      "headCommit": "b4e6a693ada020854c9d615e580e2b1414875f86",
+      "conclusion": "success",
+      "jobs": [
+        "test (22, ubuntu-latest)",
+        "test (24, ubuntu-latest)",
+        "test (26, ubuntu-latest)",
+        "test (macos-latest, 24)",
+        "test (windows-latest, 24)"
+      ]
+    },
+    "postMergeCi": {
+      "runId": 30875804181,
+      "url": "https://github.com/MateoCerquetella/empirical-sdd/actions/runs/30875804181",
+      "headCommit": "26fce8053e9cc0230a3b3e1d6563c07a48efb32b",
+      "conclusion": "success",
+      "jobs": [
+        "test (22, ubuntu-latest)",
+        "test (24, ubuntu-latest)",
+        "test (26, ubuntu-latest)",
+        "test (macos-latest, 24)",
+        "test (windows-latest, 24)"
+      ]
+    }
+  },
+  "tag": {
+    "name": "v0.22.0",
+    "annotated": true,
+    "tagObject": "a883901875f0d9330ca2d8ba89825a2dabf4cfb0",
+    "peeledCommit": "26fce8053e9cc0230a3b3e1d6563c07a48efb32b"
+  },
+  "githubRelease": {
+    "name": "Empirical 0.22.0",
+    "tag": "v0.22.0",
+    "url": "https://github.com/MateoCerquetella/empirical-sdd/releases/tag/v0.22.0",
+    "publishedAt": "2026-08-04T03:54:33Z",
+    "draft": false,
+    "prerelease": false
+  },
+  "npm": {
+    "registry": "https://registry.npmjs.org",
+    "package": "empirical-sdd",
+    "version": "0.22.0",
+    "distTag": "latest",
+    "distTagVersion": "0.22.0",
+    "integrity": "sha512-tHZ0asR/1HKPAbQe1iqMcUT8wHnYageqXPd6xWJ734l+aDcm7mQy+bvl0O9d0QEpP+enX2FLIgCtAxnxyRnwqg==",
+    "shasum": "6ab3ef88d7559d441285bb7f8e8d1a156f986293",
+    "tarball": "https://registry.npmjs.org/empirical-sdd/-/empirical-sdd-0.22.0.tgz",
+    "declaredFileCount": 40,
+    "nodeEngine": ">=22"
+  },
+  "cleanConsumer": {
+    "passed": true,
+    "source": "public npm registry exact-version install in a fresh disposable directory",
+    "installed": "empirical-sdd@0.22.0",
+    "versionOutput": "0.22.0",
+    "lifecycleHelp": [
+      "install",
+      "update",
+      "uninstall"
+    ],
+    "supportedExports": [
+      "empirical-sdd",
+      "empirical-sdd/protocol",
+      "empirical-sdd/mcp",
+      "empirical-sdd/integrations"
+    ],
+    "privateSubpath": {
+      "specifier": "empirical-sdd/dist/cli.js",
+      "rejected": true,
+      "errorCode": "ERR_PACKAGE_PATH_NOT_EXPORTED"
+    },
+    "disposableDirectoryRemoved": true
+  },
+  "lifecycleDisclosure": {
+    "revision": 8,
+    "highest": "integrated",
+    "delivered": false,
+    "published": false,
+    "explanation": "The external release is live and verified, but the terminal Empirical feature was not delivered or published through Empirical's receipt-gated state machine. This artifact preserves those external facts without fabricating lifecycle completion."
+  }
+}
