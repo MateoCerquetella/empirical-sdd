@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "feature": "fix-the-0-22-0-windows-release-gate-by-making",
+  "claimId": "fix-the-0-22-0-windows-release-gate-by-making-92e63111cfac",
+  "repositoryId": "sha256:28b611fbe37d347c519ab3d25297c1747e77c067df41cf6a321e72b9cdddc4eb",
+  "baseCommit": "af4293faadb9f8e4f614a69e57b13cc1b4ba0aee",
+  "baseTree": "4595e866b4abcf34e292180d7c70493123967e8f",
+  "featureTree": "sha256:54eb5a6685a385c1f128a2c99a17b9caafb7f605e82b2c6662b263198de3ee8f",
+  "targetCommit": "873c2b49109569361bee4cb7a3dec231ee14bd62",
+  "targetTree": "ee7cc48ede076f05e08153d75bc99fa9051db7f4",
+  "capabilityBaseDigests": {
+    "living-specifications": "sha256:a442bcb945447e97f21b0877601421e9fca480baf333715d5b8a8b7aa203a780",
+    "migration-integrity": "sha256:7ec3ba4c2ac554dd5afc63292d9f7ab2f7adf8984cee14f62633a3aed1884a2d"
+  },
+  "deltaDigest": "sha256:48f10b43bfb43a8cf48e0d319ce3a94570d69f4262f8e59bd66261bdfd5adda8",
+  "resultDigests": {
+    "living-specifications": "sha256:a5bb5cb883853e8ca13cd2b2881da60decce0df65a7e4900db49668603e16e31",
+    "migration-integrity": "sha256:8caab7fc67246a6db2c3e0dc76cc15ac9d0eae41c592bd7a3e8c09735e19a136"
+  },
+  "verificationReceiptDigests": [
+    "sha256:250800f6c01f2cee9685209df361f830e1c95029f83e72ca18d29bbced7ec6a7"
+  ],
+  "integratedAt": "2026-08-04T03:22:16.435Z",
+  "digest": "sha256:8f58ffe84cd10ecf9cc80d3071a1a46c99b92a37b4afdc3cf77cc8e886b923ef"
+}

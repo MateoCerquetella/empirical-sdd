@@ -27,3 +27,14 @@ active recovery transaction and MUST NOT remove or modify them.
 
 - **WHEN** a reserved stage directory exists without a migration marker
 - **THEN** Doctor returns actionable orphan-scratch diagnostics and preserves its bytes
+
+### Requirement: Migration reports use portable repository paths
+
+Every migration report MUST identify repository-contained artifacts with
+forward-slash relative paths regardless of the host operating system.
+
+#### Scenario: Schema 4 migrates on Windows
+
+- **WHEN** migration writes its immutable Schema-4-to-Schema-5 receipt
+- **THEN** the report returns `.empirical/migrations/schema-4-to-5.json`
+- **AND** the same observable path is returned on macOS and Linux

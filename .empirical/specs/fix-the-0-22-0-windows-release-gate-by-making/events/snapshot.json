@@ -1,25 +1,21 @@
 {
   "schemaVersion": 1,
-  "sequence": 5,
-  "previousDigest": "sha256:fa8fa21fc22d0a57a8564f07c98f49da2b9e9c83057ebab44ae74895199f3442",
-  "actor": "agent",
-  "type": "transition",
-  "summary": "Implemented canonical Markdown digests and projections, portable migration receipt reporting, Windows-safe symlink cleanup, stable worktree assertions, and focused regression coverage.",
-  "createdAt": "2026-08-04T02:26:23.031Z",
-  "stateBeforeDigest": "sha256:2ac1b795a756a1d7f2b594ca659cdb03c026b0a886dacfed48db91503aa822b7",
-  "stateAfterDigest": "sha256:0d2a7d4ea0ff9087fd05132f6ce4a95bae00af82dfc0d3e2408ecc07189a58e5",
+  "feature": "fix-the-0-22-0-windows-release-gate-by-making",
+  "lastSequence": 11,
+  "lastEventDigest": "sha256:1e1e09f4e68439a8eb741853f8badd789addc9f457f5d2a1d0603cc6ccdaddc8",
+  "stateDigest": "sha256:a4d843feed83c0fe182f5422c879690933d3524a1d10fa8fa886d775c28fdffd",
   "state": {
     "schemaVersion": 5,
-    "revision": 5,
+    "revision": 11,
     "activeFeature": "fix-the-0-22-0-windows-release-gate-by-making",
     "request": "Fix the 0.22.0 Windows release gate by making capability base/replay hashing newline-stable, returning portable migration receipt paths, and making cross-platform symlink/worktree assertions robust without weakening safety.",
     "profile": "complex",
     "workflow": "complex",
     "mode": "normal",
-    "phase": "verify",
-    "status": "waiting",
+    "phase": "done",
+    "status": "done",
     "repairAttempts": 0,
-    "message": "Implemented canonical Markdown digests and projections, portable migration receipt reporting, Windows-safe symlink cleanup, stable worktree assertions, and focused regression coverage.",
+    "message": "Integrated capability changes: living-specifications, migration-integrity",
     "implementationActor": "agent",
     "specDigest": "sha256:8477d012949632c90f8b359dbc68c8a92a6ec490c530a41a918c93fc7dd5216a",
     "approvedSpecRevision": 2,
@@ -29,23 +25,26 @@
     "capabilityClaimId": "fix-the-0-22-0-windows-release-gate-by-making-92e63111cfac",
     "authorizationDigest": null,
     "evidence": [],
-    "evidenceReceiptIds": [],
+    "evidenceReceiptIds": [
+      "executed-92b992e8c091e8192e2175bf",
+      "collected-7590d9194ce01b4c453e0040",
+      "executed-71ca7dc8cf865db83531c8f5"
+    ],
     "legacyEvidenceCount": 0,
     "completion": {
       "implemented": true,
-      "verified": false,
-      "integrated": false,
+      "verified": true,
+      "integrated": true,
       "delivered": false,
       "published": false,
-      "highest": "implemented",
+      "highest": "integrated",
       "reasons": {
-        "verified": "verified has not been proven by a durable receipt.",
-        "integrated": "integrated has not been proven by a durable receipt.",
         "delivered": "delivered has not been proven by a durable receipt.",
         "published": "published has not been proven by a durable receipt."
       }
     },
-    "updatedAt": "2026-08-04T02:26:23.031Z"
+    "updatedAt": "2026-08-04T03:22:16.505Z"
   },
-  "digest": "sha256:49f19f9447235ae43d96d9286a5ca55b4698569ede8f749cf17c0ee3eed34d73"
+  "compactedAt": "2026-08-04T03:22:16.569Z",
+  "digest": "sha256:078f651c7b21c8add3ad65522fc7193c2478c31a7316396b149bd2674cf700bd"
 }

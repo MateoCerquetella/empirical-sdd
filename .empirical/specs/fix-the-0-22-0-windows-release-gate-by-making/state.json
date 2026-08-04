@@ -1,15 +1,15 @@
 {
   "schemaVersion": 5,
-  "revision": 8,
+  "revision": 11,
   "activeFeature": "fix-the-0-22-0-windows-release-gate-by-making",
   "request": "Fix the 0.22.0 Windows release gate by making capability base/replay hashing newline-stable, returning portable migration receipt paths, and making cross-platform symlink/worktree assertions robust without weakening safety.",
   "profile": "complex",
   "workflow": "complex",
   "mode": "normal",
-  "phase": "verify",
-  "status": "waiting",
-  "repairAttempts": 1,
-  "message": "Implemented the reviewed canonical receipt-recovery fix and full snapshot digest coverage; focused suites pass normally and with Git autocrlf enabled. Remote matrix evidence remains intentionally pending.",
+  "phase": "done",
+  "status": "done",
+  "repairAttempts": 0,
+  "message": "Integrated capability changes: living-specifications, migration-integrity",
   "implementationActor": "agent",
   "specDigest": "sha256:8477d012949632c90f8b359dbc68c8a92a6ec490c530a41a918c93fc7dd5216a",
   "approvedSpecRevision": 2,
@@ -19,21 +19,23 @@
   "capabilityClaimId": "fix-the-0-22-0-windows-release-gate-by-making-92e63111cfac",
   "authorizationDigest": null,
   "evidence": [],
-  "evidenceReceiptIds": [],
+  "evidenceReceiptIds": [
+    "executed-92b992e8c091e8192e2175bf",
+    "collected-7590d9194ce01b4c453e0040",
+    "executed-71ca7dc8cf865db83531c8f5"
+  ],
   "legacyEvidenceCount": 0,
   "completion": {
     "implemented": true,
-    "verified": false,
-    "integrated": false,
+    "verified": true,
+    "integrated": true,
     "delivered": false,
     "published": false,
-    "highest": "implemented",
+    "highest": "integrated",
     "reasons": {
-      "verified": "verified has not been proven by a durable receipt.",
-      "integrated": "integrated has not been proven by a durable receipt.",
       "delivered": "delivered has not been proven by a durable receipt.",
       "published": "published has not been proven by a durable receipt."
     }
   },
-  "updatedAt": "2026-08-04T02:41:39.829Z"
+  "updatedAt": "2026-08-04T03:22:16.505Z"
 }

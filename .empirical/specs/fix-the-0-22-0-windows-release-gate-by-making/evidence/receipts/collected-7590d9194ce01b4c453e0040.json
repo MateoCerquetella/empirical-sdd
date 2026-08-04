@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "collected-7590d9194ce01b4c453e0040",
+  "criteria": [
+    "AC-4"
+  ],
+  "evidenceKinds": [
+    "test"
+  ],
+  "summary": "GitHub Actions run 30872615989 passed the exact pushed commit 873c2b49109569361bee4cb7a3dec231ee14bd62 on Node 22, 24, and 26 for Linux plus Node 24 on macOS and Windows.",
+  "passed": true,
+  "startedAt": "2026-08-04T02:47:57.808Z",
+  "completedAt": "2026-08-04T02:47:57.808Z",
+  "provenance": {
+    "repositoryId": "sha256:28b611fbe37d347c519ab3d25297c1747e77c067df41cf6a321e72b9cdddc4eb",
+    "feature": "fix-the-0-22-0-windows-release-gate-by-making",
+    "specRevision": 2,
+    "specDigest": "sha256:8477d012949632c90f8b359dbc68c8a92a6ec490c530a41a918c93fc7dd5216a",
+    "treeDigest": "sha256:54eb5a6685a385c1f128a2c99a17b9caafb7f605e82b2c6662b263198de3ee8f",
+    "policyDigest": "sha256:888d86d00b83ec4a957413efb0701df5278d06de2077ba6b76f58dd2ba6eeeaf"
+  },
+  "digest": "sha256:44b5d81bdad8c7f3fa6bb31b83654d77af5fdbbca3869699d9744354032c681e",
+  "kind": "collected",
+  "collector": "github-actions-api-via-gh",
+  "artifacts": [
+    {
+      "path": ".empirical/specs/fix-the-0-22-0-windows-release-gate-by-making/evidence/github-actions-run-30872615989.json",
+      "mediaType": "application/json",
+      "bytes": 2170,
+      "digest": "sha256:b4b19346b2f5efee26ed441804d5ace6af4fb9073663a8dc8ccc1e0540560bd9"
+    }
+  ]
+}
