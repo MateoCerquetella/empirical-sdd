@@ -1,5 +1,4 @@
 {
-  "schemaVersion": 4,
   "revision": 0,
   "activeFeature": "001-portable-resumable-sdd-library",
   "request": null,
@@ -9,9 +8,30 @@
   "repairAttempts": 0,
   "message": "Adopted non-destructively from ai/",
   "implementationActor": null,
-  "evidence": [],
   "updatedAt": "2026-07-28T21:19:18.796Z",
-  "specDigest": null,
+  "specDigest": "sha256:f513b30818054593c139d580616aa3ef1064aebbc432b4de0fd1034255dcdc0f",
   "capabilityArchiveRequired": false,
-  "capabilityDeltaDigest": null
+  "capabilityDeltaDigest": null,
+  "schemaVersion": 5,
+  "workflow": "complex",
+  "mode": "normal",
+  "approvedSpecRevision": 0,
+  "impactDigest": "sha256:fcdc9cd878cb8cca535b2839c35967430dd36394abe0236e169dc7c3ef063ff0",
+  "capabilityClaimId": null,
+  "authorizationDigest": null,
+  "evidenceReceiptIds": [],
+  "legacyEvidenceCount": 0,
+  "completion": {
+    "implemented": true,
+    "verified": true,
+    "integrated": false,
+    "delivered": false,
+    "published": false,
+    "highest": "verified",
+    "reasons": {
+      "integrated": "integrated has not been proven by a durable receipt.",
+      "delivered": "delivered has not been proven by a durable receipt.",
+      "published": "published has not been proven by a durable receipt."
+    }
+  }
 }

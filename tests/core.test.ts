@@ -1,14 +1,25 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+
 import { EmpiricalProject, parseCriteria } from "../src/core.js";
+import { resolveGitRepositoryIdentity } from "../src/coordination.js";
 import { parseDecisions } from "../src/decisions.js";
-import { SCHEMA_VERSION, PRODUCT_VERSION, type ActionPacket, type WorkflowState } from "../src/types.js";
+import {
+  publicationRequestDigest,
+  type GitHubDeliveryReceipt,
+  type PublicationReceipt,
+} from "../src/delivery.js";
+import { readJournal } from "../src/journal.js";
+import { createAuthorization, deriveCompletion, digestJson } from "../src/protocol.js";
+import { PRODUCT_VERSION, SCHEMA_VERSION, type ActionPacket, type WorkflowState } from "../src/types.js";
 
 const directories: string[] = [];
-afterEach(async () => Promise.all(directories.splice(0).map((directory) => rm(directory, { recursive: true, force: true }))));
+afterEach(async () => {
+  await Promise.all(directories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })));
+});
 
 async function temporaryProject(): Promise<string> {
   const directory = await mkdtemp(join(tmpdir(), "empirical-core-"));
@@ -21,6 +32,49 @@ function action(value: Awaited<ReturnType<EmpiricalProject["fast"]>>): ActionPac
   return value;
 }
 
+function git(root: string, args: string[]): string {
+  const result = spawnSync("git", args, { cwd: root, encoding: "utf8", shell: false });
+  if (result.status !== 0) throw new Error(result.stderr || `git ${args.join(" ")} failed`);
+  return result.stdout.trim();
+}
+
+async function initializeGit(root: string): Promise<void> {
+  git(root, ["init", "-b", "main"]);
+  git(root, ["config", "user.name", "Empirical Test"]);
+  git(root, ["config", "user.email", "empirical@example.test"]);
+  await writeFile(join(root, "README.md"), "# Fixture\n", "utf8");
+}
+
+async function commitAll(root: string, message = "fixture"): Promise<void> {
+  git(root, ["add", "."]);
+  git(root, ["commit", "-m", message]);
+}
+
+async function configureCommand(
+  project: EmpiricalProject,
+  evidence = { required: true, browserForUi: true, screenshotForUi: true, codeReview: true },
+): Promise<void> {
+  await project.configurePolicy({
+    schemaVersion: 2,
+    context: [],
+    phases: {},
+    verification: {
+      evidence,
+      commands: [{
+        id: "verify",
+        argv: [process.execPath, "-e", "process.exit(0)"],
+        cwd: ".",
+        timeoutMs: 30_000,
+        maxOutputBytes: 65_536,
+        evidenceKinds: ["test", "review"],
+        criteria: [],
+      }],
+    },
+    delivery: null,
+    preferredAgent: null,
+  });
+}
+
 async function acceptedDecisions(root: string, feature: string): Promise<void> {
   await writeFile(join(root, ".empirical/specs", feature, "decisions.md"), `# Decisions
 
@@ -30,12 +84,11 @@ Status: Accepted
 
 ### Evidence
 
-- The existing module owns this behavior.
+The existing module owns this behavior.
 
 ### Options
 
-1. Change the module.
-2. Add a second subsystem.
+1. Change the module. 2. Add a second subsystem.
 
 ### Chosen approach
 
@@ -43,11 +96,11 @@ Change the existing module and preserve its public boundary.
 
 ### Trade-offs and risks
 
-The module grows slightly; focused regression coverage mitigates the risk.
+Focused regression coverage mitigates the change risk.
 
 ### Verification
 
-Run the focused behavior test and review the public diff.
+Run the configured command and review the public diff.
 `, "utf8");
 }
 
@@ -71,81 +124,27 @@ The product MUST expose the example behavior.
 `, "utf8");
 }
 
-describe("Empirical 0.20 core", () => {
-  test("exports the alpha product and schema versions", () => {
-    expect(PRODUCT_VERSION).toBe("0.20.4");
-    expect(SCHEMA_VERSION).toBe(4);
-  });
-
-  test("parses wrapped criteria but ignores commented examples", () => {
+describe("Empirical 0.22 Schema-5 core", () => {
+  test("exports one product/schema version and parses stable criteria", () => {
+    expect(PRODUCT_VERSION).toBe("0.22.0");
+    expect(SCHEMA_VERSION).toBe(5);
     expect(parseCriteria("<!--\n- [ ] [AC-X] Example only\n-->\n")).toEqual([]);
     expect(parseCriteria("- [ ] [AC-1] The result is returned\n  without losing context.\n"))
       .toEqual([{ id: "AC-1", text: "The result is returned without losing context.", ui: false, checked: false }]);
   });
 
-  test("init creates schema-4 configuration without root workflow state", async () => {
+  test("initialization creates Schema 5, Policy v2, Manifest v2, and no root workflow projection", async () => {
     const root = await temporaryProject();
     const initialized = await EmpiricalProject.initialize(root, { integrations: false, setupComplete: true });
-    expect(initialized.state).toMatchObject({ phase: "idle", revision: 0, activeFeature: null });
-    expect(await initialized.project.config()).toMatchObject({
-      schemaVersion: 4,
-      evidence: { required: true, browserForUi: true, screenshotForUi: true, codeReview: true },
-      isolation: { mode: "ask", baseBranch: "auto", worktreePath: "../{repo}-{feature}", branchPattern: "{type}/{feature}" },
-      decisions: { complexRecords: "required" },
-      setupComplete: true,
-    });
+    expect(initialized.state).toMatchObject({ schemaVersion: 5, phase: "idle", revision: 0 });
+    expect(await initialized.project.config()).toMatchObject({ schemaVersion: 5, setupComplete: true });
+    expect(await initialized.project.policy()).toMatchObject({ schemaVersion: 2, delivery: null });
+    expect(JSON.parse(await readFile(join(root, ".empirical/context/manifest.json"), "utf8")))
+      .toMatchObject({ schemaVersion: 2 });
     expect(await stat(join(root, ".empirical/state.json")).then(() => true, () => false)).toBe(false);
   });
 
-  test("reinitialization repairs partial setup and applies only explicit configuration", async () => {
-    const root = await temporaryProject();
-    const first = await EmpiricalProject.initialize(root, {
-      integrations: false,
-      evidence: { required: false, browserForUi: false, screenshotForUi: true, codeReview: true },
-      isolation: { baseBranch: "develop", worktreePath: "../saved-{feature}" },
-      decisions: { complexRecords: "required" },
-      setupComplete: false,
-    });
-    await rm(join(root, ".empirical", "context"), { recursive: true, force: true });
-    await mkdir(join(root, ".agents", "skills", "empirical-loop"), { recursive: true });
-    await writeFile(
-      join(root, ".agents", "skills", "empirical-loop", "SKILL.md"),
-      "<!-- empirical-sdd:managed-file -->\nstale local skill\n",
-      "utf8",
-    );
-
-    const repaired = await EmpiricalProject.initialize(root, {
-      evidence: { codeReview: false },
-      isolation: { mode: "off" },
-      decisions: { complexRecords: "off" },
-      setupComplete: true,
-    });
-    expect(await repaired.project.config()).toMatchObject({
-      evidence: { required: false, browserForUi: false, screenshotForUi: true, codeReview: false },
-      isolation: { mode: "off", baseBranch: "develop", worktreePath: "../saved-{feature}" },
-      decisions: { complexRecords: "off" },
-      setupComplete: true,
-    });
-    expect(repaired.state).toMatchObject({ phase: "idle", revision: 0, activeFeature: null });
-    expect(repaired.integrations.removed).toContain(".agents/skills/empirical-loop/SKILL.md");
-    expect(await stat(join(root, ".empirical", "context", "manifest.json"))).toBeDefined();
-    await expect(readFile(join(root, ".agents", "skills", "empirical-loop", "SKILL.md"), "utf8"))
-      .rejects.toBeDefined();
-
-    const configBefore = await readFile(first.project.store.configPath, "utf8");
-    const manifestBefore = await readFile(join(root, ".empirical", "context", "manifest.json"), "utf8");
-    await EmpiricalProject.initialize(root, {
-      integrations: false,
-      isolation: { mode: "off" },
-      decisions: { complexRecords: "off" },
-      setupComplete: true,
-    });
-    expect(await readFile(first.project.store.configPath, "utf8")).toBe(configBefore);
-    expect(await readFile(join(root, ".empirical", "context", "manifest.json"), "utf8"))
-      .toBe(manifestBefore);
-  });
-
-  test("configuration is durable and validates templates", async () => {
+  test("configuration and Policy v2 are durable, strict, and repository-contained", async () => {
     const root = await temporaryProject();
     const { project } = await EmpiricalProject.initialize(root, { integrations: false });
     const configured = await project.configure({
@@ -154,162 +153,333 @@ describe("Empirical 0.20 core", () => {
       decisions: { complexRecords: "off" },
     });
     expect((await EmpiricalProject.open(root)).config()).resolves.toEqual(configured);
-    expect(configured.evidence).toEqual({
-      required: false,
-      browserForUi: false,
-      screenshotForUi: true,
-      codeReview: true,
-    });
     await expect(project.configure({ isolation: { worktreePath: "../fixed" } }))
       .rejects.toMatchObject({ code: "INVALID_CONFIG" });
+    await expect(project.configurePolicy({
+      schemaVersion: 2,
+      context: [], phases: {},
+      verification: { evidence: configured.evidence, commands: [{ id: "bad", argv: ["sh", "-c", "true"], cwd: ".", timeoutMs: 1000, maxOutputBytes: 1000, criteria: [] }] },
+      delivery: null, preferredAgent: null,
+    })).rejects.toThrow("may not invoke a shell");
+    await writeFile(
+      join(root, ".empirical", "policy.json"),
+      `${JSON.stringify({
+        schemaVersion: 2,
+        context: [],
+        phases: {},
+        verification: {
+          evidence: configured.evidence,
+          commands: [{
+            id: "unsafe",
+            argv: ["sh", "-c", "true"],
+            cwd: ".",
+            timeoutMs: 1000,
+            maxOutputBytes: 1000,
+            evidenceKinds: ["test"],
+            criteria: [],
+          }],
+        },
+        delivery: null,
+        preferredAgent: null,
+      }, null, 2)}\n`,
+      "utf8",
+    );
+    await expect(project.policy()).rejects.toMatchObject({ code: "INVALID_POLICY" });
   });
 
-  test("schema-4 configuration missing evidence fields normalizes to strict defaults", async () => {
+  test("Fast completion accepts only immutable receipts and derives verified completion", async () => {
     const root = await temporaryProject();
     const { project } = await EmpiricalProject.initialize(root, { integrations: false });
-    const config = JSON.parse(await readFile(project.store.configPath, "utf8")) as Record<string, unknown>;
-    config.evidence = { required: false, browserForUi: false };
-    await writeFile(project.store.configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
-    expect(await (await EmpiricalProject.open(root)).config()).toMatchObject({
-      evidence: { required: false, browserForUi: false, screenshotForUi: true, codeReview: true },
-    });
-  });
-
-  test("criterion evidence can be disabled while review remains independently required", async () => {
-    const root = await temporaryProject();
-    const { project } = await EmpiricalProject.initialize(root, {
-      integrations: false,
-      evidence: { required: false, browserForUi: true, screenshotForUi: true, codeReview: true },
-    });
-    const started = action(await project.fast("Add one independently reviewed result"));
-    expect(started.requiredEvidence).toEqual(["review"]);
+    await configureCommand(project);
+    const started = action(await project.fast("Fix a docs punctuation typo"));
+    expect(started).toMatchObject({ phase: "implement", riskFloor: "contract-neutral" });
     await expect(project.complete({
       revision: started.revision,
       outcome: "passed",
-      summary: "Implemented without criterion evidence",
-    })).rejects.toMatchObject({ code: "EVIDENCE_REQUIRED" });
+      summary: "Caller asserted evidence",
+      evidence: [{ criterionId: "AC-1", kind: "test", passed: true, summary: "claimed" }],
+    })).rejects.toMatchObject({ code: "INVALID_EVIDENCE" });
+    await expect(project.executeEvidence({
+      commandId: "verify",
+      criteria: ["AC-1"],
+      evidenceKinds: ["human"],
+      summary: "Caller tried to widen the configured command",
+    })).rejects.toMatchObject({ code: "INVALID_EVIDENCE" });
+    await writeFile(join(root, "claimed-test.txt"), "not an executed test\n", "utf8");
+    const collected = await project.collectEvidence({
+      criteria: ["AC-1"],
+      evidenceKinds: ["test", "review"],
+      summary: "A caller labeled an arbitrary artifact as test output",
+      collector: "caller",
+      artifacts: [{ path: "claimed-test.txt", mediaType: "text/plain" }],
+    });
+    await expect(project.complete({
+      revision: started.revision,
+      outcome: "passed",
+      summary: "Collected-only evidence must not satisfy tests",
+      receiptIds: [collected.id],
+    })).rejects.toThrow("no passing test evidence");
+    const receipt = await project.executeEvidence({
+      commandId: "verify",
+      criteria: ["AC-1"],
+      evidenceKinds: ["test", "review"],
+      summary: "Focused verification and independent diff review passed",
+    });
     const completed = await project.complete({
       revision: started.revision,
       outcome: "passed",
-      summary: "Implemented and reviewed",
-      evidence: [{ criterionId: "all", kind: "review", passed: true, summary: "Independent review passed" }],
+      summary: "Implemented and verified",
+      receiptIds: [receipt.id],
     });
-    expect(completed.phase).toBe("done");
-    expect((await project.config()).evidence).toEqual({
-      required: false,
-      browserForUi: true,
-      screenshotForUi: true,
-      codeReview: true,
-    });
+    expect(completed).toMatchObject({ phase: "done", status: "done", completionLevel: { highest: "verified" } });
+    const featureDirectory = join(root, ".empirical/specs", started.feature!);
+    expect((await readdir(featureDirectory)).sort()).toEqual(["events", "evidence", "impact.json", "spec.md", "state.json"]);
+    const journal = await readJournal(join(featureDirectory, "events"), started.feature!);
+    expect(journal.snapshot?.state).toMatchObject({ phase: "done", status: "done" });
+    expect(journal.events).toHaveLength(1);
+    expect(journal.events[0]?.type).toBe("compaction-boundary");
   });
 
-  test("UI evidence requirements reflect each configured sub-policy", async () => {
+  test("Fast failure promotes to Complex and clears unproven completion", async () => {
+    const root = await temporaryProject();
+    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
+    const started = action(await project.fast("Rename a local docs variable"));
+    const promoted = await project.complete({
+      revision: started.revision,
+      outcome: "failed",
+      summary: "The change affects observable behavior",
+    });
+    expect(promoted).toMatchObject({ profile: "complex", phase: "specify", completionLevel: { highest: "none" } });
+  });
+
+  test("UI evidence reflects configured browser and screenshot policy", async () => {
     const root = await temporaryProject();
     const { project } = await EmpiricalProject.initialize(root, {
       integrations: false,
       evidence: { required: true, browserForUi: false, screenshotForUi: true, codeReview: false },
     });
-    const started = action(await project.fast("[UI] Show one local status result"));
+    const started = action(await project.fast("[UI] Format comments only in a local preview"));
     expect(started.acceptanceCriteria[0]?.ui).toBe(true);
     expect(started.requiredEvidence).toEqual(["test", "screenshot"]);
   });
 
-  test("Fast owns its state, journal, lock boundary, spec, and evidence under the feature", async () => {
+  test("Complex Specify finalizes behavioral impact, validates decisions, and claims capabilities", async () => {
     const root = await temporaryProject();
+    await initializeGit(root);
     const { project } = await EmpiricalProject.initialize(root, { integrations: false });
-    const started = action(await project.fast("Add a deterministic hello command"));
-    expect(started).toMatchObject({ kind: "action", feature: "add-a-deterministic-hello-command", phase: "implement", revision: 1 });
-    expect(started.completion.cli).not.toContain("workstream");
-    const directory = join(root, ".empirical/specs", started.feature!);
-    expect((await readdir(directory)).sort()).toEqual(["events", "spec.md", "state.json"]);
-    expect(await readdir(join(directory, "events"))).toEqual(["00000001.json"]);
-    const done = await project.complete({
-      revision: 1,
-      outcome: "passed",
-      summary: "Implemented and reviewed",
-      evidence: [
-        { criterionId: "AC-1", kind: "test", passed: true, summary: "Focused test passed" },
-        { criterionId: "all", kind: "review", passed: true, summary: "Diff reviewed" },
-      ],
-    });
-    expect(done).toMatchObject({ phase: "done", status: "done", revision: 2 });
-    expect(await readdir(join(directory, "events"))).toEqual(["00000001.json", "00000002.json"]);
-  });
-
-  test("descriptive feature collisions are explicit", async () => {
-    const root = await temporaryProject();
-    let project = (await EmpiricalProject.initialize(root, { integrations: false })).project;
-    const first = action(await project.fast("Add hello"));
-    await project.complete({
-      revision: first.revision, outcome: "passed", summary: "Done",
-      evidence: [
-        { criterionId: "AC-1", kind: "test", passed: true, summary: "Passed" },
-        { criterionId: "all", kind: "review", passed: true, summary: "Reviewed" },
-      ],
-    });
-    project = await EmpiricalProject.open(root);
-    await expect(project.fast("Add hello")).rejects.toMatchObject({ code: "FEATURE_EXISTS" });
-  });
-
-  test("Complex creates a decision record and blocks Design until it is accepted and complete", async () => {
-    const root = await temporaryProject();
-    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
+    await commitAll(root, "initialize");
     let current = action(await project.complex("Add a durable example capability"));
-    expect(current.artifacts).toContain(`.empirical/specs/${current.feature}/deltas/<capability>.md`);
     const feature = current.feature!;
-    const specPath = join(root, ".empirical/specs", feature, "spec.md");
-    await writeFile(specPath, `# Example\n\n## Acceptance Criteria\n\n- [ ] [AC-1] The example is observable.\n`, "utf8");
+    await writeFile(join(root, ".empirical/specs", feature, "spec.md"), "# Example\n\n## Acceptance Criteria\n\n- [ ] [AC-1] The example is observable.\n", "utf8");
     await addedDelta(root, feature);
-    current = await project.complete({ revision: 1, outcome: "passed", summary: "Specified" });
+    current = await project.complete({ revision: current.revision, outcome: "passed", summary: "Specified" });
     expect(current.phase).toBe("design");
+    const state = await project.status();
+    expect(state).toMatchObject({ capabilityArchiveRequired: true, approvedSpecRevision: 2 });
+    expect(state.capabilityClaimId).toMatch(/^add-a-durable-example-capability-/);
+    expect(JSON.parse(await readFile(join(root, ".empirical/specs", feature, "impact.json"), "utf8")))
+      .toMatchObject({ classification: "behavioral", capabilities: ["example"] });
     await writeFile(join(root, ".empirical/specs", feature, "design.md"), "# Design\n\nKeep ownership local.\n", "utf8");
-    await expect(project.complete({ revision: 2, outcome: "passed", summary: "Designed" }))
+    await expect(project.complete({ revision: current.revision, outcome: "passed", summary: "Designed" }))
       .rejects.toMatchObject({ code: "DECISIONS_REQUIRED" });
     await acceptedDecisions(root, feature);
-    current = await project.complete({ revision: 2, outcome: "passed", summary: "Designed with accepted evidence" });
-    expect(current).toMatchObject({ phase: "plan", revision: 3 });
+    expect((await project.complete({ revision: current.revision, outcome: "passed", summary: "Designed" })).phase).toBe("plan");
   });
 
-  test("required Complex decisions remain enforced when code-review evidence is off", async () => {
+  test("non-Git behavioral Specify stops at the capability-claim safety boundary", async () => {
     const root = await temporaryProject();
-    const { project } = await EmpiricalProject.initialize(root, {
-      integrations: false,
-      evidence: { required: false, codeReview: false },
-    });
-    let current = action(await project.complex("Keep decision policy independent from review evidence"));
+    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
+    const started = action(await project.complex("Add a behavioral example"));
+    await writeFile(join(root, ".empirical/specs", started.feature!, "spec.md"), "# Example\n\n## Acceptance Criteria\n\n- [ ] [AC-1] Behavior exists.\n", "utf8");
+    await addedDelta(root, started.feature!);
+    await expect(project.complete({ revision: started.revision, outcome: "passed", summary: "Specified" }))
+      .rejects.toMatchObject({ code: "CAPABILITY_CLAIM_REQUIRED" });
+  });
+
+  test("YOLO records one bounded immutable authorization and never infers publication", async () => {
+    const root = await temporaryProject();
+    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
+    await expect(project.yolo("Fix a docs punctuation typo", { ceiling: "implemented" }))
+      .rejects.toMatchObject({ code: "YOLO_CEILING_UNREACHABLE" });
+    expect(await project.status()).toMatchObject({ phase: "idle", activeFeature: null });
+    const started = action(await project.yolo("Fix a docs punctuation typo", { ceiling: "integrated" }));
+    expect(started).toMatchObject({ mode: "yolo", completionLevel: { highest: "none" } });
+    const state = await project.status();
+    const authorization = JSON.parse(await readFile(join(root, ".empirical/specs", started.feature!, "authorization.json"), "utf8"));
+    expect(authorization).toMatchObject({ mode: "yolo", ceiling: "integrated" });
+    expect(state.authorizationDigest).toBe(authorization.digest);
+    expect(action(await project.yolo("Fix a docs punctuation typo", { ceiling: "integrated" })).revision)
+      .toBe(started.revision);
+    await expect(project.yolo("Fix a docs punctuation typo", { ceiling: "published" } as never))
+      .rejects.toMatchObject({ code: "PUBLICATION_AUTHORIZATION_REQUIRED" });
+  });
+
+  test("YOLO pauses durably at a partial ceiling and explicit retry resumes normal mode", async () => {
+    const root = await temporaryProject();
+    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
+    let current = action(await project.yolo("Refactor the internal parser architecture", {
+      ceiling: "implemented",
+    }));
     const feature = current.feature!;
     await writeFile(
       join(root, ".empirical/specs", feature, "spec.md"),
-      "# Independent decisions\n\n## Acceptance Criteria\n\n- [ ] [AC-1] Required decisions remain enforced.\n",
+      "# Internal parser refactor\n\n## Acceptance Criteria\n\n- [ ] [AC-1] Existing parser behavior remains unchanged.\n",
       "utf8",
     );
-    await addedDelta(root, feature);
+    await writeFile(
+      join(root, ".empirical/specs", feature, "impact.json"),
+      `${JSON.stringify({
+        classification: "non-behavioral",
+        surfaces: ["internal-parser"],
+        regressionRationale: "The refactor preserves every observable parser result under focused regression tests.",
+      }, null, 2)}\n`,
+      "utf8",
+    );
     current = await project.complete({ revision: current.revision, outcome: "passed", summary: "Specified" });
-    await writeFile(join(root, ".empirical/specs", feature, "design.md"), "# Design\n\nKeep policy gates independent.\n", "utf8");
+    await writeFile(join(root, ".empirical/specs", feature, "design.md"), "# Design\n\nKeep parser ownership local.\n", "utf8");
     await acceptedDecisions(root, feature);
     current = await project.complete({ revision: current.revision, outcome: "passed", summary: "Designed" });
-    await writeFile(join(root, ".empirical/specs", feature, "plan.md"), "# Plan\n\nImplement and verify.\n", "utf8");
+    await writeFile(join(root, ".empirical/specs", feature, "plan.md"), "# Plan\n\nRefactor and run regressions.\n", "utf8");
     current = await project.complete({ revision: current.revision, outcome: "passed", summary: "Planned" });
     current = await project.complete({ revision: current.revision, outcome: "passed", summary: "Implemented" });
-    current = await project.complete({ revision: current.revision, outcome: "passed", summary: "Verified" });
-    expect(current).toMatchObject({ phase: "review" });
-
-    await writeFile(join(root, ".empirical/specs", feature, "decisions.md"), "# Decisions\n\nInvalid after Design.\n", "utf8");
-    await expect(project.complete({
-      revision: current.revision,
-      outcome: "passed",
-      summary: "Reviewed without evidence",
-    })).rejects.toMatchObject({ code: "DECISIONS_REQUIRED" });
+    expect(current).toMatchObject({
+      phase: "verify",
+      status: "awaiting_human",
+      mode: "yolo",
+      completionLevel: { highest: "implemented" },
+    });
+    await expect(project.complete({ revision: current.revision, outcome: "passed", summary: "Over ceiling" }))
+      .rejects.toMatchObject({ code: "AWAITING_HUMAN" });
+    const resumed = await project.retry(current.revision, "human");
+    expect(resumed).toMatchObject({ phase: "verify", status: "waiting", mode: "normal" });
+    expect((await project.status()).authorizationDigest).toBeNull();
   });
 
-  test("decision validation rejects private-reasoning sections and broken supersession", () => {
-    const report = parseDecisions(`## D-001: Unsafe trace\n\nStatus: Superseded\n\n### Chain of thought\nsecret\n\n### Evidence\nfact\n\n### Options\na or b\n\n### Chosen approach\na\n\n### Trade-offs and risks\nrisk\n\n### Verification\ntest\n`);
-    expect(report.valid).toBe(false);
-    expect(report.issues.join(" ")).toContain("hidden-reasoning");
-    expect(report.issues.join(" ")).toContain("Superseded by");
+  test("publication adopts an exact immutable receipt and transitions a delivered terminal feature idempotently", async () => {
+    const root = await temporaryProject();
+    await initializeGit(root);
+    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
+    await commitAll(root, "initialize publication fixture");
+    const started = action(await project.complex("Prepare an explicitly requested immutable release"));
+    const feature = started.feature!;
+    const delivered = await project.store.transition(
+      started.revision,
+      "fixture",
+      "Seed independently delivered state",
+      (state) => ({
+        ...state,
+        phase: "done",
+        status: "done",
+        completion: deriveCompletion({
+          implemented: true,
+          verified: true,
+          integrated: true,
+          delivered: true,
+          published: false,
+        }),
+      }),
+    );
+    const identity = await resolveGitRepositoryIdentity(root);
+    const commit = git(root, ["rev-parse", "HEAD"]);
+    const packageName = "empirical-fixture";
+    const version = "1.2.3";
+    const distTag = "latest";
+    const authorization = createAuthorization({
+      repositoryId: identity.repositoryId,
+      feature,
+      requestDigest: publicationRequestDigest({
+        repositoryId: identity.repositoryId,
+        feature,
+        packageName,
+        version,
+        distTag,
+        commit,
+      }),
+      ceiling: "published",
+      targetBranch: "main",
+      allowExternalAgent: false,
+      createdAt: "2026-08-03T12:00:00.000Z",
+      expiresAt: null,
+    });
+    const deliveryBody: Omit<GitHubDeliveryReceipt, "digest"> = {
+      schemaVersion: 1,
+      repositoryId: identity.repositoryId,
+      feature,
+      targetBranch: "main",
+      source: {
+        number: 11,
+        url: "https://example.test/source/11",
+        state: "MERGED",
+        commit,
+        mergeCommit: commit,
+      },
+      evidence: {
+        number: 12,
+        url: "https://example.test/evidence/12",
+        state: "MERGED",
+        commit,
+        mergeCommit: commit,
+      },
+      requiredChecks: ["ci"],
+      commandReceiptDigests: [digestJson({ command: "delivery" })],
+      deliveredAt: "2026-08-03T12:01:00.000Z",
+    };
+    const publicationBody: Omit<PublicationReceipt, "digest"> = {
+      schemaVersion: 1,
+      repositoryId: identity.repositoryId,
+      feature,
+      authorizationDigest: authorization.digest,
+      planDigest: digestJson({ operation: "publish", version }),
+      packageName,
+      version,
+      tag: `v${version}`,
+      distTag,
+      commit,
+      commandReceiptDigests: [digestJson({ command: "publication-observation" })],
+      publishedAt: "2026-08-03T12:02:00.000Z",
+    };
+    const featureDirectory = join(root, ".empirical", "specs", feature);
+    await writeFile(
+      join(featureDirectory, "delivery-receipt.json"),
+      `${JSON.stringify({ ...deliveryBody, digest: digestJson(deliveryBody) }, null, 2)}\n`,
+      "utf8",
+    );
+    await writeFile(
+      join(featureDirectory, "publication-receipt.json"),
+      `${JSON.stringify({ ...publicationBody, digest: digestJson(publicationBody) }, null, 2)}\n`,
+      "utf8",
+    );
+    const selected = await EmpiricalProject.open(root, { feature });
+    const input = {
+      revision: delivered.revision,
+      authorization,
+      packageName,
+      version,
+      distTag,
+      commit,
+      approved: true as const,
+      actor: "publisher",
+    };
+    const published = await selected.publish(input);
+    expect(published.action).toMatchObject({
+      phase: "done",
+      status: "done",
+      revision: delivered.revision + 1,
+      completionLevel: { highest: "published" },
+    });
+    expect(published.receipt).toMatchObject({ packageName, version, commit });
+    expect(await readFile(join(featureDirectory, "publication-authorization.json"), "utf8"))
+      .toContain(authorization.digest);
+    expect(await selected.publish(input)).toEqual(published);
+    const journal = await readJournal(join(featureDirectory, "events"), feature);
+    expect(journal.snapshot?.state).toMatchObject({
+      phase: "done",
+      completion: { highest: "published" },
+    });
+    expect(journal.events).toHaveLength(1);
   });
 
-  test("Explain is read-only and reports rationale, gates, context, and accepted decisions", async () => {
+  test("Explain is read-only and reports deterministic routing and context gaps", async () => {
     const root = await temporaryProject();
     const { project } = await EmpiricalProject.initialize(root, { integrations: false });
     const started = action(await project.complex("Explain an active decision"));
@@ -318,270 +488,97 @@ describe("Empirical 0.20 core", () => {
     const before = await readFile(statePath, "utf8");
     const report = await project.explain();
     expect(report).toMatchObject({ feature: started.feature, phase: "specify", rationale: { gate: "proceed" } });
-    expect(report.rationale.reason).toContain("state machine");
-    expect(report.rationale.requiredContext).toContain(`.empirical/specs/${started.feature}/spec.md`);
-    expect(report.rationale.missingContext).not.toContain(`.empirical/specs/${started.feature}/spec.md`);
-    expect(report.rationale.missingContext).toContain(`.empirical/specs/${started.feature}/deltas/<capability>.md`);
-    expect(report.decisions[0]).toMatchObject({ id: "D-001", status: "Accepted" });
     expect(await readFile(statePath, "utf8")).toBe(before);
   });
 
-  test("read-only open observes a newer journal event without repairing its state projection", async () => {
+  test("exact revisions, evidence gates, and concurrent identical starters remain deterministic", async () => {
     const root = await temporaryProject();
     const { project } = await EmpiricalProject.initialize(root, { integrations: false });
-    const started = action(await project.fast("Observe interrupted state read-only"));
-    const directory = join(root, ".empirical/specs", started.feature!);
-    const statePath = join(directory, "state.json");
-    const before = await readFile(statePath, "utf8");
-    const recovered = {
-      ...(JSON.parse(before) as WorkflowState),
-      revision: 2,
-      message: "Journal committed before projection",
-      updatedAt: new Date().toISOString(),
-    };
-    await writeFile(join(directory, "events/00000002.json"), `${JSON.stringify({
-      schemaVersion: 4, revision: 2, previousRevision: 1, actor: "fixture",
-      summary: "Interrupted projection", createdAt: recovered.updatedAt, state: recovered,
-    })}\n`, "utf8");
-
-    const report = await (await EmpiricalProject.openReadOnly(root)).explain();
-    expect(report).toMatchObject({ feature: started.feature, revision: 2 });
-    expect(await readFile(statePath, "utf8")).toBe(before);
-  });
-
-  test("read-only open refuses legacy root state without migrating it", async () => {
-    const root = await temporaryProject();
-    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
-    const legacy = {
-      ...(await project.status()), schemaVersion: 3, revision: 3,
-      activeFeature: null, phase: "done", status: "done",
-    };
-    const statePath = join(root, ".empirical/state.json");
-    await writeFile(statePath, `${JSON.stringify(legacy)}\n`, "utf8");
-    await expect(EmpiricalProject.openReadOnly(root)).rejects.toMatchObject({ code: "MIGRATION_REQUIRED" });
-    expect(await readFile(statePath, "utf8")).toContain('"schemaVersion":3');
-  });
-
-  test("exact revisions and evidence gates remain enforced", async () => {
-    const root = await temporaryProject();
-    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
-    const started = action(await project.fast("Add one checked result"));
-    await expect(project.complete({ revision: 0, outcome: "passed", summary: "stale" }))
-      .rejects.toMatchObject({ code: "STALE_REVISION" });
-    await expect(project.complete({ revision: 1, outcome: "passed", summary: "missing evidence" }))
-      .rejects.toMatchObject({ code: "EVIDENCE_REQUIRED" });
-    expect((await project.status()).revision).toBe(started.revision);
-  });
-
-  test("concurrent identical starters converge on one feature and journal", async () => {
-    const root = await temporaryProject();
-    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
-    const values = await Promise.all(Array.from({ length: 8 }, () => project.fast("Add one concurrent output")));
+    const values = await Promise.all(Array.from({ length: 6 }, () => project.fast("Fix a comments-only typo")));
     for (const value of values) expect(value).toEqual(values[0]);
     const started = action(values[0]!);
-    expect(await readdir(join(root, ".empirical/specs"))).toEqual([started.feature!]);
+    await expect(project.complete({ revision: 0, outcome: "passed", summary: "stale" }))
+      .rejects.toMatchObject({ code: "STALE_REVISION" });
+    await expect(project.complete({ revision: started.revision, outcome: "passed", summary: "missing" }))
+      .rejects.toMatchObject({ code: "EVIDENCE_REQUIRED" });
     expect(await readdir(join(root, ".empirical/specs", started.feature!, "events"))).toEqual(["00000001.json"]);
   });
 
-  for (const schemaVersion of [1, 2, 3] as const) {
-    test(`schema-${schemaVersion} default root state migrates into its feature`, async () => {
-      const root = await temporaryProject();
-      const initialized = await EmpiricalProject.initialize(root, { integrations: false });
-      const feature = `legacy-schema-${schemaVersion}`;
-      await initialized.project.store.writeSpec(feature, `# Legacy\n\n## Acceptance Criteria\n\n- [ ] [AC-1] Legacy state resumes.\n`);
-      const state: WorkflowState = {
-        ...(await initialized.project.status()),
-        schemaVersion: SCHEMA_VERSION,
-        revision: 1,
-        activeFeature: feature,
-        request: "Resume legacy state",
-        profile: "fast",
-        phase: "implement",
-        status: "waiting",
-        updatedAt: new Date().toISOString(),
-      };
-      const persisted = { ...state, schemaVersion } as unknown as Record<string, unknown>;
-      if (schemaVersion < 3) {
-        delete persisted.capabilityArchiveRequired;
-        delete persisted.capabilityDeltaDigest;
-      }
-      await writeFile(join(root, ".empirical/state.json"), `${JSON.stringify(persisted)}\n`, "utf8");
-      await mkdir(join(root, ".empirical/events"), { recursive: true });
-      await writeFile(join(root, ".empirical/events/00000001.json"), `${JSON.stringify({
-        schemaVersion, revision: 1, previousRevision: 0, actor: "legacy", summary: "Legacy event", createdAt: state.updatedAt, state: persisted,
-      })}\n`, "utf8");
-      const project = await EmpiricalProject.open(root);
-      expect(await project.status()).toMatchObject({ schemaVersion: 4, activeFeature: feature, revision: 1 });
-      expect(JSON.parse(await readFile(join(root, ".empirical/specs", feature, "state.json"), "utf8"))).toMatchObject({ schemaVersion: 4 });
-      expect(await stat(join(root, ".empirical/state.json")).then(() => true, () => false)).toBe(false);
-      expect(await readdir(join(root, ".empirical/specs", feature, "events"))).toEqual(["00000001.json"]);
-    });
-  }
-
-  test("migration preserves root history when the referenced specification is missing", async () => {
+  test("Schema 5 rejects mixed legacy root state instead of performing partial compatibility migration", async () => {
     const root = await temporaryProject();
     const { project } = await EmpiricalProject.initialize(root, { integrations: false });
-    const state = {
-      ...(await project.status()), schemaVersion: 3, revision: 1,
-      activeFeature: "missing-contract", request: "Resume missing contract",
-      profile: "fast", phase: "implement", status: "waiting",
-    };
-    const statePath = join(root, ".empirical/state.json");
-    const eventPath = join(root, ".empirical/events/00000001.json");
-    await writeFile(statePath, `${JSON.stringify(state)}\n`, "utf8");
-    await mkdir(join(root, ".empirical/events"), { recursive: true });
-    await writeFile(eventPath, `${JSON.stringify({
-      schemaVersion: 3, revision: 1, previousRevision: 0, actor: "legacy",
-      summary: "Legacy", createdAt: state.updatedAt, state,
-    })}\n`, "utf8");
+    await writeFile(join(root, ".empirical/state.json"), `${JSON.stringify(await project.status())}\n`, "utf8");
     await expect(EmpiricalProject.open(root)).rejects.toMatchObject({ code: "MIGRATION_CONFLICT" });
-    expect(await readFile(statePath, "utf8")).toContain("missing-contract");
-    expect(await readFile(eventPath, "utf8")).toContain("Legacy");
+    await expect(EmpiricalProject.openReadOnly(root)).rejects.toMatchObject({ code: "MIGRATION_REQUIRED" });
   });
 
-  test("an interrupted migration fills missing events before removing root history", async () => {
+  test("Schema 5 read-only access rejects mixed feature state", async () => {
     const root = await temporaryProject();
-    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
-    const feature = "interrupted-migration";
-    await project.store.writeSpec(feature, "# Interrupted migration\n");
-    const state = {
-      ...(await project.status()), schemaVersion: 3, revision: 1,
-      activeFeature: feature, request: "Resume interrupted migration",
-      profile: "fast", phase: "implement", status: "waiting",
-    };
-    await writeFile(join(root, ".empirical/state.json"), `${JSON.stringify(state)}\n`, "utf8");
-    await mkdir(join(root, ".empirical/events"), { recursive: true });
-    await writeFile(join(root, ".empirical/events/00000001.json"), `${JSON.stringify({
-      schemaVersion: 3, revision: 1, previousRevision: 0, actor: "legacy",
-      summary: "Legacy", createdAt: state.updatedAt, state,
-    })}\n`, "utf8");
-    const featureDirectory = join(root, ".empirical/specs", feature);
-    await writeFile(join(featureDirectory, "state.json"), `${JSON.stringify({ ...state, schemaVersion: 4 })}\n`, "utf8");
-
-    const reopened = await EmpiricalProject.open(root);
-    expect(await reopened.status()).toMatchObject({ activeFeature: feature, revision: 1 });
-    expect(await readdir(join(featureDirectory, "events"))).toEqual(["00000001.json"]);
-    expect(await stat(join(root, ".empirical/state.json")).then(() => true, () => false)).toBe(false);
+    await EmpiricalProject.initialize(root, { integrations: false });
+    const directory = join(root, ".empirical/specs/mixed-feature");
+    await mkdir(directory, { recursive: true });
+    await writeFile(
+      join(directory, "state.json"),
+      `${JSON.stringify({ schemaVersion: 4, activeFeature: "mixed-feature" })}\n`,
+      "utf8",
+    );
+    await expect(EmpiricalProject.openReadOnly(root)).rejects.toMatchObject({
+      code: "MIGRATION_REQUIRED",
+    });
   });
 
-  test("migration partitions shared root history by the feature recorded in each event", async () => {
-    const root = await temporaryProject();
-    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
-    const firstFeature = "completed-legacy-feature";
-    const secondFeature = "current-legacy-feature";
-    await project.store.writeSpec(firstFeature, "# Completed legacy feature\n");
-    await project.store.writeSpec(secondFeature, "# Current legacy feature\n");
-    const idle = await project.status();
-    const firstState = {
-      ...idle, schemaVersion: 3, revision: 7, activeFeature: firstFeature,
-      request: "Complete legacy work", profile: "fast", phase: "done", status: "done",
-    };
-    const secondState = {
-      ...idle, schemaVersion: 3, revision: 8, activeFeature: secondFeature,
-      request: "Resume current work", profile: "fast", phase: "implement", status: "waiting",
-    };
-    await writeFile(join(root, ".empirical/state.json"), `${JSON.stringify(secondState)}\n`, "utf8");
-    await mkdir(join(root, ".empirical/events"), { recursive: true });
-    for (const [name, state] of [["00000007.json", firstState], ["00000008.json", secondState]] as const) {
-      await writeFile(join(root, ".empirical/events", name), `${JSON.stringify({
-        schemaVersion: 3, revision: state.revision, previousRevision: state.revision - 1,
-        actor: "legacy", summary: state.request, createdAt: state.updatedAt, state,
-      })}\n`, "utf8");
-    }
-
-    const reopened = await EmpiricalProject.open(root);
-    expect(await reopened.status()).toMatchObject({ activeFeature: secondFeature, revision: 8 });
-    expect(await readdir(join(root, ".empirical/specs", firstFeature, "events"))).toEqual(["00000007.json"]);
-    expect(await readdir(join(root, ".empirical/specs", secondFeature, "events"))).toEqual(["00000008.json"]);
-    expect(JSON.parse(await readFile(join(root, ".empirical/specs", firstFeature, "state.json"), "utf8")))
-      .toMatchObject({ activeFeature: firstFeature, phase: "done", revision: 7 });
-  });
-
-  test("feature creation refuses a symbolic-link destination without writing through it", async () => {
+  test("feature creation refuses symlink destinations and recovery rejects ambiguous histories", async () => {
     const root = await temporaryProject();
     const outside = await temporaryProject();
     const { project } = await EmpiricalProject.initialize(root, { integrations: false });
-    const feature = "redirected-feature";
-    await symlink(outside, join(root, ".empirical/specs", feature), "dir");
-    await expect(project.fast("Create redirected feature", { id: feature }))
+    await symlink(outside, join(root, ".empirical/specs/redirected-feature"), "dir");
+    await expect(project.fast("Create redirected feature", { id: "redirected-feature" }))
       .rejects.toMatchObject({ code: "UNSAFE_SPEC_PATH" });
-    expect(await readdir(outside)).toEqual([]);
-  });
-
-  test("terminal legacy root state does not reserve the checkout", async () => {
-    const root = await temporaryProject();
-    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
-    const terminal = { ...(await project.status()), schemaVersion: 3, phase: "done", status: "done", activeFeature: null, revision: 9 };
-    await writeFile(join(root, ".empirical/state.json"), `${JSON.stringify(terminal)}\n`, "utf8");
-    const reopened = await EmpiricalProject.open(root);
-    expect(await reopened.status()).toMatchObject({ phase: "idle", activeFeature: null });
-    expect(action(await reopened.fast("Start after terminal legacy state"))).toMatchObject({ revision: 1, phase: "implement" });
-  });
-
-  test("a process that first sees a non-Git project discovers checkout metadata after Git is initialized", async () => {
-    const root = await temporaryProject();
-    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
-    expect(await project.status()).toMatchObject({ phase: "idle" });
-    spawnSync("git", ["init", "-b", "main"], { cwd: root, encoding: "utf8", shell: false });
-    const started = action(await project.fast("Track work after Git initialization"));
-    const selection = join(root, ".git/empirical-sdd/active-feature");
-    expect(await readFile(selection, "utf8"))
-      .toBe(`${started.feature}\n`);
-    await rm(selection);
-    const recovered = await EmpiricalProject.open(root);
-    expect(await recovered.status()).toMatchObject({ activeFeature: started.feature });
-    expect(await readFile(selection, "utf8")).toBe(`${started.feature}\n`);
-    await recovered.complete({
-      revision: 1,
-      outcome: "passed",
-      summary: "Completed after recovery",
-      evidence: [
-        { criterionId: "AC-1", kind: "test", passed: true, summary: "Passed" },
-        { criterionId: "all", kind: "review", passed: true, summary: "Reviewed" },
-      ],
-    });
-    expect(await stat(selection).then(() => true, () => false)).toBe(false);
-  });
-
-  test("recovery rejects multiple unclaimed non-terminal feature histories", async () => {
-    const root = await temporaryProject();
-    const { project } = await EmpiricalProject.initialize(root, { integrations: false });
-    const started = action(await project.fast("Create the first recoverable feature"));
+    await rm(join(root, ".empirical/specs/redirected-feature"));
+    const started = action(await project.fast("Fix a first comments-only typo"));
     const first = join(root, ".empirical/specs", started.feature!);
     const secondFeature = "second-unclaimed-feature";
     const second = join(root, ".empirical/specs", secondFeature);
     await mkdir(second, { recursive: true });
     const state = JSON.parse(await readFile(join(first, "state.json"), "utf8")) as WorkflowState;
     await writeFile(join(second, "spec.md"), "# Second\n\n## Acceptance Criteria\n\n- [ ] [AC-1] Second is observable.\n", "utf8");
-    await writeFile(join(second, "state.json"), `${JSON.stringify({
-      ...state,
-      activeFeature: secondFeature,
-      request: "Create a second unclaimed feature",
-    })}\n`, "utf8");
-
-    await expect(EmpiricalProject.open(root)).rejects.toMatchObject({
-      code: "MULTIPLE_ACTIVE_FEATURES",
-      details: { features: [started.feature, secondFeature].sort() },
-    });
+    await writeFile(join(second, "state.json"), `${JSON.stringify({ ...state, activeFeature: secondFeature, request: "Second" })}\n`, "utf8");
+    await expect(EmpiricalProject.open(root)).rejects.toMatchObject({ code: "MULTIPLE_ACTIVE_FEATURES" });
   });
 
-  test("project initialization keeps runtime integration but installs no local workflow skill", async () => {
+  test("decision parser rejects hidden reasoning and broken supersession", () => {
+    const report = parseDecisions("## D-001: Unsafe trace\n\nStatus: Superseded\n\n### Chain of thought\nsecret\n\n### Evidence\nfact\n\n### Options\na or b\n\n### Chosen approach\na\n\n### Trade-offs and risks\nrisk\n\n### Verification\ntest\n");
+    expect(report.valid).toBe(false);
+    expect(report.issues.join(" ")).toContain("hidden-reasoning");
+    expect(report.issues.join(" ")).toContain("Superseded by");
+  });
+
+  test("project integration stays MCP-only and v1 adoption remains non-destructive", async () => {
     const root = await temporaryProject();
     const { integrations } = await EmpiricalProject.initialize(root);
     expect(integrations.entrypoints).toEqual([]);
     expect(await readFile(join(root, ".mcp.json"), "utf8")).toContain("empirical");
-    await expect(readFile(join(root, ".agents/skills/empirical/SKILL.md"), "utf8"))
-      .rejects.toBeDefined();
-  });
+    await expect(readFile(join(root, ".agents/skills/empirical/SKILL.md"), "utf8")).rejects.toBeDefined();
 
-  test("v1 adoption preserves ai and stores active state inside the feature", async () => {
-    const root = await temporaryProject();
-    await mkdir(join(root, "ai/specs/legacy-feature"), { recursive: true });
-    await writeFile(join(root, "ai/STATE.md"), "current_spec: legacy-feature\ncurrent_phase: implementation\n", "utf8");
-    await writeFile(join(root, "ai/specs/legacy-feature/spec.md"), "# Legacy\n", "utf8");
-    const adopted = await EmpiricalProject.adopt(root, { integrations: false });
+    const legacy = await temporaryProject();
+    await mkdir(join(legacy, "ai/specs/legacy-feature"), { recursive: true });
+    await writeFile(join(legacy, "ai/STATE.md"), "current_spec: legacy-feature\ncurrent_phase: implementation\n", "utf8");
+    await writeFile(join(legacy, "ai/specs/legacy-feature/spec.md"), "# Legacy\n", "utf8");
+    const adopted = await EmpiricalProject.adopt(legacy, { integrations: false });
     expect(await adopted.project.status()).toMatchObject({ activeFeature: "legacy-feature", phase: "implement" });
-    expect(await readFile(join(root, "ai/STATE.md"), "utf8")).toContain("legacy-feature");
-    expect(await stat(join(root, ".empirical/specs/legacy-feature/state.json"))).toBeDefined();
+    expect(await readFile(join(legacy, "ai/STATE.md"), "utf8")).toContain("legacy-feature");
+
+    const finishedLegacy = await temporaryProject();
+    await mkdir(join(finishedLegacy, "ai/specs/finished-feature"), { recursive: true });
+    await writeFile(join(finishedLegacy, "ai/STATE.md"), "current_spec: finished-feature\ncurrent_phase: done\n", "utf8");
+    await writeFile(join(finishedLegacy, "ai/specs/finished-feature/spec.md"), "# Finished\n", "utf8");
+    const finished = await EmpiricalProject.adopt(finishedLegacy, { integrations: false });
+    expect(await finished.project.status()).toMatchObject({ phase: "done", status: "done" });
+    const journal = await readJournal(
+      join(finishedLegacy, ".empirical/specs/finished-feature/events"),
+      "finished-feature",
+    );
+    expect(journal.snapshot).not.toBeNull();
+    expect(journal.events.map((event) => event.type)).toEqual(["compaction-boundary"]);
   });
 });

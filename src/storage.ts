@@ -1,17 +1,18 @@
-import { chmod, lstat, open, readFile, readdir, rename, rm, rmdir, stat, writeFile, mkdir } from "node:fs/promises";
+import { chmod, lstat, open, readFile, readdir, rename, rm, rmdir, stat, mkdir } from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { EmpiricalError } from "./errors.js";
+import { deriveCompletion, digestJson, type JsonValue } from "./protocol.js";
+import { appendJournalEvent, compactJournal, readJournal, recoverCompaction } from "./journal.js";
+import { migrateSchema4To5 } from "./migration.js";
+import { defaultPolicy, parsePolicy } from "./policy.js";
 import { readCheckoutSelection, writeCheckoutSelection } from "./checkouts.js";
 import {
-  POLICY_SCHEMA_VERSION,
   SCHEMA_VERSION,
   type ProjectPolicy,
-  type Phase,
   type Profile,
   type ProjectConfig,
-  type TransitionEvent,
   type WorkflowState,
 } from "./types.js";
 
@@ -111,12 +112,20 @@ export class ProjectStore {
 
   async loadPolicy(): Promise<ProjectPolicy> {
     if (!(await isFile(this.policyPath))) return defaultPolicy();
-    return normalizePolicy(await readJson<ProjectPolicy>(this.policyPath, "INVALID_POLICY"));
+    try {
+      return parsePolicy(await readJson<unknown>(this.policyPath, "INVALID_POLICY"), this.root) as ProjectPolicy;
+    } catch (error) {
+      throw new EmpiricalError(
+        "INVALID_POLICY",
+        `Could not validate strict Policy v2 at ${this.policyPath}`,
+        error,
+      );
+    }
   }
 
   async writePolicy(policy: ProjectPolicy): Promise<void> {
     await this.withResourceLock("policy", async () => {
-      await writeJsonAtomic(this.policyPath, normalizePolicy(policy));
+      await writeJsonAtomic(this.policyPath, parsePolicy(policy, this.root));
     });
   }
 
@@ -136,10 +145,10 @@ export class ProjectStore {
     const projected = normalizeState(
       await readJson<WorkflowState>(this.statePath, "PROJECT_NOT_INITIALIZED"),
     );
-    const event = await this.latestEvent();
-    if (event && event.revision > projected.revision) {
-      if (recover) await writeJsonAtomic(this.statePath, event.state);
-      return event.state;
+    const journal = await this.latestJournalState();
+    if (journal && journal.revision > projected.revision) {
+      if (recover) await writeJsonAtomic(this.statePath, journal);
+      return journal;
     }
     return projected;
   }
@@ -161,7 +170,12 @@ export class ProjectStore {
     }
     await this.ensureLayout();
     await this.commitInitialState(state, actor, summary ?? `Started ${this.feature}`);
-    await writeCheckoutSelection(this.root, this.feature);
+    if (state.phase === "done" && state.status === "done") {
+      await this.compactTerminalJournal(actor);
+      await writeCheckoutSelection(this.root, null);
+    } else {
+      await writeCheckoutSelection(this.root, this.feature);
+    }
   }
 
   async configure(update: Partial<ProjectConfig>): Promise<ProjectConfig> {
@@ -183,6 +197,7 @@ export class ProjectStore {
     const active: string[] = [];
     for (const feature of await this.listFeatureIds()) {
       const scoped = this.forFeature(feature);
+      await scoped.assertFeaturePathSafe(feature, [scoped.statePath, scoped.eventsDirectory]);
       if (!(await isFile(scoped.statePath))) continue;
       const state = await scoped.loadState(recover);
       if (
@@ -231,6 +246,13 @@ export class ProjectStore {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
       throw error;
+    }
+    const unsafe = entries.find((entry) => entry.isSymbolicLink() && isFeatureId(entry.name));
+    if (unsafe) {
+      throw new EmpiricalError(
+        "UNSAFE_SPEC_PATH",
+        `Feature storage cannot use symbolic links: ${join(directory, unsafe.name)}`,
+      );
     }
     return entries
       .filter((entry) => entry.isDirectory() && isFeatureId(entry.name))
@@ -282,15 +304,6 @@ export class ProjectStore {
       next.schemaVersion = SCHEMA_VERSION;
       next.revision = current.revision + 1;
       next.updatedAt = now;
-      const event: TransitionEvent = {
-        schemaVersion: SCHEMA_VERSION,
-        revision: next.revision,
-        previousRevision: current.revision,
-        actor: prepared.actor,
-        summary: prepared.summary,
-        createdAt: now,
-        state: next,
-      };
       await this.ensureCurrentConfigSchema();
       await prepared.validate?.();
       let rollback: (() => Promise<void>) | undefined;
@@ -300,14 +313,25 @@ export class ProjectStore {
         if (next.phase === "done" && next.status === "done") {
           await writeCheckoutSelection(this.root, null);
         }
-        await writeJsonAtomic(this.eventPath(event.revision), event);
+        const event = await appendJournalEvent({
+          directory: this.eventsDirectory,
+          feature: this.requireFeature(),
+          actor: prepared.actor,
+          summary: prepared.summary,
+          state: next as unknown as import("./protocol.js").JsonValue,
+          now: () => new Date(now),
+        });
         eventWritten = true;
         await writeJsonAtomic(this.statePath, next);
         return { state: next, value: prepared.value };
       } catch (error) {
         if (eventWritten) {
           try {
-            await rm(this.eventPath(event.revision), { force: true });
+            const latest = await readJournal(
+              this.eventsDirectory,
+              this.requireFeature(),
+            );
+            await rm(this.eventPath(latest.lastSequence), { force: true });
           } catch (cleanupError) {
             throw new EmpiricalError(
               "TRANSACTION_RECOVERY_REQUIRED",
@@ -332,132 +356,77 @@ export class ProjectStore {
     });
   }
 
-  async migrateSchema(): Promise<Record<string, unknown>> {
-    const project = new ProjectStore(this.root);
-    await project.ensureProjectMetadata();
-    return project.withResourceLock("specs", async () => {
-      const rawConfig = await readJson<ProjectConfig>(project.configPath, "PROJECT_NOT_INITIALIZED");
-      const configVersion = schemaVersion(rawConfig);
-      const config = normalizeConfig(rawConfig);
-      let changed = JSON.stringify(rawConfig) !== JSON.stringify(config);
-      if (changed) await writeJsonAtomic(project.configPath, config);
-
-      const legacyStatePath = join(project.directory, "state.json");
-      const legacyEvents = join(project.directory, "events");
-      let stateVersion: number | null = null;
-      let migratedFeature: string | null = null;
-      if (await isSymbolicLink(legacyStatePath) || await isSymbolicLink(legacyEvents)) {
-        throw new EmpiricalError("UNSAFE_MIGRATION_PATH", "Workflow migration cannot follow symbolic links");
-      }
-      const eventNames = await legacyEventNames(legacyEvents);
-      const hasLegacyState = await isFile(legacyStatePath);
-      if (!hasLegacyState && eventNames.length) {
+  async compactTerminalJournal(actor = "empirical-compaction"): Promise<void> {
+    this.requireFeature();
+    await this.withLock(async () => {
+      await recoverCompaction<JsonValue>(this.eventsDirectory);
+      const state = await this.loadState();
+      if (state.phase !== "done" || state.status !== "done") {
         throw new EmpiricalError(
-          "MIGRATION_CONFLICT",
-          "Cannot migrate root transition history because its state projection is missing",
+          "COMPACTION_NOT_READY",
+          "Only a terminal workflow journal can be compacted",
         );
       }
-      if (hasLegacyState) {
-        const rawState = await readJson<WorkflowState>(legacyStatePath, "PROJECT_NOT_INITIALIZED");
-        stateVersion = schemaVersion(rawState);
-        const state = normalizeState(rawState);
-        const eventsByFeature = new Map<string, Array<{ name: string; event: TransitionEvent }>>();
-        const desiredState = new Map<string, WorkflowState>();
+      const journal = await readJournal<JsonValue>(
+        this.eventsDirectory,
+        this.requireFeature(),
+      );
+      const alreadyCompacted = journal.snapshot !== null
+        && journal.snapshot.stateDigest === journal.events.at(-1)?.stateAfterDigest
+        && journal.snapshot.stateDigest === digestJson(state)
+        && journal.events.length === 1
+        && journal.events[0]?.type === "compaction-boundary";
+      if (alreadyCompacted) return;
+      await compactJournal<JsonValue>({
+        directory: this.eventsDirectory,
+        feature: this.requireFeature(),
+        actor,
+      });
+    });
+  }
 
-        for (const name of eventNames) {
-          const sourcePath = join(legacyEvents, name);
-          if (await isSymbolicLink(sourcePath)) {
-            throw new EmpiricalError("UNSAFE_MIGRATION_PATH", `Workflow migration cannot follow ${sourcePath}`);
-          }
-          const event = normalizeEvent(await readJson<TransitionEvent>(sourcePath, "INVALID_EVENT"));
-          const feature = event.state.activeFeature;
-          if (!feature) {
-            throw new EmpiricalError(
-              "MIGRATION_CONFLICT",
-              `Cannot assign root transition event ${name} to a feature`,
-            );
-          }
-          assertFeatureId(feature);
-          const records = eventsByFeature.get(feature) ?? [];
-          records.push({ name, event });
-          eventsByFeature.set(feature, records);
-          const current = desiredState.get(feature);
-          if (!current || event.state.revision > current.revision) desiredState.set(feature, event.state);
-        }
-        if (state.activeFeature) {
-          assertFeatureId(state.activeFeature);
-          desiredState.set(state.activeFeature, state);
-          migratedFeature = state.activeFeature;
-        }
-
-        const features = [...new Set([...eventsByFeature.keys(), ...desiredState.keys()])].sort();
-        for (const feature of features) {
-          const scoped = project.forFeature(feature);
-          const specPath = project.specPath(feature);
-          await scoped.assertFeaturePathSafe(feature, [specPath, scoped.statePath, scoped.eventsDirectory]);
-          if (!(await isFile(specPath))) {
-            throw new EmpiricalError("MIGRATION_CONFLICT", `Cannot migrate ${feature}: its specification is missing`);
-          }
-          for (const { name, event } of eventsByFeature.get(feature) ?? []) {
-            const targetPath = join(scoped.eventsDirectory, name);
-            if (await isSymbolicLink(targetPath)) {
-              throw new EmpiricalError("UNSAFE_MIGRATION_PATH", `Workflow migration cannot follow ${targetPath}`);
-            }
-            if (await isFile(targetPath)) {
-              const existing = normalizeEvent(await readJson<TransitionEvent>(targetPath, "INVALID_EVENT"));
-              if (JSON.stringify(existing) !== JSON.stringify(event)) {
-                throw new EmpiricalError("MIGRATION_CONFLICT", `Transition event ${name} conflicts with ${feature} history`);
-              }
-            }
-          }
-          const projected = desiredState.get(feature);
-          if (projected && await isFile(scoped.statePath)) {
-            const existing = normalizeState(await readJson<WorkflowState>(scoped.statePath, "PROJECT_NOT_INITIALIZED"));
-            if (existing.revision === projected.revision && JSON.stringify(existing) !== JSON.stringify(projected)) {
-              throw new EmpiricalError("MIGRATION_CONFLICT", `Feature ${feature} has conflicting workflow state`);
-            }
-          }
-        }
-
-        for (const feature of features) {
-          const scoped = project.forFeature(feature);
-          await scoped.ensureLayout();
-          for (const { name, event } of eventsByFeature.get(feature) ?? []) {
-            const targetPath = join(scoped.eventsDirectory, name);
-            if (!(await isFile(targetPath))) await writeJsonAtomic(targetPath, event);
-          }
-          const projected = desiredState.get(feature);
-          if (!projected) continue;
-          const existing = await isFile(scoped.statePath)
-            ? normalizeState(await readJson<WorkflowState>(scoped.statePath, "PROJECT_NOT_INITIALIZED"))
-            : null;
-          if (!existing || existing.revision < projected.revision) {
-            await writeJsonAtomic(scoped.statePath, projected);
-          }
-        }
-
-        await rm(legacyStatePath, { force: true });
-        await rm(join(project.directory, "state.lock"), { force: true });
-        await rm(legacyEvents, { recursive: true, force: true });
-        changed = true;
+  async migrateSchema(): Promise<Record<string, unknown>> {
+    const project = new ProjectStore(this.root);
+    const rawVersion = schemaVersion(
+      await readJson<ProjectConfig>(project.configPath, "PROJECT_NOT_INITIALIZED"),
+    );
+    if (rawVersion === 4) {
+      return { ...(await migrateSchema4To5(this.root)) };
+    }
+    if (rawVersion !== SCHEMA_VERSION) {
+      throw new EmpiricalError(
+        "MIGRATION_REQUIRED",
+        `Schema ${rawVersion} is unsupported; Empirical 0.22 migrates only Schema 4 to Schema 5`,
+      );
+    }
+    await project.ensureProjectMetadata();
+    return project.withResourceLock("specs", async () => {
+      const legacyStatePath = join(project.directory, "state.json");
+      const legacyEvents = join(project.directory, "events");
+      if (await pathExists(legacyStatePath) || await pathExists(legacyEvents)) {
+        throw new EmpiricalError(
+          "MIGRATION_CONFLICT",
+          "Schema 5 cannot contain legacy root workflow state; restore the Schema-4 backup and rerun the atomic migrator",
+        );
       }
-
       for (const feature of await project.listFeatureIds()) {
         const scoped = project.forFeature(feature);
         await scoped.assertFeaturePathSafe(feature, [scoped.statePath, scoped.eventsDirectory]);
         if (!(await isFile(scoped.statePath))) continue;
         const raw = await readJson<WorkflowState>(scoped.statePath, "PROJECT_NOT_INITIALIZED");
-        const normalized = normalizeState(raw);
-        if (JSON.stringify(raw) !== JSON.stringify(normalized)) {
-          await writeJsonAtomic(scoped.statePath, normalized);
-          changed = true;
+        if (raw.schemaVersion !== SCHEMA_VERSION) {
+          throw new EmpiricalError(
+            "MIGRATION_CONFLICT",
+            `Schema-5 project contains mixed feature state for ${feature}`,
+          );
         }
+        await scoped.latestJournalState();
       }
       return {
-        changed,
-        from: { config: configVersion, state: stateVersion },
+        changed: false,
+        from: { config: SCHEMA_VERSION, state: SCHEMA_VERSION },
         to: SCHEMA_VERSION,
-        migratedFeature,
+        migratedFeature: null,
       };
     });
   }
@@ -533,8 +502,20 @@ export class ProjectStore {
     if (config.schemaVersion !== SCHEMA_VERSION || await pathExists(join(this.directory, "state.json")) || await pathExists(join(this.directory, "events"))) {
       throw new EmpiricalError(
         "MIGRATION_REQUIRED",
-        "This read-only operation requires schema 4; migrate through an installed Empirical agent skill first",
+        "This read-only operation requires Schema 5; migrate through an installed Empirical agent skill first",
       );
+    }
+    for (const feature of await this.listFeatureIds()) {
+      const scoped = this.forFeature(feature);
+      if (!(await isFile(scoped.statePath))) continue;
+      const state = await readJson<WorkflowState>(scoped.statePath, "PROJECT_NOT_INITIALIZED");
+      if (state.schemaVersion !== SCHEMA_VERSION) {
+        throw new EmpiricalError(
+          "MIGRATION_REQUIRED",
+          `Read-only access found mixed Schema-${String(state.schemaVersion)} state for ${feature}`,
+        );
+      }
+      await scoped.latestJournalState();
     }
   }
 
@@ -542,25 +523,23 @@ export class ProjectStore {
     return join(this.eventsDirectory, `${String(revision).padStart(8, "0")}.json`);
   }
 
-  private async latestEvent(): Promise<TransitionEvent | null> {
-    let names: string[];
+  private async latestJournalState(): Promise<WorkflowState | null> {
     try {
-      names = (await readdir(this.eventsDirectory))
-        .filter((name) => /^[0-9]{8}\.json$/.test(name))
-        .sort();
+      const journal = await readJournal<import("./protocol.js").JsonValue>(
+        this.eventsDirectory,
+        this.requireFeature(),
+      );
+      return journal.state
+        ? normalizeState(journal.state as unknown as WorkflowState)
+        : null;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
-      throw new EmpiricalError("INVALID_EVENT", `Could not inspect ${this.eventsDirectory}`, error);
+      throw new EmpiricalError(
+        "INVALID_EVENT",
+        `Could not verify ${this.eventsDirectory}`,
+        error,
+      );
     }
-    const name = names.at(-1);
-    if (!name) return null;
-    const path = join(this.eventsDirectory, name);
-    if (await isSymbolicLink(path)) {
-      throw new EmpiricalError("UNSAFE_SPEC_PATH", `Feature storage cannot use symbolic links: ${path}`);
-    }
-    return normalizeEvent(
-      await readJson<TransitionEvent>(path, "INVALID_EVENT"),
-    );
   }
 
   private async commitInitialState(
@@ -568,16 +547,14 @@ export class ProjectStore {
     actor: string,
     summary: string,
   ): Promise<void> {
-    const event: TransitionEvent = {
-      schemaVersion: SCHEMA_VERSION,
-      revision: state.revision,
-      previousRevision: -1,
+    await appendJournalEvent({
+      directory: this.eventsDirectory,
+      feature: this.requireFeature(),
       actor,
       summary,
-      createdAt: state.updatedAt,
-      state,
-    };
-    await writeJsonAtomic(this.eventPath(state.revision), event);
+      state: state as unknown as import("./protocol.js").JsonValue,
+      now: () => new Date(state.updatedAt),
+    });
     await writeJsonAtomic(this.statePath, state);
   }
 
@@ -882,13 +859,38 @@ export async function writeTextAtomic(path: string, contents: string): Promise<v
     (details) => details.mode & 0o7777,
     () => null,
   );
+  let handle: Awaited<ReturnType<typeof open>> | null = null;
   try {
-    await writeFile(temporary, contents, "utf8");
+    handle = await open(temporary, "wx", existingMode ?? 0o600);
+    await handle.writeFile(contents, "utf8");
     if (existingMode !== null) await chmod(temporary, existingMode);
+    await handle.sync();
+    await handle.close();
+    handle = null;
     await rename(temporary, path);
+    await syncDirectory(dirname(path));
   } catch (error) {
+    await handle?.close().catch(() => undefined);
     await rm(temporary, { force: true });
     throw error;
+  }
+}
+
+async function syncDirectory(path: string): Promise<void> {
+  let handle: Awaited<ReturnType<typeof open>>;
+  try {
+    handle = await open(path, "r");
+  } catch (error) {
+    if (process.platform === "win32" && ["EISDIR", "EPERM", "EACCES"].includes(String((error as NodeJS.ErrnoException).code))) return;
+    throw error;
+  }
+  try {
+    await handle.sync().catch((error: NodeJS.ErrnoException) => {
+      if (process.platform === "win32" && ["EINVAL", "ENOTSUP", "EBADF", "EPERM"].includes(String(error.code))) return;
+      throw error;
+    });
+  } finally {
+    await handle.close();
   }
 }
 
@@ -914,19 +916,6 @@ async function pathExists(path: string): Promise<boolean> {
     return true;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
-    throw error;
-  }
-}
-
-async function legacyEventNames(directory: string): Promise<string[]> {
-  try {
-    return (await readdir(directory, { withFileTypes: true }))
-      .filter((entry) => entry.isFile() || entry.isSymbolicLink())
-      .map((entry) => entry.name)
-      .filter((name) => /^[0-9]{8}\.json$/.test(name))
-      .sort();
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw error;
   }
 }
@@ -960,39 +949,6 @@ export function assertCapabilityId(capability: string): void {
 
 function isCapabilityId(value: string): boolean {
   return /^[a-z0-9][a-z0-9-]*$/.test(value);
-}
-
-function defaultPolicy(): ProjectPolicy {
-  return { schemaVersion: POLICY_SCHEMA_VERSION, context: [], phases: {} };
-}
-
-function normalizePolicy(policy: ProjectPolicy): ProjectPolicy {
-  if (
-    policy.schemaVersion !== POLICY_SCHEMA_VERSION
-    || !Array.isArray(policy.context)
-    || !isRecord(policy.phases)
-  ) {
-    throw new EmpiricalError("INVALID_POLICY", "Unsupported or malformed project policy");
-  }
-  const context = policy.context.map((item) => requiredPolicyText(item, "context"));
-  const phases: Partial<Record<Phase, string[]>> = {};
-  const validPhases = new Set<Phase>([
-    "idle", "shape", "specify", "design", "plan", "implement", "verify", "review", "archive", "done",
-  ]);
-  for (const [phase, guidance] of Object.entries(policy.phases)) {
-    if (!validPhases.has(phase as Phase) || !Array.isArray(guidance)) {
-      throw new EmpiricalError("INVALID_POLICY", `Invalid policy phase '${phase}'`);
-    }
-    phases[phase as Phase] = guidance.map((item) => requiredPolicyText(item, phase));
-  }
-  return { schemaVersion: POLICY_SCHEMA_VERSION, context, phases };
-}
-
-function requiredPolicyText(value: unknown, field: string): string {
-  if (typeof value !== "string" || !value.trim()) {
-    throw new EmpiricalError("INVALID_POLICY", `Policy ${field} entries must be non-empty strings`);
-  }
-  return value.trim();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -1034,18 +990,50 @@ function normalizeConfig(config: ProjectConfig): ProjectConfig {
 
 function normalizeState(state: WorkflowState): WorkflowState {
   assertSupportedSchema(state);
+  const persistedCompletion: Record<string, unknown> = isRecord(state.completion)
+    ? state.completion
+    : {};
+  const completion = deriveCompletion({
+    implemented: persistedCompletion.implemented === true,
+    verified: persistedCompletion.verified === true,
+    integrated: persistedCompletion.integrated === true,
+    delivered: persistedCompletion.delivered === true,
+    published: persistedCompletion.published === true,
+  });
   return {
     ...state,
     schemaVersion: SCHEMA_VERSION,
     profile: normalizeProfile((state as { profile?: unknown }).profile),
+    workflow: state.workflow === "complex" || state.profile === "complex" ? "complex" : "fast",
+    phase: state.phase === "archive" ? "integrate" : state.phase,
+    mode: state.mode === "yolo" ? "yolo" : "normal",
     specDigest: typeof state.specDigest === "string" ? state.specDigest : null,
+    approvedSpecRevision: Number.isSafeInteger(state.approvedSpecRevision)
+      ? state.approvedSpecRevision
+      : null,
     capabilityArchiveRequired: typeof state.capabilityArchiveRequired === "boolean"
       ? state.capabilityArchiveRequired
       : false,
     capabilityDeltaDigest: typeof state.capabilityDeltaDigest === "string"
       ? state.capabilityDeltaDigest
       : null,
+    impactDigest: typeof state.impactDigest === "string" ? state.impactDigest : null,
+    capabilityClaimId: typeof state.capabilityClaimId === "string"
+      ? state.capabilityClaimId
+      : null,
+    authorizationDigest: typeof state.authorizationDigest === "string"
+      ? state.authorizationDigest
+      : null,
     evidence: Array.isArray(state.evidence) ? state.evidence : [],
+    evidenceReceiptIds: Array.isArray(state.evidenceReceiptIds)
+      ? state.evidenceReceiptIds
+      : [],
+    legacyEvidenceCount: Number.isSafeInteger(state.legacyEvidenceCount)
+      ? state.legacyEvidenceCount
+      : Array.isArray(state.evidence)
+        ? state.evidence.length
+        : 0,
+    completion,
   };
 }
 
@@ -1063,21 +1051,37 @@ function validateWorktreeTemplates(worktreePath: string, branchPattern: string):
 }
 
 function idleState(profile: Profile): WorkflowState {
+  const workflow = profile === "complex" ? "complex" : "fast";
   return {
     schemaVersion: SCHEMA_VERSION,
     revision: 0,
     activeFeature: null,
     request: null,
     profile,
+    workflow,
+    mode: "normal",
     phase: "idle",
     status: "idle",
     repairAttempts: 0,
     message: null,
     implementationActor: null,
     specDigest: null,
+    approvedSpecRevision: null,
     capabilityArchiveRequired: false,
     capabilityDeltaDigest: null,
+    impactDigest: null,
+    capabilityClaimId: null,
+    authorizationDigest: null,
     evidence: [],
+    evidenceReceiptIds: [],
+    legacyEvidenceCount: 0,
+    completion: deriveCompletion({
+      implemented: false,
+      verified: false,
+      integrated: false,
+      delivered: false,
+      published: false,
+    }),
     updatedAt: new Date(0).toISOString(),
   };
 }
@@ -1088,20 +1092,9 @@ function normalizeProfile(profile: unknown): Profile {
   throw new EmpiricalError("INVALID_PROFILE", `Unknown persisted workflow '${String(profile)}'`);
 }
 
-function normalizeEvent(event: TransitionEvent): TransitionEvent {
-  assertSupportedSchema(event);
-  return {
-    ...event,
-    schemaVersion: SCHEMA_VERSION,
-    state: normalizeState(event.state),
-  };
-}
-
 function assertSupportedSchema(value: { schemaVersion: number }): void {
   if (
-    value.schemaVersion !== 1
-    && value.schemaVersion !== 2
-    && value.schemaVersion !== 3
+    value.schemaVersion !== 4
     && value.schemaVersion !== SCHEMA_VERSION
   ) {
     throw new EmpiricalError(

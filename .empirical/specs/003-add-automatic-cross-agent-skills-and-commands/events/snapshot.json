@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "feature": "003-add-automatic-cross-agent-skills-and-commands",
+  "lastSequence": 7,
+  "lastEventDigest": "sha256:f8a6469ff5e6fecbca90caf4f2ba45309ec55edccdda3d3e8216a8c3e5dbd8f6",
+  "stateDigest": "sha256:7f294513ce5a80442775c51dde74cdf1ec27ed6a6b0d4b21be843adc407c7540",
+  "state": {
+    "revision": 14,
+    "activeFeature": "003-add-automatic-cross-agent-skills-and-commands",
+    "request": "Add automatic cross-agent skills and commands, an agent-native resumable loop, and a one-revision fast profile for trivial low-risk changes",
+    "profile": "complex",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Final review passed after fixing all concurrency, schema, integration portability, lock recovery, symlink, and mode-preservation findings; full CI and package smoke are green.",
+    "implementationActor": "agent",
+    "updatedAt": "2026-07-28T22:52:40.046Z",
+    "specDigest": "sha256:4e29034f58db71d476c1e621ee26b8d80244cdb51b623a965662609b0d6d956f",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "schemaVersion": 5,
+    "workflow": "complex",
+    "mode": "normal",
+    "approvedSpecRevision": 14,
+    "impactDigest": "sha256:fcdc9cd878cb8cca535b2839c35967430dd36394abe0236e169dc7c3ef063ff0",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 10,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": false,
+      "delivered": false,
+      "published": false,
+      "highest": "verified",
+      "reasons": {
+        "integrated": "integrated has not been proven by a durable receipt.",
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "compactedAt": "2026-07-28T22:52:40.046Z",
+  "digest": "sha256:f75c501219f80d37dac10d727adb7109d6c1a43a1d220af61c1dfc7cdbcadbbc"
+}

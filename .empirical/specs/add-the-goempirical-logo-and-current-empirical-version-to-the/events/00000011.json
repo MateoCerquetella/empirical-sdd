@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "sequence": 11,
+  "previousDigest": "sha256:4492581ae093f990b9ac122dd14ddf89ccdab4acc4b8000e257a46ea28a113a0",
+  "actor": "schema-4-migration",
+  "type": "compaction-boundary",
+  "summary": "Compacted through journal event 10",
+  "createdAt": "2026-07-31T14:55:19.623Z",
+  "stateBeforeDigest": "sha256:38d58de1739bc24f3f97f90417ba663941916de36077d2effe830168675ccb31",
+  "stateAfterDigest": "sha256:38d58de1739bc24f3f97f90417ba663941916de36077d2effe830168675ccb31",
+  "state": {
+    "revision": 10,
+    "activeFeature": "add-the-goempirical-logo-and-current-empirical-version-to-the",
+    "request": "Add the GoEmpirical logo and current Empirical version to the human-facing CLI, modeled on the Hermes CLI presentation referenced by the user, while preserving machine-readable CLI behavior; publish this work as the next patch version.",
+    "profile": "complex",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Archived capability changes: cli-branding",
+    "implementationActor": "codex",
+    "specDigest": "sha256:f8febc17fe8769094a0997573bfb3861053b827b9ad7f551c94e23c782486225",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "sha256:e2814039dfa951a756128974f67a6736321a4a8f9700cf2558e303af9726373d",
+    "updatedAt": "2026-07-31T14:55:19.623Z",
+    "schemaVersion": 5,
+    "workflow": "complex",
+    "mode": "normal",
+    "approvedSpecRevision": 10,
+    "impactDigest": "sha256:07e59d7d46964756bd084cc97a5de2c05bbe6fcd642e962c86b45ce8d3ddf8e4",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 8,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": true,
+      "delivered": false,
+      "published": false,
+      "highest": "integrated",
+      "reasons": {
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "digest": "sha256:14aa6e9de1af9733d2e712c3f2025959dcacc68c49820046d11247c74ac8cf3f"
+}

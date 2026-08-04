@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 5,
+  "revision": 8,
+  "activeFeature": "add-safe-empirical-uninstall",
+  "request": "Add a safe public empirical uninstall command that confirms destructive intent, removes every Empirical-managed global agent skill and owned selection metadata while preserving unmanaged or unsafe files, uninstalls the global empirical-sdd npm package last, works outside a repository with human and JSON reports, leaves project .empirical history and repository MCP configuration untouched, and documents the exact behavior difference from the current install/update-only version.",
+  "profile": "complex",
+  "workflow": "complex",
+  "mode": "normal",
+  "phase": "done",
+  "status": "done",
+  "repairAttempts": 0,
+  "message": "Integrated capability changes: agent-integrations",
+  "implementationActor": "codex",
+  "specDigest": "sha256:c027694070a0188ebf669952b1a9634c4db6d81ff2634fe547668bf4e2ae3f0b",
+  "approvedSpecRevision": 2,
+  "capabilityArchiveRequired": true,
+  "capabilityDeltaDigest": "sha256:b6ad7ff6bd06db0f0dd830287a80959dd7478332ec010350dfb2a9f5f0b526c9",
+  "impactDigest": "sha256:989ebbacc0f8b864dbf849bbd69f5a377fafdf6be77889f054bbb10cb60a419a",
+  "capabilityClaimId": "add-safe-empirical-uninstall-92e63111cfac",
+  "authorizationDigest": null,
+  "evidence": [],
+  "evidenceReceiptIds": [
+    "executed-d541a8c4dc0bf08507dc3638",
+    "executed-49e94f0d7b556518396bc4c0"
+  ],
+  "legacyEvidenceCount": 0,
+  "completion": {
+    "implemented": true,
+    "verified": true,
+    "integrated": true,
+    "delivered": false,
+    "published": false,
+    "highest": "integrated",
+    "reasons": {
+      "delivered": "delivered has not been proven by a durable receipt.",
+      "published": "published has not been proven by a durable receipt."
+    }
+  },
+  "updatedAt": "2026-08-04T01:15:01.759Z"
+}

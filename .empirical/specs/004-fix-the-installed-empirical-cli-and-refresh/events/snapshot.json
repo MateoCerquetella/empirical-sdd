@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "feature": "004-fix-the-installed-empirical-cli-and-refresh",
+  "lastSequence": 2,
+  "lastEventDigest": "sha256:66b229a5b18920e82c616a3fe716d80318b282fffce1ed012893547f55c87ad7",
+  "stateDigest": "sha256:d919afbe485366dc7630bd9408a0e6ec3a6ab0fa4f0af06665535010b371e31d",
+  "state": {
+    "revision": 16,
+    "activeFeature": "004-fix-the-installed-empirical-cli-and-refresh",
+    "request": "Fix the installed Empirical CLI and refresh the hello-world-harness integrations so ordinary agent prompts activate the Fast workflow",
+    "profile": "fast",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Replaced obsolete @empirical/cli 1.0.6 with empirical-sdd 2.1.0 and regenerated the harness integrations from the current engine.",
+    "implementationActor": "agent",
+    "updatedAt": "2026-07-28T23:10:34.811Z",
+    "specDigest": "sha256:54778ea28e7b2bdcf90b10d275ed2e61c8022ad8edaf143dd60a4936e22236a3",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "schemaVersion": 5,
+    "workflow": "fast",
+    "mode": "normal",
+    "approvedSpecRevision": 16,
+    "impactDigest": "sha256:fcdc9cd878cb8cca535b2839c35967430dd36394abe0236e169dc7c3ef063ff0",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 2,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": false,
+      "delivered": false,
+      "published": false,
+      "highest": "verified",
+      "reasons": {
+        "integrated": "integrated has not been proven by a durable receipt.",
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "compactedAt": "2026-07-28T23:10:34.811Z",
+  "digest": "sha256:aa1c18804774fe32833afc31e4acb6004f0729a8c2f9419ff0f54a8392db1731"
+}

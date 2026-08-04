@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "classification": "behavioral",
+  "capabilities": [
+    "exploratory-discovery",
+    "living-specifications",
+    "parallel-workstreams",
+    "project-policy"
+  ],
+  "surfaces": [
+    "legacy-schema-4-workflow"
+  ],
+  "regressionRationale": null,
+  "digest": "sha256:167eaf3a0e4ac62097a0276292959f50a7764224955a00273d102bfbc99107a0"
+}

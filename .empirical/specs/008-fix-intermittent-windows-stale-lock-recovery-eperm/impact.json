@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "classification": "behavioral",
+  "capabilities": [
+    "parallel-workstreams"
+  ],
+  "surfaces": [
+    "legacy-schema-4-workflow"
+  ],
+  "regressionRationale": null,
+  "digest": "sha256:40af7ada356b586df6337e51b93713ff0ee461a70f066104fa746566dcd0b864"
+}

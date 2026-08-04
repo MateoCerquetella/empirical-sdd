@@ -3,18 +3,18 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { EmpiricalProject } from "./core.js";
 import { EmpiricalError, asErrorMessage } from "./errors.js";
-import { PRODUCT_VERSION, type AgentIntegrationId, type Evidence } from "./types.js";
+import { OPERATIONS, operationAnnotations, operationById } from "./operations.js";
+import {
+  authorizationSchema,
+  executionModeSchema,
+  workflowSchema,
+} from "./protocol.js";
+import { PRODUCT_VERSION, type AgentIntegrationId } from "./types.js";
 
 const profileSchema = z.enum(["fast", "complex"]);
 const changeTypeSchema = z.enum(["feature", "fix", "chore"]);
 const agentSchema = z.enum(["codex", "claude", "cursor", "gemini", "windsurf"]);
-const evidenceSchema = z.object({
-  criterionId: z.string().min(1),
-  kind: z.enum(["test", "browser", "screenshot", "review", "human"]),
-  passed: z.boolean(),
-  summary: z.string().min(1),
-  artifact: z.string().min(1).optional(),
-});
+const evidenceKindSchema = z.enum(["test", "browser", "screenshot", "review", "human"]);
 const socraticAnswerSchema = z.object({
   pass: z.enum(["problem", "outcome", "boundaries", "risks", "verification"]),
   title: z.string().min(1),
@@ -36,26 +36,45 @@ const configurationSchema = {
   branchPattern: z.string().min(1).optional(),
   decisions: z.enum(["required", "off"]).optional(),
 };
+const deliveryCommitSchema = z.object({
+  branch: z.string().min(1),
+  paths: z.array(z.string().min(1)).min(1),
+  message: z.string().min(1),
+  title: z.string().min(1),
+  body: z.string().min(1),
+}).strict();
 
 export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
+  const registered = new Set<string>();
+  const operationName = (id: string): string => {
+    const definition = operationById(id);
+    if (!definition) throw new Error(`Unknown MCP registry operation: ${id}`);
+    registered.add(id);
+    return definition.mcpName;
+  };
+  const operationSummary = (id: string): string => {
+    const definition = operationById(id);
+    if (!definition) throw new Error(`Unknown MCP registry operation: ${id}`);
+    return definition.summary;
+  };
   const server = new McpServer(
     { name: "empirical-sdd", version: PRODUCT_VERSION },
     {
       instructions:
-        "Use Empirical through the installed automatic or explicit agent skills. Initialize or repair with empirical_init, refresh compact context with empirical_context, save five-pass interviews with empirical_discovery, start concrete Complex specifications with empirical_complex, and resume selected work with empirical_loop. Fast and Complex are internal routing profiles, not human commands. Complete exact revisions and archive reviewed deltas. Never launch a worktree or another runtime without explicit approval of the exact proposal.",
+        "Use Empirical through the six registry-backed skills. Route deterministically, record immutable evidence receipts, complete exact revisions, and integrate reviewed deltas against an independent target. YOLO carries bounded standing authorization but never suppresses host prompts or weakens Git, credential, publication, or deletion safety floors.",
     },
   );
 
-  server.registerTool("empirical_explore", {
+  server.registerTool(operationName("explore"), {
     title: "Explore a vague problem",
-    description: "Return read-only repository context for a five-pass Socratic interview.",
+    description: operationSummary("explore"),
     inputSchema: { root: z.string().optional(), problem: z.string().min(1) },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("explore"),
   }, async ({ root, problem }) => toolResult(async () => (await EmpiricalProject.openReadOnly(root ?? defaultRoot)).explore(problem)));
 
-  server.registerTool("empirical_discovery", {
+  server.registerTool(operationName("discovery"), {
     title: "Save or approve Socratic discovery",
-    description: "Persist ordered five-pass Socratic answers and return one next pass or material follow-up. With approved true, bind the exact refined request to internal Complex Specify.",
+    description: operationSummary("discovery"),
     inputSchema: {
       root: z.string().optional(),
       id: z.string().min(1).optional(),
@@ -63,7 +82,7 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
       answers: z.array(socraticAnswerSchema).max(5),
       approved: z.literal(true).optional(),
     },
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+    annotations: operationAnnotations("discovery"),
   }, async ({ root, id, problem, answers, approved }) => toolResult(async () => {
     const project = await EmpiricalProject.open(root ?? defaultRoot);
     return project.discovery({
@@ -74,11 +93,11 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     });
   }));
 
-  server.registerTool("empirical_init", {
+  server.registerTool(operationName("init"), {
     title: "Initialize Empirical",
-    description: "Initialize or repair repository configuration, runtime bridges, and compact context without starting a feature.",
+    description: operationSummary("init"),
     inputSchema: { root: z.string().optional(), profile: profileSchema.optional(), ...configurationSchema },
-    annotations: { destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("init"),
   }, async ({ root, profile, evidenceRequired, browserForUi, screenshotForUi, codeReview, isolation, base, worktreePath, branchPattern, decisions }) => toolResult(async () => {
     const initialized = await EmpiricalProject.initialize(root ?? defaultRoot, {
       ...(profile ? { profile } : {}),
@@ -100,23 +119,23 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     return { state: initialized.state, config: await initialized.project.config(), integrations: initialized.integrations, knowledge: await initialized.project.context(), next: await initialized.project.next() };
   }));
 
-  server.registerTool("empirical_context", {
+  server.registerTool(operationName("context"), {
     title: "Refresh repository knowledge",
-    description: "Create or refresh bounded file-backed repository context without embeddings or network access.",
+    description: operationSummary("context"),
     inputSchema: { root: z.string().optional() },
-    annotations: { destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("context"),
   }, async ({ root }) => toolResult(async () => (await EmpiricalProject.open(root ?? defaultRoot)).context()));
 
-  server.registerTool("empirical_handoff", {
+  server.registerTool(operationName("handoff"), {
     title: "Offer or authorize agent handoff",
-    description: "After Complex Specify passes, return current/save/detected-agent choices or revalidate one explicitly approved exact target. This tool never launches a process.",
+    description: operationSummary("handoff"),
     inputSchema: {
       root: z.string().optional(),
       agent: agentSchema.optional(),
       approvalToken: z.string().length(64).optional(),
       approved: z.literal(true).optional(),
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("handoff"),
   }, async ({ root, agent, approvalToken, approved }) => toolResult(async () => {
     const project = await EmpiricalProject.openReadOnly(root ?? defaultRoot);
     if (!agent) return project.handoff();
@@ -129,13 +148,14 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     return project.authorizeHandoff(agent as AgentIntegrationId, approvalToken, approved);
   }));
 
-  server.registerTool("empirical_configure", {
+  server.registerTool(operationName("configure"), {
     title: "Configure Empirical",
-    description: "Persist evidence, worktree isolation, and Complex decision-record preferences.",
-    inputSchema: { root: z.string().optional(), ...configurationSchema },
-    annotations: { destructiveHint: false, idempotentHint: true },
-  }, async ({ root, evidenceRequired, browserForUi, screenshotForUi, codeReview, isolation, base, worktreePath, branchPattern, decisions }) => toolResult(async () => {
+    description: operationSummary("configure"),
+    inputSchema: { root: z.string().optional(), policy: z.unknown().optional(), ...configurationSchema },
+    annotations: operationAnnotations("configure"),
+  }, async ({ root, policy, evidenceRequired, browserForUi, screenshotForUi, codeReview, isolation, base, worktreePath, branchPattern, decisions }) => toolResult(async () => {
     const project = await EmpiricalProject.open(root ?? defaultRoot);
+    if (policy !== undefined) return project.configurePolicy(policy);
     return project.configure({
       evidence: {
         ...(evidenceRequired !== undefined ? { required: evidenceRequired } : {}),
@@ -154,38 +174,76 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     });
   }));
 
-  server.registerTool("empirical_adopt", {
+  server.registerTool(operationName("adopt"), {
     title: "Adopt Empirical v1",
-    description: "Non-destructively adopt an ai/ Empirical v1 workspace.",
+    description: operationSummary("adopt"),
     inputSchema: { root: z.string().optional(), profile: profileSchema.optional() },
-    annotations: { destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("adopt"),
   }, async ({ root, profile }) => toolResult(async () => {
     const adopted = await EmpiricalProject.adopt(root ?? defaultRoot, { ...(profile ? { profile } : {}), setupComplete: true });
     return { state: adopted.state, integrations: adopted.integrations, next: await adopted.project.next() };
   }));
 
-  server.registerTool("empirical_fast", {
+  server.registerTool(operationName("fast"), {
     title: "Start or resume Fast",
-    description: "Start an explicit tiny low-risk non-UI change, or return a worktree proposal for unrelated active work.",
+    description: operationSummary("fast"),
     inputSchema: { root: z.string().optional(), request: z.string().min(1), id: z.string().optional() },
-    annotations: { destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("fast"),
   }, async ({ root, request, id }) => toolResult(async () => (await EmpiricalProject.open(root ?? defaultRoot)).fast(request, { ...(id ? { id } : {}) })));
 
-  server.registerTool("empirical_complex", {
+  server.registerTool(operationName("complex"), {
     title: "Start or resume Complex",
-    description: "Start a substantial/UI change, or return a worktree proposal for unrelated active work.",
+    description: operationSummary("complex"),
     inputSchema: { root: z.string().optional(), request: z.string().min(1), id: z.string().optional() },
-    annotations: { destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("complex"),
   }, async ({ root, request, id }) => toolResult(async () => (await EmpiricalProject.open(root ?? defaultRoot)).complex(request, { ...(id ? { id } : {}) })));
 
-  server.registerTool("empirical_worktree_propose", {
+  server.registerTool(operationName("route"), {
+    title: "Route an Empirical request",
+    description: operationSummary("route"),
+    inputSchema: {
+      root: z.string().optional(),
+      request: z.string().min(1),
+      mode: executionModeSchema.optional(),
+      requestedProfile: workflowSchema.optional(),
+      declaredContractNeutral: z.boolean().optional(),
+    },
+    annotations: operationAnnotations("route"),
+  }, async ({ root, request, mode, requestedProfile, declaredContractNeutral }) => toolResult(async () =>
+    (await EmpiricalProject.openReadOnly(root ?? defaultRoot)).route(request, {
+      ...(mode ? { mode } : {}),
+      ...(requestedProfile ? { requestedProfile } : {}),
+      ...(declaredContractNeutral !== undefined ? { declaredContractNeutral } : {}),
+    })));
+
+  server.registerTool(operationName("yolo"), {
+    title: "Start or resume bounded YOLO",
+    description: operationSummary("yolo"),
+    inputSchema: {
+      root: z.string().optional(),
+      request: z.string().min(1),
+      id: z.string().optional(),
+      ceiling: z.enum(["implemented", "verified", "integrated", "delivered"]).optional(),
+      targetBranch: z.string().min(1).optional(),
+      allowExternalAgent: z.boolean().optional(),
+    },
+    annotations: operationAnnotations("yolo"),
+  }, async ({ root, request, id, ceiling, targetBranch, allowExternalAgent }) => toolResult(async () =>
+    (await EmpiricalProject.open(root ?? defaultRoot)).yolo(request, {
+      ...(id ? { id } : {}),
+      ...(ceiling ? { ceiling } : {}),
+      ...(targetBranch ? { targetBranch } : {}),
+      ...(allowExternalAgent !== undefined ? { allowExternalAgent } : {}),
+    })));
+
+  server.registerTool(operationName("worktree-propose"), {
     title: "Preview isolated Git worktree",
-    description: "Return the exact base, branch, path, and command without mutating Git or files.",
+    description: operationSummary("worktree-propose"),
     inputSchema: {
       root: z.string().optional(), request: z.string().min(1), workflow: profileSchema,
       changeType: changeTypeSchema.optional(), id: z.string().optional(), branch: z.string().optional(), path: z.string().optional(), base: z.string().optional(),
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("worktree-propose"),
   }, async ({ root, request, workflow, changeType, id, branch, path, base }) => toolResult(async () => {
     const project = await EmpiricalProject.openReadOnly(root ?? defaultRoot);
     return project.proposeWorktree(request, workflow, {
@@ -194,16 +252,16 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     });
   }));
 
-  server.registerTool("empirical_worktree_create", {
+  server.registerTool(operationName("worktree-create"), {
     title: "Create approved Git worktree",
-    description: "After explicit human approval, revalidate safety, create the worktree, and start the exact request there.",
+    description: operationSummary("worktree-create"),
     inputSchema: {
       root: z.string().optional(), request: z.string().min(1), workflow: profileSchema,
       changeType: changeTypeSchema.optional(), id: z.string().optional(), branch: z.string().optional(), path: z.string().optional(), base: z.string().optional(),
       baseCommit: z.string().min(1), activeFeature: z.string().min(1), approvalToken: z.string().length(64),
       approved: z.literal(true),
     },
-    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+    annotations: operationAnnotations("worktree-create"),
   }, async ({ root, request, workflow, changeType, id, branch, path, base, baseCommit, activeFeature, approvalToken, approved }) => toolResult(async () => {
     const project = await EmpiricalProject.open(root ?? defaultRoot);
     return project.createWorktree({
@@ -214,106 +272,215 @@ export function createMcpServer(defaultRoot = mcpDefaultRoot()): McpServer {
     });
   }));
 
-  server.registerTool("empirical_loop", {
+  server.registerTool(operationName("loop"), {
     title: "Resume active workflow",
-    description: "Return the exact current action; takes no request or profile.",
+    description: operationSummary("loop"),
     inputSchema: { root: z.string().optional() },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("loop"),
   }, async ({ root }) => toolResult(async () => (await EmpiricalProject.openReadOnly(root ?? defaultRoot)).loop()));
 
-  server.registerTool("empirical_next", {
+  server.registerTool(operationName("next"), {
     title: "Read current action",
-    description: "Read the current workflow action without changing state.",
+    description: operationSummary("next"),
     inputSchema: { root: z.string().optional() },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("next"),
   }, async ({ root }) => toolResult(async () => (await EmpiricalProject.openReadOnly(root ?? defaultRoot)).next()));
 
-  server.registerTool("empirical_explain", {
+  server.registerTool(operationName("explain"), {
     title: "Explain current Empirical state",
-    description: "Show deterministic state rationale, context gaps, gate, and accepted decision summaries without private reasoning.",
+    description: operationSummary("explain"),
     inputSchema: { root: z.string().optional() },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("explain"),
   }, async ({ root }) => toolResult(async () => (await EmpiricalProject.openReadOnly(root ?? defaultRoot)).explain()));
 
-  server.registerTool("empirical_complete", {
+  server.registerTool(operationName("complete"), {
     title: "Complete current action",
-    description: "Complete the exact current revision with outcome, summary, and required evidence.",
+    description: operationSummary("complete"),
     inputSchema: {
       root: z.string().optional(), revision: z.number().int().nonnegative(),
       outcome: z.enum(["passed", "failed", "awaiting_human", "blocked"]),
-      summary: z.string().min(1), actor: z.string().optional(), evidence: z.array(evidenceSchema).optional(),
+      summary: z.string().min(1), actor: z.string().optional(),
+      receiptIds: z.array(z.string().regex(/^(?:executed|collected)-[a-z0-9-]+$/)).optional(),
     },
-    annotations: { destructiveHint: false, idempotentHint: false },
-  }, async ({ root, revision, outcome, summary, actor, evidence }) => toolResult(async () => {
+    annotations: operationAnnotations("complete"),
+  }, async ({ root, revision, outcome, summary, actor, receiptIds }) => toolResult(async () => {
     const project = await EmpiricalProject.open(root ?? defaultRoot);
-    return project.complete({ revision, outcome, summary, ...(actor ? { actor } : {}), ...(evidence ? { evidence: evidence as Evidence[] } : {}) });
+    return project.complete({ revision, outcome, summary, ...(actor ? { actor } : {}), ...(receiptIds ? { receiptIds } : {}) });
   }));
 
-  server.registerTool("empirical_archive", {
-    title: "Archive reviewed capability deltas",
-    description: "Apply approved capability deltas and finish the exact archive revision.",
+  server.registerTool(operationName("archive"), {
+    title: "Legacy archive boundary",
+    description: operationSummary("archive"),
     inputSchema: { root: z.string().optional(), revision: z.number().int().nonnegative(), actor: z.string().optional() },
-    annotations: { destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("archive"),
   }, async ({ root, revision, actor }) => toolResult(async () => (await EmpiricalProject.open(root ?? defaultRoot)).archive(revision, actor)));
 
-  server.registerTool("empirical_status", {
+  server.registerTool(operationName("status"), {
     title: "Read workflow status",
-    description: "Read current feature-local workflow state.",
+    description: operationSummary("status"),
     inputSchema: { root: z.string().optional() },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("status"),
   }, async ({ root }) => toolResult(async () => (await EmpiricalProject.openReadOnly(root ?? defaultRoot)).status()));
 
-  server.registerTool("empirical_verify", {
+  server.registerTool(operationName("verify"), {
     title: "Validate evidence",
-    description: "Validate current specification and evidence without advancing state.",
+    description: operationSummary("verify"),
     inputSchema: { root: z.string().optional() },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("verify"),
   }, async ({ root }) => toolResult(async () => (await EmpiricalProject.openReadOnly(root ?? defaultRoot)).verify()));
 
-  server.registerTool("empirical_retry", {
+  server.registerTool(operationName("evidence-execute"), {
+    title: "Execute configured evidence",
+    description: operationSummary("evidence-execute"),
+    inputSchema: {
+      root: z.string().optional(),
+      commandId: z.string().regex(/^[a-z][a-z0-9-]*$/),
+      criteria: z.array(z.string().regex(/^AC-[A-Z0-9]+(?:-[A-Z0-9]+)*$/)).min(1),
+      evidenceKinds: z.array(evidenceKindSchema).min(1).optional(),
+      summary: z.string().min(1),
+    },
+    annotations: operationAnnotations("evidence-execute"),
+  }, async ({ root, commandId, criteria, evidenceKinds, summary }) => toolResult(async () =>
+    (await EmpiricalProject.open(root ?? defaultRoot)).executeEvidence({
+      commandId,
+      criteria,
+      ...(evidenceKinds ? { evidenceKinds } : {}),
+      summary,
+    })));
+
+  server.registerTool(operationName("evidence-collect"), {
+    title: "Collect artifact evidence",
+    description: operationSummary("evidence-collect"),
+    inputSchema: {
+      root: z.string().optional(),
+      criteria: z.array(z.string().regex(/^AC-[A-Z0-9]+(?:-[A-Z0-9]+)*$/)).min(1),
+      evidenceKinds: z.array(evidenceKindSchema).min(1),
+      summary: z.string().min(1),
+      collector: z.string().min(1),
+      artifacts: z.array(z.object({
+        path: z.string().min(1),
+        mediaType: z.string().min(1),
+      }).strict()).min(1),
+    },
+    annotations: operationAnnotations("evidence-collect"),
+  }, async ({ root, criteria, evidenceKinds, summary, collector, artifacts }) => toolResult(async () =>
+    (await EmpiricalProject.open(root ?? defaultRoot)).collectEvidence({
+      criteria,
+      evidenceKinds,
+      summary,
+      collector,
+      artifacts,
+    })));
+
+  server.registerTool(operationName("retry"), {
     title: "Resume a paused workflow",
-    description: "Resume a blocked or awaiting-human feature at its exact revision.",
+    description: operationSummary("retry"),
     inputSchema: { root: z.string().optional(), revision: z.number().int().nonnegative(), actor: z.string().optional() },
-    annotations: { destructiveHint: false, idempotentHint: false },
+    annotations: operationAnnotations("retry"),
   }, async ({ root, revision, actor }) => toolResult(async () => (await EmpiricalProject.open(root ?? defaultRoot)).retry(revision, actor)));
 
-  server.registerTool("empirical_doctor", {
+  server.registerTool(operationName("doctor"), {
     title: "Inspect project health",
-    description: "Read configuration, active feature, policy, capabilities, and runtime metadata.",
+    description: operationSummary("doctor"),
     inputSchema: { root: z.string().optional() },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("doctor"),
   }, async ({ root }) => toolResult(async () => (await EmpiricalProject.openReadOnly(root ?? defaultRoot)).doctor()));
 
-  server.registerTool("empirical_migrate", {
+  server.registerTool(operationName("migrate"), {
     title: "Migrate Empirical schema",
-    description: "Migrate legacy default root state into feature-local schema 4; alternate parallel state remains unsupported.",
+    description: operationSummary("migrate"),
     inputSchema: { root: z.string().optional() },
-    annotations: { destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("migrate"),
   }, async ({ root }) => toolResult(async () => (await EmpiricalProject.open(root ?? defaultRoot, { migrate: false })).migrate()));
 
-  server.registerTool("empirical_capabilities", {
+  server.registerTool(operationName("capabilities"), {
     title: "Read living capability specifications",
-    description: "List capability specs or read one current behavior contract.",
+    description: operationSummary("capabilities"),
     inputSchema: { root: z.string().optional(), name: z.string().optional() },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("capabilities"),
   }, async ({ root, name }) => toolResult(async () => {
     const project = await EmpiricalProject.openReadOnly(root ?? defaultRoot);
     return name ? { name, contents: await project.capability(name) } : project.capabilities();
   }));
 
-  server.registerTool("empirical_policy", {
+  server.registerTool(operationName("policy"), {
     title: "Read project policy",
-    description: "Read committed project context and additive phase guidance.",
+    description: operationSummary("policy"),
     inputSchema: { root: z.string().optional() },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("policy"),
   }, async ({ root }) => toolResult(async () => (await EmpiricalProject.openReadOnly(root ?? defaultRoot)).policy()));
 
-  server.registerTool("empirical_integrate", {
+  server.registerTool(operationName("integrate"), {
+    title: "Integrate reviewed capability deltas",
+    description: operationSummary("integrate"),
+    inputSchema: {
+      root: z.string().optional(),
+      revision: z.number().int().nonnegative(),
+      targetRoot: z.string().min(1),
+      actor: z.string().optional(),
+    },
+    annotations: operationAnnotations("integrate"),
+  }, async ({ root, revision, targetRoot, actor }) => toolResult(async () =>
+    (await EmpiricalProject.open(root ?? defaultRoot)).integrate(revision, targetRoot, actor)));
+
+  server.registerTool(operationName("deliver"), {
+    title: "Deliver through protected GitHub pull requests",
+    description: operationSummary("deliver"),
+    inputSchema: {
+      root: z.string().optional(),
+      revision: z.number().int().nonnegative(),
+      source: deliveryCommitSchema,
+      evidence: deliveryCommitSchema,
+      actor: z.string().optional(),
+    },
+    annotations: operationAnnotations("deliver"),
+  }, async ({ root, revision, source, evidence, actor }) => toolResult(async () =>
+    (await EmpiricalProject.open(root ?? defaultRoot)).deliver({
+      revision,
+      source,
+      evidence,
+      ...(actor ? { actor } : {}),
+    })));
+
+  server.registerTool(operationName("publish"), {
+    title: "Publish one explicitly authorized immutable version",
+    description: operationSummary("publish"),
+    inputSchema: {
+      root: z.string().optional(),
+      revision: z.number().int().nonnegative(),
+      authorization: authorizationSchema,
+      feature: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+      packageName: z.string().min(1),
+      version: z.string().min(1),
+      distTag: z.string().min(1),
+      commit: z.string().regex(/^[a-f0-9]{7,64}$/),
+      approved: z.literal(true),
+      actor: z.string().optional(),
+    },
+    annotations: operationAnnotations("publish"),
+  }, async ({ root, revision, authorization, feature, packageName, version, distTag, commit, actor }) => toolResult(async () =>
+    (await EmpiricalProject.open(root ?? defaultRoot, { feature })).publish({
+      revision,
+      authorization,
+      packageName,
+      version,
+      distTag,
+      commit,
+      approved: true,
+      ...(actor ? { actor } : {}),
+    })));
+
+  server.registerTool(operationName("integrations"), {
     title: "Refresh project agent discovery",
-    description: "Refresh project instructions, skills, commands, and MCP configuration.",
+    description: operationSummary("integrations"),
     inputSchema: { root: z.string().optional() },
-    annotations: { destructiveHint: false, idempotentHint: true },
+    annotations: operationAnnotations("integrations"),
   }, async ({ root }) => toolResult(async () => (await EmpiricalProject.open(root ?? defaultRoot)).integrations()));
+
+  const missing = OPERATIONS.filter((definition) => !registered.has(definition.id));
+  if (missing.length > 0) {
+    throw new Error(`MCP registry parity is incomplete: ${missing.map((entry) => entry.id).join(", ")}`);
+  }
 
   return server;
 }

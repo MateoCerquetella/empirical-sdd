@@ -1,5 +1,4 @@
 {
-  "schemaVersion": 4,
   "revision": 2,
   "activeFeature": "clarify-readme-reinstall-instructions-so-local-unreleased-builds-are-ins",
   "request": "Clarify README reinstall instructions so local unreleased builds are installed from the repository instead of npm latest",
@@ -9,22 +8,30 @@
   "repairAttempts": 0,
   "message": "Documented the correct local reinstall path and the npm latest version caveat",
   "implementationActor": "agent",
-  "specDigest": "ed7d57f55ea4bbc0d6cd1587c05c679356396409fb31907449b11784b1f7d8b8",
+  "specDigest": "sha256:ed7d57f55ea4bbc0d6cd1587c05c679356396409fb31907449b11784b1f7d8b8",
   "capabilityArchiveRequired": false,
   "capabilityDeltaDigest": null,
-  "evidence": [
-    {
-      "criterionId": "AC-1",
-      "kind": "test",
-      "passed": true,
-      "summary": "README contains npm uninstall -g empirical-sdd, npm install -g ., and UNKNOWN_COMMAND recovery guidance"
-    },
-    {
-      "criterionId": "all",
-      "kind": "review",
-      "passed": true,
-      "summary": "Focused README diff reviewed; instructions distinguish published and unreleased builds"
+  "updatedAt": "2026-07-29T20:25:18.540Z",
+  "schemaVersion": 5,
+  "workflow": "fast",
+  "mode": "normal",
+  "approvedSpecRevision": 2,
+  "impactDigest": "sha256:fcdc9cd878cb8cca535b2839c35967430dd36394abe0236e169dc7c3ef063ff0",
+  "capabilityClaimId": null,
+  "authorizationDigest": null,
+  "evidenceReceiptIds": [],
+  "legacyEvidenceCount": 2,
+  "completion": {
+    "implemented": true,
+    "verified": true,
+    "integrated": false,
+    "delivered": false,
+    "published": false,
+    "highest": "verified",
+    "reasons": {
+      "integrated": "integrated has not been proven by a durable receipt.",
+      "delivered": "delivered has not been proven by a durable receipt.",
+      "published": "published has not been proven by a durable receipt."
     }
-  ],
-  "updatedAt": "2026-07-29T20:25:18.540Z"
+  }
 }

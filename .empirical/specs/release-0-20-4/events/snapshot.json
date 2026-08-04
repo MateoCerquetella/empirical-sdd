@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "feature": "release-0-20-4",
+  "lastSequence": 10,
+  "lastEventDigest": "sha256:98083d2deb3b29a999095eaf23ef5d61110f09ff299dcb39d0d17ed5a0a9211a",
+  "stateDigest": "sha256:cc8f2297f151284a240bda0b0499d915798064684b421b50c2e962e8a6afb11b",
+  "state": {
+    "revision": 10,
+    "activeFeature": "release-0-20-4",
+    "request": "Release the already implemented and verified Empirical CLI branding update as version 0.20.4. Include the complete intended working-tree changes, rerun release validation, commit them on a release branch, push and merge through GitHub with required checks passing, publish empirical-sdd@0.20.4 to npm with the latest dist-tag, create and push the matching annotated v0.20.4 git tag and GitHub release notes, then verify the public npm package, tag, GitHub release, and a clean install. Do not alter feature behavior or include unrelated changes.",
+    "profile": "complex",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Archived capability changes: package-distribution",
+    "implementationActor": "codex",
+    "specDigest": "sha256:481abe47b2a1f147bd1e35218ce1ccf8e0c13a591ff5c4e37a07baa59cc10749",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "sha256:d808a2553e52ea6bff14ea01cdcb4c79c6038241d89219083a7a5fb4462376f2",
+    "updatedAt": "2026-07-31T16:09:04.002Z",
+    "schemaVersion": 5,
+    "workflow": "complex",
+    "mode": "normal",
+    "approvedSpecRevision": 10,
+    "impactDigest": "sha256:afd5984966a19a00bb41cf75eb4b187fd03516c633891b9ceb8e7f0c4970cc46",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 18,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": true,
+      "delivered": false,
+      "published": false,
+      "highest": "integrated",
+      "reasons": {
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "compactedAt": "2026-07-31T16:09:04.002Z",
+  "digest": "sha256:32b85e92c44d7bbd55d88267eaf3fd53f703a8dfc1f3f03b63b40b275cac1904"
+}

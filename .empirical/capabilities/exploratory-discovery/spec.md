@@ -17,16 +17,18 @@ The MCP, TypeScript, JSON CLI, and explicit non-interview Explore interfaces MUS
 
 ### Requirement: Explore remains an intentional choice
 
-The automatic Empirical skill MUST conduct discovery only when work is
-genuinely vague. The explicit Socratic skill MUST conduct discovery whenever it
-is invoked. A concrete request entering the automatic skill MUST route directly
-to the eligible internal Fast or Complex operation.
+The automatic skill MUST conduct discovery only for genuinely vague work. The
+explicit Socratic skill MUST always conduct discovery. Concrete requests MUST
+route directly through deterministic risk classification. YOLO MUST ask a
+question only when multiple materially different product contracts remain and
+repository context, policy, prior decisions, and safe defaults cannot select one
+correctly.
 
-#### Scenario: A developer deliberately requests Socratic discovery
+#### Scenario: YOLO receives a concrete cross-cutting request
 
-- **WHEN** the developer invokes `empirical-socratic` with an idea
-- **THEN** ambiguity is explored even if the initial sentence appears concise
-- **AND** automatic routing behavior remains unchanged for ordinary `empirical` requests
+- **WHEN** scope, outcome, safety ceiling, and verification are recoverable from the request and repository
+- **THEN** routing selects Complex without an interview
+- **AND** the workflow advances under its recorded authorization
 
 ### Requirement: Interactive Explore conducts a Socratic interview
 
@@ -53,17 +55,18 @@ explicit and agent-neutral.
 
 ### Requirement: Agent integrations use the full Socratic contract
 
-Both automatic discovery and the explicit Socratic skill MUST conduct the five
-passes one question at a time, ask only material follow-ups, reflect material
-answers, present the complete refined contract, and wait for approval before
-creating workflow state. The explicit skill MUST then draft the required
-Specify artifacts and wait for a second approval before completing Specify.
+Automatic or explicit Socratic discovery MUST conduct the five passes one
+question at a time, ask only material follow-ups, reflect answers, present the
+complete refined contract, and wait for approval before creating normal-mode
+workflow state. The explicit skill MUST draft Specify artifacts and wait for a
+second approval. YOLO uses the same durable five-pass record only when a blocker
+requires discovery; otherwise it MUST NOT manufacture questions or approvals.
 
-#### Scenario: A vague product idea enters the Socratic skill
+#### Scenario: A YOLO product ambiguity blocks a correct contract
 
-- **WHEN** a supported agent receives the idea through `empirical-socratic`
-- **THEN** it covers user/problem, outcome, boundaries, risk, and verification
-- **AND** neither workflow creation nor implementation occurs before its corresponding approval
+- **WHEN** two incompatible user-visible outcomes remain after repository research
+- **THEN** Empirical asks the minimum discriminating question and persists its answer
+- **AND** resumes automatically once the blocker is resolved
 
 ### Requirement: Approved agent-native discovery is structurally validated
 

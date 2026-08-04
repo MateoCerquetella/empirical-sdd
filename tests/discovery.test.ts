@@ -258,7 +258,7 @@ describe("Socratic discovery", () => {
     expect(result.stdout).toContain("Do not enter secrets or credentials");
     expect(result.stdout).toContain("One material follow-up:");
     expect(result.stdout).toContain("Refined request");
-    expect(result.stdout).toContain("step 1/7");
+    expect(result.stdout).toContain("step 1/9");
 
     const record = await onlyDiscovery(root);
     expect(record.status).toBe("started");

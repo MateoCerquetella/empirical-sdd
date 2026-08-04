@@ -19,7 +19,13 @@ const declarations = Bun.spawn(
 if ((await declarations.exited) !== 0) process.exit(1);
 
 const result = await Bun.build({
-  entrypoints: [resolve(root, "src/index.ts"), resolve(root, "src/cli.ts")],
+  entrypoints: [
+    resolve(root, "src/index.ts"),
+    resolve(root, "src/protocol.ts"),
+    resolve(root, "src/mcp.ts"),
+    resolve(root, "src/integrations.ts"),
+    resolve(root, "src/cli.ts"),
+  ],
   outdir: output,
   target: "node",
   format: "esm",

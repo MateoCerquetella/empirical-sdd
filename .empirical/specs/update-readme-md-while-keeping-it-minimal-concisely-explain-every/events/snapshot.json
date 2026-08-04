@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "feature": "update-readme-md-while-keeping-it-minimal-concisely-explain-every",
+  "lastSequence": 2,
+  "lastEventDigest": "sha256:5642e731e643500122c7f22ac27cda217481ce0d4c6799b3631cf942398a786f",
+  "stateDigest": "sha256:679d8f0697507f6e0a7fa0272c97207b025df5b566dbebf035b5c78880b73198",
+  "state": {
+    "revision": 2,
+    "activeFeature": "update-readme-md-while-keeping-it-minimal-concisely-explain-every",
+    "request": "Update README.md while keeping it minimal: concisely explain every command it presents, including package installation and update commands, all five public coding-agent skills with each agent's invocation syntax, and the Bun development commands. Do not document private internal commands or change source behavior.",
+    "profile": "fast",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Expanded the minimal README with concise purpose tables for package commands, all five public coding-agent skills and their per-agent invocation syntax, and Bun development commands.",
+    "implementationActor": "agent",
+    "specDigest": "sha256:81e9ab735ecd4f0f0ac865d86bff2aac7c853f4accaa6781f3fb0ab9c75d8a9a",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "updatedAt": "2026-07-30T20:40:16.591Z",
+    "schemaVersion": 5,
+    "workflow": "fast",
+    "mode": "normal",
+    "approvedSpecRevision": 2,
+    "impactDigest": "sha256:fcdc9cd878cb8cca535b2839c35967430dd36394abe0236e169dc7c3ef063ff0",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 2,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": false,
+      "delivered": false,
+      "published": false,
+      "highest": "verified",
+      "reasons": {
+        "integrated": "integrated has not been proven by a durable receipt.",
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "compactedAt": "2026-07-30T20:40:16.591Z",
+  "digest": "sha256:68f96d9ebfb3a58f1a13eb1cf196d22d54d0a15d7bdc0c61a76d403c65545158"
+}

@@ -36,17 +36,21 @@ state unchanged.
 
 ### Requirement: External launch requires explicit approval
 
-No external agent process may start until the human selects a displayed target
-and explicitly approves its exact proposal. Structured callers MUST echo an
-approval token or equivalent exact proposal data.
+Normal mode MUST NOT start an external agent until the human selects and
+approves an exact proposal. YOLO MAY launch the configured preferred supported
+agent only when the standing authorization explicitly includes external handoff
+and the fresh proposal matches repository, feature, specification, executable,
+arguments, and working directory. Configuration alone grants no launch
+authority; stale, edited, unsupported, or scope-exceeding proposals MUST fail.
 
-#### Scenario: The user approves one detected CLI agent
+#### Scenario: Normal mode proposes a detected CLI agent
 
-- **WHEN** the approved launch data still matches the current feature and specification
-- **THEN** the host may start that exact agent command in the repository
-- **AND** stale, edited, unsupported, or unapproved launch requests are rejected
+- **WHEN** the user has not approved its exact launch token
+- **THEN** Empirical leaves process and project state unchanged
+- **AND** returns current, save, and detected-agent choices
 
-#### Scenario: The user saves the handoff
+#### Scenario: Authorized YOLO prefers the current agent
 
-- **WHEN** the user chooses save
-- **THEN** the specification remains resumable and no process is created
+- **WHEN** no supported external agent preference is configured
+- **THEN** the current agent continues the workflow
+- **AND** no discovery question or process launch is introduced

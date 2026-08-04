@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "feature": "010-add-a-concise-empirical-command-reference-to",
+  "lastSequence": 2,
+  "lastEventDigest": "sha256:a0435e2148877f8b15686d362fb1078382bb0ab4233ea52ba82629be46c5bf2d",
+  "stateDigest": "sha256:13894e892965c98fca6c84778aad1a245b685589ee7a0fb692d8ce2066fac9bf",
+  "state": {
+    "revision": 57,
+    "activeFeature": "010-add-a-concise-empirical-command-reference-to",
+    "request": "Add a concise Empirical command reference to every generated agent instruction, covering interactive Socratic explore with optional Codex launch, direct Fast and Complex starts, workstreams, and loop resume, with integration tests ensuring the commands remain present.",
+    "profile": "fast",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Added a reusable command reference to every generated agent instruction and refreshed all managed agent files.",
+    "implementationActor": "agent",
+    "updatedAt": "2026-07-29T15:41:04.164Z",
+    "specDigest": "sha256:3ba943b844c0ad90460e982292de596b405ea15d49f1a0b08016173330660718",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "schemaVersion": 5,
+    "workflow": "fast",
+    "mode": "normal",
+    "approvedSpecRevision": 57,
+    "impactDigest": "sha256:fcdc9cd878cb8cca535b2839c35967430dd36394abe0236e169dc7c3ef063ff0",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 2,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": false,
+      "delivered": false,
+      "published": false,
+      "highest": "verified",
+      "reasons": {
+        "integrated": "integrated has not been proven by a durable receipt.",
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "compactedAt": "2026-07-29T15:41:04.164Z",
+  "digest": "sha256:e74c21a33958a2e1680ff19d30808c0a84b51469ca525624bb6afd4bb2270be8"
+}

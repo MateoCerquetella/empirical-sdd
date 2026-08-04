@@ -13,6 +13,10 @@ export interface UpdateReport {
   integrations: "refreshed";
 }
 
+export interface PackageUninstallReport {
+  package: "removed";
+}
+
 export function updateEmpirical(runner: LifecycleRunner = runInherited): UpdateReport {
   const npm = process.platform === "win32" ? "npm.cmd" : "npm";
   const empirical = process.platform === "win32" ? "empirical.cmd" : "empirical";
@@ -23,15 +27,36 @@ export function updateEmpirical(runner: LifecycleRunner = runInherited): UpdateR
   return { package: "updated", integrations: "refreshed" };
 }
 
+export function uninstallEmpirical(runner: LifecycleRunner = runInherited): PackageUninstallReport {
+  const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+  const result = runner(npm, ["uninstall", "-g", "empirical-sdd"]);
+  assertStage(
+    result,
+    "UNINSTALL_PACKAGE_FAILED",
+    "npm package uninstall",
+    "Managed agent skills may already have been removed; retry the command or run npm uninstall -g empirical-sdd manually.",
+  );
+  return { package: "removed" };
+}
+
+export function isUninstallConfirmed(answer: string): boolean {
+  return /^(?:y|yes)$/i.test(answer.trim());
+}
+
 function runInherited(command: string, args: string[]): LifecycleProcessResult {
   const result = spawnSync(command, args, { stdio: "inherit", shell: false });
   return { status: result.status, ...(result.error ? { error: result.error } : {}) };
 }
 
-function assertStage(result: LifecycleProcessResult, code: string, stage: string): void {
+function assertStage(
+  result: LifecycleProcessResult,
+  code: string,
+  stage: string,
+  remediation?: string,
+): void {
   if (!result.error && result.status === 0) return;
   throw new EmpiricalError(
     code,
-    `${stage} failed${result.error ? `: ${result.error.message}` : ` with exit status ${String(result.status)}`}`,
+    `${stage} failed${result.error ? `: ${result.error.message}` : ` with exit status ${String(result.status)}`}${remediation ? `. ${remediation}` : ""}`,
   );
 }

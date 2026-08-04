@@ -1,35 +1,50 @@
-# Migration to Empirical 0.20
+# Migration to Empirical 0.22
 
-## Empirical v1 (`ai/`)
+## Schema 4 → Schema 5
 
-Invoke an installed Empirical skill in the repository. Adoption reads
-`ai/STATE.md`, copies the current spec when available, writes
-schema-4 configuration and feature-local state, and leaves `ai/` untouched.
+Empirical 0.22 supports one breaking, atomic migration from Schema 4. Invoke an
+installed Empirical skill after upgrading. The migrator performs a read-only
+preflight, rejects symbolic links and mixed/conflicting layouts, builds a
+complete candidate tree, validates every transformed document and journal, and
+only then promotes the candidate.
+
+The transform creates strict Schema-5 feature state, Policy v2, Manifest v2,
+impact manifests, completion state, hash-chained journals, and a compact
+migration receipt. Legacy `archive` state becomes `integrate`; it is not marked
+integrated without a new independent integration receipt. The previous layout
+is retained in the transaction backup until promotion and recovery complete.
+An interruption is either rolled forward from its verified transaction marker
+or restored without leaving mixed versions.
+
+Top-level `.empirical.schema5-*` stages/markers and
+`.empirical.schema4-backup-*` directories are reserved migration transaction
+state, not product source. A candidate failure before marker creation removes
+only the exact stage created by that attempt. Doctor reports any unmarked orphan
+read-only; inspect it before moving or removing it manually.
+
+Schema 5 does not maintain a permissive compatibility reader. A project that
+contains Schema-5 configuration plus legacy root state, legacy events, or
+Schema-4 feature projections fails closed with a migration conflict.
 
 ## Earlier npm alpha schemas
 
-Invoke `$empirical-init` (or the equivalent native Init skill) after upgrading.
-It removes only marker-owned stale local skills, repairs partial schema-4 setup,
-and then normalizes schema-1, schema-2, or schema-3 default state at
-`.empirical/state.json` with its root journal into:
+Schemas 1–3 are not directly accepted by 0.22. First use the Empirical version
+that created the repository to migrate it to Schema 4, verify that state, and
+then upgrade to 0.22. Alternate historical parallel-state directories remain
+unsupported because their histories cannot be assigned safely.
 
-```text
-.empirical/specs/<existing-feature>/state.json
-.empirical/specs/<existing-feature>/events/
-```
+## Empirical v1 (`ai/`)
 
-Only after every destination write succeeds are the old projection, lock, and
-journal removed. The migration is idempotent, rejects symbolic links and
-conflicting newer history, and does not let terminal idle/done state reserve the
-checkout.
+Use the existing non-destructive adoption operation before the Schema-5
+migration. Adoption reads `ai/STATE.md`, copies an available current spec, and
+leaves `ai/` untouched. Verify the resulting Schema-4 repository, then upgrade
+to 0.22 and run the atomic migration.
 
-Earlier alternate named parallel-state directories are intentionally
-unsupported and are not combined with current history. If you need to inspect
-that data, use the package version that created it before upgrading. Empirical
-0.20 removes its commands, flags, packet fields, API types, and MCP tool rather
-than pretending to migrate ambiguous concurrent histories.
+## Operational checks
 
-## Version reset
-
-The canonical alpha line is `0.20.x` and is intentionally breaking while the
-workflow stabilizes. Removed npm versions cannot be reused.
+Run Doctor before and after migration. Doctor is read-only: it reports whether
+migration is required and validates the final schema, journal chain, policy,
+knowledge, receipts, claims, locks, worktrees, tools, and delivery artifacts.
+Migration scratch is excluded from knowledge fingerprints, evidence tree
+digests, and integration source overlays. Do not manually combine old and new
+state trees.

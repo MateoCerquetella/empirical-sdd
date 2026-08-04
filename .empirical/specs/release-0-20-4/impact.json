@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "classification": "behavioral",
+  "capabilities": [
+    "package-distribution"
+  ],
+  "surfaces": [
+    "legacy-schema-4-workflow"
+  ],
+  "regressionRationale": null,
+  "digest": "sha256:afd5984966a19a00bb41cf75eb4b187fd03516c633891b9ceb8e7f0c4970cc46"
+}

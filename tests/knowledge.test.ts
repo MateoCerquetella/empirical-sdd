@@ -4,7 +4,11 @@ import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EmpiricalProject } from "../src/core.js";
-import { refreshRepositoryKnowledge } from "../src/knowledge.js";
+import {
+  freshRepositoryKnowledgePaths,
+  inspectRepositoryKnowledge,
+  refreshRepositoryKnowledge,
+} from "../src/knowledge.js";
 import type { RepositoryKnowledgeManifest } from "../src/types.js";
 
 const directories: string[] = [];
@@ -52,8 +56,8 @@ describe("repository knowledge", () => {
     const before = await readFile(manifestPath, "utf8");
     await writeFile(overviewPath, "# Project Overview\n\nMaintained evidence.\n", "utf8");
 
-    expect((await refreshRepositoryKnowledge(root)).status).toBe("current");
-    expect(await readFile(manifestPath, "utf8")).toBe(before);
+    expect((await refreshRepositoryKnowledge(root)).status).toBe("refreshed");
+    expect(await readFile(manifestPath, "utf8")).not.toBe(before);
     expect(await readFile(overviewPath, "utf8")).toContain("Maintained evidence");
 
     await writeFile(join(root, "README.md"), "two\n", "utf8");
@@ -82,5 +86,92 @@ describe("repository knowledge", () => {
     expect(report.truncated).toBe(true);
     expect(report.files).toBeLessThanOrEqual(1_200);
     expect(manifest.files.map((file) => file.path)).not.toContain("ignored.txt");
+  });
+
+  test("Manifest v2 marks only source-dependent pages stale before explicit refresh", async () => {
+    const root = await temporaryRepository();
+    await writeFile(join(root, "README.md"), "overview\n", "utf8");
+    await writeFile(
+      join(root, "package.json"),
+      '{"scripts":{"test":"bun test"}}\n',
+      "utf8",
+    );
+    await writeFile(join(root, "CONTRIBUTING.md"), "Conventions stay stable.\n", "utf8");
+    await EmpiricalProject.initialize(root, { integrations: false });
+    const current = await inspectRepositoryKnowledge(root);
+    expect(current.valid).toBe(true);
+    expect(current.fresh).toEqual(expect.arrayContaining([
+      ".empirical/context/index.md",
+      ".empirical/context/commands.md",
+      ".empirical/context/conventions.md",
+    ]));
+
+    await writeFile(
+      join(root, "package.json"),
+      '{"scripts":{"test":"bun test","ci":"bun run check && bun test"}}\n',
+      "utf8",
+    );
+    const stale = await inspectRepositoryKnowledge(root);
+    expect(stale.stale).toEqual(expect.arrayContaining([
+      ".empirical/context/index.md",
+      ".empirical/context/overview.md",
+      ".empirical/context/architecture.md",
+      ".empirical/context/commands.md",
+    ]));
+    expect(stale.stale).not.toContain(".empirical/context/conventions.md");
+    expect(await freshRepositoryKnowledgePaths(root)).not.toContain(
+      ".empirical/context/commands.md",
+    );
+    expect((await refreshRepositoryKnowledge(root)).status).toBe("refreshed");
+    expect((await inspectRepositoryKnowledge(root)).valid).toBe(true);
+  });
+
+  test("Manifest v2 excludes reserved migration stages and backups from source fingerprints", async () => {
+    const root = await temporaryRepository();
+    await writeFile(join(root, "README.md"), "overview\n", "utf8");
+    await EmpiricalProject.initialize(root, { integrations: false });
+    const before = await inspectRepositoryKnowledge(root);
+    const stage = join(root, ".empirical.schema5-stage-aborted");
+    const reserved = join(root, ".empirical.schema5-aborted-metadata");
+    const backup = join(root, ".empirical.schema4-backup-aborted");
+    await mkdir(stage);
+    await mkdir(reserved);
+    await mkdir(backup);
+    await writeFile(join(stage, "README.md"), "stale duplicate\n", "utf8");
+    await writeFile(join(reserved, "transaction.json"), "stale metadata\n", "utf8");
+    await writeFile(join(backup, "README.md"), "stale backup\n", "utf8");
+    const afterScratch = await inspectRepositoryKnowledge(root);
+    expect(afterScratch.files).toEqual(before.files);
+    expect(afterScratch.stale).toEqual([]);
+    const nested = join(root, "ordinary", ".empirical.schema5-user");
+    await mkdir(nested, { recursive: true });
+    await writeFile(join(nested, "source.ts"), "nested ordinary source\n", "utf8");
+    expect((await inspectRepositoryKnowledge(root)).files.map((file) => file.path)).toContain(
+      "ordinary/.empirical.schema5-user/source.ts",
+    );
+    await writeFile(join(root, "README.md"), "ordinary source change\n", "utf8");
+    expect((await inspectRepositoryKnowledge(root)).files).not.toEqual(before.files);
+  });
+
+  test("Manifest v2 detects page and manifest tampering deterministically", async () => {
+    const root = await temporaryRepository();
+    await writeFile(join(root, "README.md"), "overview\n", "utf8");
+    await EmpiricalProject.initialize(root, { integrations: false });
+    await writeFile(
+      join(root, ".empirical", "context", "commands.md"),
+      "<!-- empirical-sdd:managed-context-v2 -->\n# Commands\n\nTampered.\n",
+      "utf8",
+    );
+    expect((await inspectRepositoryKnowledge(root)).stale).toContain(
+      ".empirical/context/commands.md",
+    );
+    const manifestPath = join(root, ".empirical", "context", "manifest.json");
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as Record<string, unknown>;
+    await writeFile(
+      manifestPath,
+      `${JSON.stringify({ ...manifest, generator: "edited" }, null, 2)}\n`,
+      "utf8",
+    );
+    expect((await inspectRepositoryKnowledge(root)).issues[0]).toContain("digest check");
   });
 });

@@ -1,152 +1,113 @@
 # Architecture
 
-Empirical 0.20 is a TypeScript library, Node.js CLI, and stdio MCP server over
-one committed `.empirical/` model.
+Empirical 0.22 is a TypeScript library, Node.js CLI, stdio MCP server, and six
+generated agent skills over one repository-native Schema 5 model.
 
-## Modules
+## Boundaries
 
-- `src/core.ts` owns the workflow state machine, exact revision gates, packets,
-  evidence rules, configuration, proposal/handoff orchestration, and Explain.
-- `src/storage.ts` owns schema normalization, atomic JSON/text writes,
-  feature-scoped journals, locks, recovery, and legacy default-state migration.
-- `src/worktrees.ts` owns shell-free Git inspection, proposals, safety checks,
-  and exact `git worktree add -b` execution.
-- `src/decisions.ts` owns Complex decision templates, validation,
-  supersession, and safe summaries.
-- `src/specifications.ts` owns capability-delta parsing, validation,
-  transactional projection, convergence, and rollback.
-- `src/discovery.ts` owns the five Socratic passes, progressive validation,
-  durable drafts, and exact approved briefs.
-- `src/agents.ts` owns supported-agent detection, launch capability metadata,
-  approval-bound handoff options, and integrity tokens.
-- `src/agent-catalog.ts` owns the pinned 75-entry skill-install compatibility
-  snapshot (73 global targets), aliases, safe native roots, and conservative
-  detection hints. It performs no fetch or telemetry.
-- `src/checkouts.ts` owns checkout-local feature selection in per-worktree Git
-  metadata and cross-checkout claim discovery.
-- `src/knowledge.ts` owns the bounded, deterministic, secret-safe repository
-  inventory and compact Markdown context set.
-- `src/integrations.ts` reconciles canonical selected ids and unique physical
-  destinations, records `~/.empirical-sdd/integrations.json`, removes
-  marker-owned legacy commands, and preserves project runtime bridges.
-- `src/selector.ts` owns the dependency-free searchable, bounded, width-safe
-  multi-agent selector.
-- `src/setup.ts` owns strict setup defaults, validation, and the shared summary
-  model used before private interactive initialization.
-- `src/lifecycle.ts` owns the package-update then integration-refresh sequence.
-- `src/cli.ts` and `src/mcp.ts` adapt the same core API; they do not implement a
-  second workflow.
+- `protocol.ts` defines strict shared schemas, canonical JSON, digests,
+  authorizations, impacts, receipts, and completion derivation.
+- `operations.ts` is the single frozen registry for MCP names, internal verbs,
+  summaries, workflows, modes, and the six skills.
+- `core.ts` owns workflow transitions, exact revisions, phase gates, routing,
+  receipt use, and orchestration.
+- `storage.ts` owns safe paths, atomic projections, locks, journal recovery, and
+  Schema-5 invariants.
+- `journal.ts` owns hash chains, snapshot verification, transactional
+  compaction, and interrupted-compaction recovery.
+- `migration.ts` performs the one supported atomic Schema 4 → 5 transform.
+- `runtime.ts` executes exact argument arrays without a shell and captures
+  bounded output.
+- `evidence.ts` creates and verifies executed and collected receipts.
+- `coordination.ts` owns Git-common-dir identity, capability claims, base replay,
+  candidate validation, projection rollback, and integration receipts.
+- `delivery.ts` owns protected GitHub source/evidence PR convergence and
+  explicit publication planning.
+- `knowledge.ts` owns Manifest v2 fingerprints and fresh-by-default retrieval.
+- `doctor.ts` performs read-only cross-subsystem diagnostics.
+- `cli.ts`, `mcp.ts`, and `integrations.ts` are registry-backed adapters, not
+  alternate workflow implementations. Global uninstall reuses integration
+  containment and ownership checks, then `lifecycle.ts` removes the npm package
+  last through an exact shell-free argv.
 
-## Ownership
+Legacy discovery, decision, agent handoff, selector, setup, and worktree modules
+remain focused owners of those boundaries.
+
+## Ownership model
 
 ```text
-project
-├── config + policy
-├── living capabilities
+Git common directory
+└── capability claims shared by all linked checkouts
+
+repository checkout
+├── Schema-5 config + Policy v2 + Manifest v2
+├── living capability projections
 ├── discovery records
-└── feature
-    ├── contract + design + decisions + plan + deltas
-    ├── state + exact revision journal + lock
-    └── evidence
+└── selected feature
+    ├── spec + design + decisions + plan + impact + deltas
+    ├── immutable evidence/integration/delivery receipts
+    └── state projection + hash journal + terminal snapshot
 ```
 
-Each checkout selects zero or one active feature through
-`<absolute-git-dir>/empirical-sdd/active-feature`. `waiting`, `awaiting_human`,
-and `blocked` states are resumable; `done` and idle states do not reserve a
-checkout. Recovery ignores features claimed by another registered checkout and
-rejects multiple unclaimed candidates instead of guessing.
+Checkout selection lives in the checkout's absolute Git directory. Claims live
+under the common directory. This separation prevents two linked worktrees from
+selecting each other's workflow state while still serializing changes to the
+same living capability.
 
-Feature-local state prevents two branches created from the same base from
-colliding on a project-global state file. Git worktrees isolate the source tree
-and branch. Shared capability projection remains serialized by a project-level
-resource lock during Archive.
+## Transition integrity
 
-## Agent experience and context
+A workflow transition acquires an ownership-aware feature lock, verifies the
+exact revision and immutable artifacts, prepares any rollback-capable effect,
+appends a linked event, writes the state projection atomically, and releases
+only its own lock. Terminal paths compact the chain to a verified snapshot and
+boundary. Stale-lock recovery checks age, process liveness, inode/device
+identity, and ownership token.
 
-Every selected agent receives one automatic skill plus four deliberate SDD
-skills. `empirical` owns automatic initialization, context retrieval, resume,
-discovery, internal routing, exact transitions, and optional handoff.
-`empirical-init` stops after setup, `empirical-spec` and
-`empirical-socratic` stop with Specify awaiting contract approval, and
-`empirical-loop` resumes selected work through a terminal workflow result. Fast
-and Complex remain internal profiles. The public CLI exposes only installation
-and update; MCP and the TypeScript API expose workflow operations as automation
-primitives.
+Migration stages, markers, and backups use reserved top-level names. Before a
+marker exists, candidate transform/validation failure removes the exact owned
+stage. After a marker exists, recovery alone controls stage/backup promotion.
+Knowledge, evidence hashing, and source overlays exclude these transaction
+trees; Doctor reports unmarked survivors without deleting them.
 
-The global skill catalog, project MCP bridges, and executable handoff registry
-are separate compatibility layers. A selected skill-only target receives the
-five generated files but gains no inferred command syntax, MCP configuration,
-or launch capability. Canonical selected ids are persisted separately from
-marker-owned files because several ids share `.agents/skills`,
-`.config/agents/skills`, or `.zencoder/skills`. Reconciliation groups normalized
-roots and removes a root only when no selected id references it. Current and
-legacy names share marker ownership and path-safety checks, so initialization
-can remove stale managed local shadows without deleting unmanaged extensions.
+Integration adds a second transaction boundary. It verifies Git repository
+identity, replays deltas from captured bases, temporarily projects candidates
+into a different worktree, runs every exact Policy command there, restores the
+target, then promotes source capability projections with rollback and records a
+receipt. The feature is not `integrated` until that receipt and state transition
+both succeed.
 
-Before in-agent initialization mutates a repository, the generated Init
-contract renders recommended or current Verification, Parallel work, and
-Decisions settings. Apply/Keep, Customize, and Cancel form the first gate;
-customization ends with Save/Edit/Cancel. The TypeScript API, MCP tools, and
-private CLI carry the same partial evidence, isolation, and decision fields.
-All four evidence settings default on. Criterion evidence controls test and UI
-sub-gates, while code review remains independent.
+## Delivery and publication
 
-Repository knowledge is file-backed under `.empirical/context/`. The generated
-manifest includes only normalized paths, sizes, and content digests from a
-bounded Git-aware inventory. Agent-maintained topic pages are created once and
-preserved. No semantic index or external service participates.
+Delivery requires Policy v2, repository-bound authorization, a verified
+integration, an exact target branch, and declared checks. It converges a source
+PR, waits for required green checks, merges it without admin or force, creates
+a source-merge binding, then converges and merges an evidence PR. Both merge
+commits and command receipts are digested in the delivery receipt.
 
-Agent-native Socratic progress is saved after each ordered pass. Approval
-derives one deterministic refined request, persists it, and starts internal
-Complex with the exact same text. A worktree proposal leaves the record approved
-but not falsely started.
+Publication is intentionally outside the workflow's inferred path. A caller
+must explicitly provide an exact package, semantic version, dist-tag, merged
+commit, literal approval, and an authorization bound to that exact request.
+Empirical independently inspects and then re-inspects remote Git, GitHub, and
+npm state. Conflicting tags, releases, versions, or dist-tags stop instead of
+being replaced.
 
-Handoff is proposal/authorization, not process execution. A proposal binds the
-approved spec digest, feature, target agent, launch capability, cwd, prompt, and
-argv into a token. Authorization re-derives all fields. The current host is the
-only component that may execute the exact approved argv.
+## Knowledge and diagnostics
 
-## Transactions
+Manifest v2 records normalized source fingerprints and generated-page source
+sets. Retrieval returns fresh pages by default; a changed source makes dependent
+pages explicitly stale. Doctor reads schema/migration state, journals and
+snapshots, locks and claims, tool versions, Policy v2, knowledge freshness,
+receipts, worktrees, and delivery artifacts. It never repairs, prunes, launches,
+or writes.
 
-A normal transition:
+## Package surface
 
-1. acquires `<feature>/state.lock`;
-2. recovers a newer valid journal event when needed;
-3. verifies the caller's exact revision;
-4. validates immutable contracts and phase gates;
-5. prepares any rollback-capable external effect;
-6. writes the next event atomically;
-7. writes the state projection atomically;
-8. removes only the lock instance owned by the caller.
+The supported exports are the main library, `./protocol`, `./mcp`, and
+`./integrations`. The build emits Node-compatible ESM and declarations. CI
+tests supported Node lines 22, 24, and 26 and enforces distribution, consumer,
+registry-consistency, aggregate coverage, and per-module coverage gates.
 
-Stale-lock recovery checks age, process liveness, inode/device identity, and an
-ownership token. Windows sharing violations are retried within the same bounded
-wait.
-
-## Git isolation
-
-A proposal is read-only and resolves request, workflow, type, feature, base,
-base commit, branch, absolute path, exact argv, and an integrity token over the
-approved fields. Creation requires explicit approval and revalidates the active
-feature, base commit, token, cleanliness, and collisions immediately before
-invoking Git through an argument array. No shell, force, stash, implicit commit,
-cleanup, or deletion path exists.
-
-## Decision traceability
-
-Complex decisions store externally reviewable evidence, options, the accepted
-choice, trade-offs/risks, and verification. Design requires a valid accepted
-entry; Review revalidates the record and implementation alignment. Supersession
-is append-only and reciprocal. Explain derives its rationale from workflow state
-and artifact expectations; it never stores or exposes private model reasoning.
-
-## Schema migration
-
-Schema 4 reads schema 1, 2, and 3 configuration/state. A historical default
-root state and valid journal are normalized and partitioned beneath the feature
-named by each event, then the source projection is removed only after every
-destination has been validated and written successfully. The operation is
-idempotent and blocks on missing contracts, unassignable events, conflicting
-history, or symbolic-link paths. Read-only commands require explicit migration
-instead of mutating the project. Historical alternate parallel-state
-directories are left untouched and unsupported.
+The public lifecycle CLI exposes Install, Update, and Uninstall. Uninstall owns
+only catalog-derived global skill paths, valid owner-stamped selection metadata,
+and the global package. Repository discovery and project `.empirical` or MCP
+mutation are outside that command's authority.

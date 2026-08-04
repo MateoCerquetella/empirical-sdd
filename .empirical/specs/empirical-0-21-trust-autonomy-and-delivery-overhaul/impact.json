@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "classification": "behavioral",
+  "capabilities": [
+    "agent-handoff",
+    "agent-integrations",
+    "autonomous-delivery",
+    "exploratory-discovery",
+    "living-specifications",
+    "package-distribution",
+    "project-policy",
+    "repository-knowledge",
+    "verification-policy",
+    "workflow-routing",
+    "worktree-isolation"
+  ],
+  "surfaces": [
+    "legacy-schema-4-workflow"
+  ],
+  "regressionRationale": null,
+  "digest": "sha256:9a0953e4fc9c831d5f320adcb53dbc18e7d572fa0f34c3ef3b1582b9b55a26f8"
+}

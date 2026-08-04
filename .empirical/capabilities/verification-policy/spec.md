@@ -57,3 +57,13 @@ reconfiguration. Invalid textual flags MUST fail before mutation.
 - **THEN** Empirical persists that value and preserves the other evidence,
   isolation, and decision settings
 - **AND** the returned configuration reports the complete effective policy
+
+### Requirement: Evidence tree digests exclude migration scratch
+
+Repository tree digests MUST ignore top-level `.empirical.schema5-*` transaction
+paths in both Git and filesystem traversal modes.
+
+#### Scenario: Scratch appears between evidence operations
+
+- **WHEN** reserved migration scratch is created without changing product source
+- **THEN** the tree digest remains stable and ordinary source changes still produce a new digest

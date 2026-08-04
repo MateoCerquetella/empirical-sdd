@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "classification": "behavioral",
+  "capabilities": [
+    "package-distribution"
+  ],
+  "surfaces": [
+    "git-delivery",
+    "github-release",
+    "npm-registry",
+    "package-manifest"
+  ],
+  "regressionRationale": null,
+  "digest": "sha256:4f361f3f1194082b6a8cf4bb96ae17c6a477c22256b24f48b39c5b29aadcd27f"
+}

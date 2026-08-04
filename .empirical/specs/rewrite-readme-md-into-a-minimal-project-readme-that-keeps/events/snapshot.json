@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "feature": "rewrite-readme-md-into-a-minimal-project-readme-that-keeps",
+  "lastSequence": 2,
+  "lastEventDigest": "sha256:57e0a11d4e9b8eba1d8f1704caba50ee3de7380bb7b0298880d1e212fd692e69",
+  "stateDigest": "sha256:dfd63ea7b846bbad50bb55dada1d51faec2bec86f7f205b3dac00bc420bef829",
+  "state": {
+    "revision": 2,
+    "activeFeature": "rewrite-readme-md-into-a-minimal-project-readme-that-keeps",
+    "request": "Rewrite README.md into a minimal project README that keeps only the essential description, installation, basic agent usage, development command, documentation links, and license. Do not change source behavior.",
+    "profile": "fast",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Replaced the 312-line manual-style README with a 51-line landing page covering the project summary, alpha status, install, agent usage, development, documentation, and MIT license.",
+    "implementationActor": "agent",
+    "specDigest": "sha256:93411711e98e5b29ce6e4ad309f30d4b25673a30003d785f99b7922843221f44",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "updatedAt": "2026-07-30T19:36:45.983Z",
+    "schemaVersion": 5,
+    "workflow": "fast",
+    "mode": "normal",
+    "approvedSpecRevision": 2,
+    "impactDigest": "sha256:fcdc9cd878cb8cca535b2839c35967430dd36394abe0236e169dc7c3ef063ff0",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 2,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": false,
+      "delivered": false,
+      "published": false,
+      "highest": "verified",
+      "reasons": {
+        "integrated": "integrated has not been proven by a durable receipt.",
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "compactedAt": "2026-07-30T19:36:45.983Z",
+  "digest": "sha256:e557323afcacbc8c6e4e0411072114f39ce0d400eb176178e0feb8491def5134"
+}

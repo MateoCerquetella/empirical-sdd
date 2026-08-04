@@ -1,5 +1,4 @@
 {
-  "schemaVersion": 4,
   "revision": 8,
   "activeFeature": "release-empirical-sdd-0-20-3",
   "request": "Release the completed Empirical setup wizard and broad 73-target agent installer as npm package empirical-sdd version 0.20.3, verify the live registry artifact from a clean consumer, then push the release commits and matching v0.20.3 tag.",
@@ -9,24 +8,30 @@
   "repairAttempts": 0,
   "message": "Published empirical-sdd@0.20.3 as npm latest, verified the registry tarball and exact shasum from a clean consumer, exercised all 73 installer entrypoints in an isolated home, and pushed annotated tag v0.20.3 for merged commit eff18f7.",
   "implementationActor": "codex",
-  "specDigest": "e06a70102d3774300e7b9aa7f7538087749bf9fe963e05523ae2c537223e2637",
+  "specDigest": "sha256:e06a70102d3774300e7b9aa7f7538087749bf9fe963e05523ae2c537223e2637",
   "capabilityArchiveRequired": false,
   "capabilityDeltaDigest": null,
-  "evidence": [
-    {
-      "criterionId": "AC-1",
-      "kind": "test",
-      "passed": true,
-      "summary": "Registry reports 0.20.3 as latest with shasum b5f50f9619ceac5e2c7868d5f870f2da599f2d37. A clean npm consumer reported CLI 0.20.3 and installed 73 entrypoints across 65 destinations with five guidance integrations and 326 created skill files.",
-      "artifact": "https://registry.npmjs.org/empirical-sdd/-/empirical-sdd-0.20.3.tgz"
-    },
-    {
-      "criterionId": "AC-1",
-      "kind": "review",
-      "passed": true,
-      "summary": "PR #6 merged at eff18f71c51672a954d5171126e1c128bceb4f44 after GitHub Actions passed on Ubuntu, macOS, and Windows; annotated tag v0.20.3 was pushed to that exact commit.",
-      "artifact": "https://github.com/MateoCerquetella/empirical-sdd/pull/6"
+  "updatedAt": "2026-07-31T13:58:47.949Z",
+  "schemaVersion": 5,
+  "workflow": "fast",
+  "mode": "normal",
+  "approvedSpecRevision": 8,
+  "impactDigest": "sha256:fcdc9cd878cb8cca535b2839c35967430dd36394abe0236e169dc7c3ef063ff0",
+  "capabilityClaimId": null,
+  "authorizationDigest": null,
+  "evidenceReceiptIds": [],
+  "legacyEvidenceCount": 2,
+  "completion": {
+    "implemented": true,
+    "verified": true,
+    "integrated": false,
+    "delivered": false,
+    "published": false,
+    "highest": "verified",
+    "reasons": {
+      "integrated": "integrated has not been proven by a durable receipt.",
+      "delivered": "delivered has not been proven by a durable receipt.",
+      "published": "published has not been proven by a durable receipt."
     }
-  ],
-  "updatedAt": "2026-07-31T13:58:47.949Z"
+  }
 }

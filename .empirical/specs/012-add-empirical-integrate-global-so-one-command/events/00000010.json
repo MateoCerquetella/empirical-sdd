@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "sequence": 10,
+  "previousDigest": "sha256:c6e71b7bb7148d3cb48ae0b4ddedffe5a797dd89f7a1465e7a375d5aef39172c",
+  "actor": "schema-4-migration",
+  "type": "compaction-boundary",
+  "summary": "Compacted through journal event 9",
+  "createdAt": "2026-07-29T16:17:33.318Z",
+  "stateBeforeDigest": "sha256:9c159d8c9302734fc192db55ba8c720ed9ef0873c66210f01b3cc4489317f6d1",
+  "stateAfterDigest": "sha256:9c159d8c9302734fc192db55ba8c720ed9ef0873c66210f01b3cc4489317f6d1",
+  "state": {
+    "revision": 8,
+    "activeFeature": "012-add-empirical-integrate-global-so-one-command",
+    "request": "Add empirical integrate --global so one command installs the five Empirical workflow skills globally for Codex, Claude Code, Cursor, Gemini CLI, and Windsurf using each agent's native user-level skills directory. It must work outside an initialized project, preserve unmanaged files, update Empirical-managed files safely, report exact installed paths and agent-specific invocation syntax, keep project-local integrate behavior, document install/update usage, and ship as npm patch 2.3.1.",
+    "profile": "complex",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Archived capability changes: agent-integrations",
+    "implementationActor": "agent",
+    "specDigest": "sha256:606bff8aa7f814e1f7c70ab5549f1035d8e469305e51145e89f5eb09269ad6a7",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "sha256:91cbfb7d98d224f59c8808a1f2f9c6150772b5d3fbcad5609dd351b240cc3e35",
+    "updatedAt": "2026-07-29T16:17:33.318Z",
+    "schemaVersion": 5,
+    "workflow": "complex",
+    "mode": "normal",
+    "approvedSpecRevision": 8,
+    "impactDigest": "sha256:d2385f9cb9c4bf67d07889dae3b49f81e71759c3f365f6f71d9290747765c3ce",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 15,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": true,
+      "delivered": false,
+      "published": false,
+      "highest": "integrated",
+      "reasons": {
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "digest": "sha256:92239ade9755ca1e95311a6834c69c93d9199829ab0b7d84f6b866801602ce10"
+}

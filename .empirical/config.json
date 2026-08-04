@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "profile": "complex",
   "maxRepairAttempts": 2,
   "evidence": {
@@ -18,5 +18,9 @@
   "decisions": {
     "complexRecords": "required"
   },
-  "setupComplete": true
+  "setupComplete": true,
+  "migratedFrom": {
+    "schemaVersion": 4,
+    "migratedAt": "2026-08-03T22:31:23.517Z"
+  }
 }

@@ -73,3 +73,13 @@ automation, and no separate public terminal initialization step is required.
 
 - **WHEN** the user cancels either the initial summary or final review
 - **THEN** repository configuration, Git state, and workflow state remain unchanged
+
+### Requirement: Source overlays exclude migration scratch
+
+Integration overlays MUST ignore reserved top-level `.empirical.schema5-*`
+paths while preserving conflict detection and restoration for ordinary source.
+
+#### Scenario: Source contains an aborted migration stage
+
+- **WHEN** independent integration validates reviewed source containing reserved scratch
+- **THEN** no scratch path appears in the target and every ordinary overlaid path is restored afterward

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "classification": "behavioral",
+  "capabilities": [
+    "agent-integrations"
+  ],
+  "surfaces": [
+    "legacy-schema-4-workflow"
+  ],
+  "regressionRationale": null,
+  "digest": "sha256:d2385f9cb9c4bf67d07889dae3b49f81e71759c3f365f6f71d9290747765c3ce"
+}

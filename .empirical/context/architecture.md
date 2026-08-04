@@ -14,7 +14,8 @@
 - `src/discovery.ts`: ordered Socratic passes, progressive durable answers, and
   exact approved Complex handoff.
 - `src/agents.ts` / `src/integrations.ts` / `src/lifecycle.ts`: supported-agent
-  detection, the five-skill global catalog, managed migration, and updates.
+  detection, the six-skill global catalog, managed migration, updates, and
+  ownership-bound global uninstall.
 - `src/cli.ts` / `src/mcp.ts`: adapters over the same core API.
 
 ## Data and control flow

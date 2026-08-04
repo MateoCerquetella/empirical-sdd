@@ -208,6 +208,25 @@ describe("Git worktree isolation", () => {
 
   test("approval becomes stale when the base or active feature changes", async () => {
     const { root, project } = await repository();
+    await project.configurePolicy({
+      schemaVersion: 2,
+      context: [],
+      phases: {},
+      verification: {
+        evidence: { required: true, browserForUi: true, screenshotForUi: true, codeReview: true },
+        commands: [{
+          id: "verify",
+          argv: [process.execPath, "-e", "process.exit(0)"],
+          cwd: ".",
+          timeoutMs: 30_000,
+          maxOutputBytes: 65_536,
+          evidenceKinds: ["test", "review"],
+          criteria: [],
+        }],
+      },
+      delivery: null,
+      preferredAgent: null,
+    });
     git(root, ["add", "."]);
     git(root, ["commit", "-m", "record current feature"]);
     const oldBase = proposal(await project.fast("Add stale-base coverage"));
@@ -220,12 +239,15 @@ describe("Git worktree isolation", () => {
     })).rejects.toMatchObject({ code: "STALE_WORKTREE_PROPOSAL" });
 
     const oldFeature = proposal(await project.fast("Add stale-active coverage", { id: "stale-active" }));
+    const receipt = await project.executeEvidence({
+      commandId: "verify",
+      criteria: ["AC-1"],
+      evidenceKinds: ["test", "review"],
+      summary: "Focused fixture verification and review passed",
+    });
     await project.complete({
       revision: 1, outcome: "passed", summary: "Finish current",
-      evidence: [
-        { criterionId: "AC-1", kind: "test", passed: true, summary: "Passed" },
-        { criterionId: "all", kind: "review", passed: true, summary: "Reviewed" },
-      ],
+      receiptIds: [receipt.id],
     });
     await project.fast("Start a different active feature");
     await expect(project.createWorktree({

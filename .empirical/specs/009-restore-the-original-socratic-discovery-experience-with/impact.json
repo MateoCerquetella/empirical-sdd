@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "classification": "behavioral",
+  "capabilities": [
+    "exploratory-discovery"
+  ],
+  "surfaces": [
+    "legacy-schema-4-workflow"
+  ],
+  "regressionRationale": null,
+  "digest": "sha256:0c398c1edcb5c2d2c2cafcf547646897fd7b225c0bdcda7574f5ad742c879753"
+}

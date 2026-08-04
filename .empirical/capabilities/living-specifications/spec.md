@@ -8,34 +8,45 @@ Living capability specifications preserve the current observable product truth w
 
 ### Requirement: Complex changes declare valid capability deltas
 
-Every new Complex change MUST include at least one valid capability delta before Specify can pass. Each delta MUST use ADDED, MODIFIED, or REMOVED requirement sections, named requirements, and at least one concrete scenario per requirement.
+Every Complex change MUST include a machine-readable impact manifest before
+Specify passes. Behavioral changes MUST name affected capabilities and include
+at least one valid delta using ADDED, MODIFIED, or REMOVED requirement sections,
+named requirements, and concrete scenarios. Non-behavioral changes MUST include
+no capability deltas and MUST instead name affected surfaces and a concrete
+regression rationale. Fabricated no-op deltas MUST be rejected.
 
 #### Scenario: Specify validates a behavioral change
 
-- **WHEN** an agent completes Specify for a new Complex change
-- **THEN** Empirical validates every declared operation against the current living capability specifications
+- **WHEN** an impact manifest classifies observable behavior as changed
+- **THEN** Empirical validates every declared operation against current living specifications
+- **AND** it rejects completion when an affected capability lacks a delta
+
+#### Scenario: Specify validates an internal refactor
+
+- **WHEN** the manifest classifies the change as non-behavioral
+- **THEN** Empirical requires affected surfaces and a regression rationale
+- **AND** it rejects any fabricated capability delta
 
 ### Requirement: Reviewed deltas are archived before completion
 
-A Complex change MUST enter Archive after Review and MUST NOT reach Done until
-its validated deltas have been atomically applied to
-`.empirical/capabilities/<name>/spec.md` through the exact feature-scoped
-revision.
+A behavioral Complex change MUST pass Review, replay and integrate its exact
+validated deltas against the current target, and persist a digest-bound
+integration receipt before reaching integrated completion. Projection writes
+MUST be atomic; any failure restores every touched capability and preserves the
+same resumable revision. Non-behavioral changes record an empty integrated
+projection with their regression receipt.
 
-#### Scenario: Review passes
+#### Scenario: Replay and integration succeed
 
-- **WHEN** a Complex change receives passing review evidence
-- **THEN** its next action is Archive with its exact feature revision
+- **WHEN** all current capability projections accept the validated operations
+- **THEN** Empirical writes the living specifications and integration receipt as one transaction
+- **AND** status reports integrated at the exact resulting digests
 
-#### Scenario: Archive succeeds
+#### Scenario: Projection partially fails
 
-- **WHEN** all capability projections can be committed
-- **THEN** Empirical writes the living specifications and advances the feature to Done as one logical transaction
-
-#### Scenario: Archive partially fails
-
-- **WHEN** any capability projection cannot be written
-- **THEN** Empirical restores every capability already touched and leaves the feature at the same Archive revision
+- **WHEN** any capability cannot be committed or verified
+- **THEN** Empirical restores every capability already touched
+- **AND** the workflow remains resumable without claiming integration
 
 ### Requirement: Capability delta operations are safe and repeatable
 

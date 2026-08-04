@@ -47,3 +47,13 @@ the material context needed for the current phase.
 - **WHEN** repository knowledge exists
 - **THEN** the packet lists its context paths
 - **AND** mandatory workflow gates remain authoritative over contextual guidance
+
+### Requirement: Migration scratch is excluded from knowledge fingerprints
+
+Manifest v2 MUST exclude top-level paths whose names begin
+`.empirical.schema5-` in Git-backed and filesystem-fallback inventories.
+
+#### Scenario: An aborted stage is present
+
+- **WHEN** repository knowledge is inspected with reserved migration scratch present
+- **THEN** its source digest is unchanged while an ordinary source-file change still makes dependent context stale
