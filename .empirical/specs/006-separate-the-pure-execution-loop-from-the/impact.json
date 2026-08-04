@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "classification": "non-behavioral",
+  "capabilities": [],
+  "surfaces": [
+    "legacy-schema-4-workflow"
+  ],
+  "regressionRationale": "Migrated history did not retain reviewable unarchived capability deltas; existing regression artifacts remain historical only.",
+  "digest": "sha256:fcdc9cd878cb8cca535b2839c35967430dd36394abe0236e169dc7c3ef063ff0"
+}

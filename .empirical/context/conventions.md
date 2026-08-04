@@ -14,7 +14,7 @@
   worktrees where isolation behavior matters.
 - Changes must pass type checking, the full suite, built distribution smoke,
   npm package inspection, and `git diff --check`.
-- Version `0.20.4` remains alpha; publication is a separate explicit action.
+- Version `0.22.0` remains alpha; publication is a separate explicit action.
 
 ## Repository-specific constraints
 
@@ -22,5 +22,5 @@
 - Fast is restricted to explicit tiny low-risk non-UI work; substantial or UI
   changes use the seven-phase Complex workflow.
 - Do not persist private chain-of-thought or credentials.
-- Do not add project-local workflow skills; global installation owns the five
+- Do not add project-local workflow skills; global installation owns the six
   automatic and deliberate Empirical entrypoints.

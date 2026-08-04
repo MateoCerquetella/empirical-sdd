@@ -1,34 +1,53 @@
 # Security model
 
-Empirical treats repository content, requests, specs, evidence, decision files,
-Git metadata, and CLI/MCP inputs as untrusted.
+Empirical treats requests, repository content, specs, decisions, evidence,
+receipts, Git metadata, policies, CLI/MCP inputs, and remote observations as
+untrusted.
 
-- Feature and capability IDs use portable allowlists; artifact paths cannot be
-  absolute or traverse above the repository.
-- Atomic writers preserve existing modes and never replace managed files through
-  symbolic-link paths.
-- Discovery, capability, global-skill, migration, and worktree targets validate
-  containment and symbolic-link boundaries.
-- Repository context inventory is bounded, excludes ignored/build/dependency,
-  secret-like, binary, and oversized paths, and persists content digests rather
-  than source contents in its manifest. It uses no external indexing service.
-- Workflow transitions require exact revisions and use ownership-aware locks;
-  stale recovery cannot remove a newer owner's lock.
-- Capability Archive validates a frozen delta digest and rolls back partial
-  projection writes.
-- Worktree proposal performs no writes. Approved creation requires a clean
-  checkout, a resolvable base, a new path, a new branch, and no registered
-  checkout collision. Git runs without a shell or `--force`.
-- Empirical never stashes, commits, moves changes, deletes a worktree/branch, or
-  launches another AI runtime from its handoff API. Handoff authorization binds
-  the target, capability, cwd, prompt, argv, feature, and approved-spec digest;
-  the host may execute only after explicit approval.
-- Decision records reject hidden-reasoning, prompt-transcript, credential, and
+- Strict schemas reject unknown fields at protocol boundaries. Feature,
+  capability, command, branch, and artifact identifiers use portable
+  allowlists; repository paths cannot be absolute or traverse upward.
+- Atomic writers preserve modes and refuse managed symbolic-link paths.
+  Ownership-aware locks cannot remove a newer caller's lock.
+- Policy commands run as exact argument arrays without a shell. Output, timeout,
+  and working directory are bounded. Shell launchers and control syntax are
+  rejected.
+- Evidence consists of immutable, canonical-digest receipts. Executed receipts
+  retain command/result/source provenance; collected receipts fingerprint
+  repository-contained artifacts. Caller assertions are not evidence.
+- Capability ownership is shared through the Git common directory. Integration
+  verifies base digests, detects claim conflicts, validates in an independent
+  worktree, rolls back candidate projections, and never force-writes Git.
+- Worktree and agent-handoff proposals are read-only and integrity-bound.
+  Creation or host execution requires literal approval of an unchanged exact
+  path/branch/argv proposal.
+- Manifest v2 inventory is bounded and excludes ignored, build, dependency,
+  secret-like, binary, and oversized paths. It stores fingerprints, not a
+  remote semantic index. Stale generated pages are not silently retrieved.
+- Reserved migration stage/marker/backup paths are transaction state rather
+  than source. Pre-marker failure removes only its owned stage; evidence,
+  knowledge, and integration overlays exclude scratch, while Doctor diagnoses
+  orphans without deleting them.
+- Global uninstall is confirmation-gated and derives every candidate from the
+  pinned catalog under the validated user home. It removes only regular files
+  carrying Empirical's managed marker and valid owner-stamped metadata, never
+  follows symlinks, never searches repositories, and invokes exact npm package
+  removal only after managed integration cleanup succeeds.
+- Doctor never repairs, deletes, prunes, launches, or writes.
+- Delivery uses ordinary GitHub PR merges and declared required checks. It has
+  no admin, protection-bypass, force-push, credential-discovery, or hidden
+  cleanup path.
+- Publication requires an exact explicit version, commit, tag, dist-tag,
+  literal approval, and authorization bound to the complete request. Empirical
+  independently queries remote state before and after mutation. Existing
+  conflicting immutable tags, releases, npm versions, or dist-tags block the
+  operation.
+- YOLO changes question frequency, not authority. It never bypasses host
+  permissions or branch protection, extracts credentials, infers publication,
+  replaces immutable artifacts, or deletes real worktrees/branches.
+- Decision files reject hidden-reasoning, prompt-transcript, credential, and
   secret sections. Explain exposes deterministic state-machine rationale only.
-- MCP schemas validate inputs before core operations; `empirical_worktree_create`
-  is marked destructive and requires literal approval.
-- Active feature selection lives below each checkout's absolute Git directory,
-  so committed blocked state cannot silently claim a newly linked checkout.
 
 Do not place secrets in requests, Socratic answers, specifications, decisions,
-evidence summaries, or screenshots. `.empirical/` is committed project data.
+evidence summaries, screenshots, or delivery inputs. `.empirical/` is committed
+project data; Git-common-dir claim records are local coordination metadata.

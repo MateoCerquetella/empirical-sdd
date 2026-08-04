@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "feature": "011-fix-empirical-integrate-so-it-installs-real",
+  "lastSequence": 10,
+  "lastEventDigest": "sha256:00a01ba712885a62391265e2d4f8c6af7dc863d2db9db887342f3bffd779bb04",
+  "stateDigest": "sha256:7ac33e5893fc8a69529cc48ff8269401cba0e739ede144ee4f5ae88e6010c9da",
+  "state": {
+    "revision": 67,
+    "activeFeature": "011-fix-empirical-integrate-so-it-installs-real",
+    "request": "Fix empirical integrate so it installs real user-invocable Empirical commands for every supported agent: add the missing Claude slash command, retain and verify Cursor, Gemini, and Windsurf commands, expose Codex through its supported project skill invocation, report exact per-agent command names after integration, update documentation, and add integration tests that prove every generated command artifact and invocation.",
+    "profile": "complex",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Archived capability changes: agent-integrations",
+    "implementationActor": "agent",
+    "updatedAt": "2026-07-29T19:26:25.110Z",
+    "specDigest": "sha256:e537ef3a2804411cdfe1b20ec336f45526de91404ff353dd642ef6719a32ec00",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "sha256:05c584cae68f1cd3550912952e9354cf8c7d4418f7e7c756cecc82c79012ffa8",
+    "schemaVersion": 5,
+    "workflow": "complex",
+    "mode": "normal",
+    "approvedSpecRevision": 67,
+    "impactDigest": "sha256:d2385f9cb9c4bf67d07889dae3b49f81e71759c3f365f6f71d9290747765c3ce",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 7,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": true,
+      "delivered": false,
+      "published": false,
+      "highest": "integrated",
+      "reasons": {
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "compactedAt": "2026-07-29T19:26:25.110Z",
+  "digest": "sha256:b27b1e7a54416680bf96535fe52dfb56865b89c5a511383670f82df01d450d33"
+}

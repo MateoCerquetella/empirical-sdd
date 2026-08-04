@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "sequence": 14,
+  "previousDigest": "sha256:e021c25371e39b01dbcff866e3de3fcada758d2a956fa2c7795a1ce0bd0e825a",
+  "actor": "schema-4-migration",
+  "type": "compaction-boundary",
+  "summary": "Compacted through journal event 13",
+  "createdAt": "2026-07-29T13:24:16.047Z",
+  "stateBeforeDigest": "sha256:d2b1167c4a9894f81154f2434928162c3089fb9e619cc455ec320bee12b86f91",
+  "stateAfterDigest": "sha256:d2b1167c4a9894f81154f2434928162c3089fb9e619cc455ec320bee12b86f91",
+  "state": {
+    "revision": 29,
+    "activeFeature": "006-separate-the-pure-execution-loop-from-the",
+    "request": "Separate the pure execution loop from the Fast and Complex SDD starters, keep Quick only for backward compatibility, and make ordinary agent prompts choose the SDD workflow automatically",
+    "profile": "complex",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Reviewed the Fast, Complex, and resume-only Loop separation across the core, CLI, MCP tools, generated integrations, legacy compatibility, docs, installers, concurrency and schema handling, and package smoke coverage; no blocking findings remain.",
+    "implementationActor": "agent",
+    "updatedAt": "2026-07-29T13:24:16.047Z",
+    "specDigest": "sha256:8af8f66e744c3884aba031e19396a57cc876e33308ec16dfa7b3bc7777e47bab",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "schemaVersion": 5,
+    "workflow": "complex",
+    "mode": "normal",
+    "approvedSpecRevision": 29,
+    "impactDigest": "sha256:fcdc9cd878cb8cca535b2839c35967430dd36394abe0236e169dc7c3ef063ff0",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 8,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": false,
+      "delivered": false,
+      "published": false,
+      "highest": "verified",
+      "reasons": {
+        "integrated": "integrated has not been proven by a durable receipt.",
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "digest": "sha256:b604b09110202f865bd40ef6ff10b6061ba9c383fd4645c33c14dcf47fa149dc"
+}

@@ -1,5 +1,4 @@
 {
-  "schemaVersion": 4,
   "revision": 7,
   "activeFeature": "002-replace-rust-with-one-npm-installed-typescript",
   "request": "Replace Rust with one npm-installed TypeScript package, self-guiding CLI, and optional MCP support for Codex, Claude, Gemini, Cursor, and Windsurf",
@@ -9,64 +8,30 @@
   "repairAttempts": 0,
   "message": "Final review found no blocking correctness, security, portability, or packaging issues. The npm/Bun implementation preserves existing agent configuration, validates untrusted completion data, requires evidence, and keeps MCP optional.",
   "implementationActor": "codex",
-  "evidence": [
-    {
-      "criterionId": "AC-1",
-      "kind": "test",
-      "passed": true,
-      "summary": "A packed tarball installed globally into an isolated prefix as one package and empirical --version returned 2.0.0."
-    },
-    {
-      "criterionId": "AC-2",
-      "kind": "test",
-      "passed": true,
-      "summary": "Initialization tests preserved existing AGENTS.md and MCP entries while creating portable state and discovery files."
-    },
-    {
-      "criterionId": "AC-3",
-      "kind": "test",
-      "passed": true,
-      "summary": "Type checking and Quick/Strong workflow tests passed against the exported TypeScript core used by the CLI."
-    },
-    {
-      "criterionId": "AC-4",
-      "kind": "test",
-      "passed": true,
-      "summary": "An MCP SDK client discovered and called the source server, and the separately bundled Node stdio server passed a smoke test."
-    },
-    {
-      "criterionId": "AC-5",
-      "kind": "test",
-      "passed": true,
-      "summary": "Integration tests created Codex, Claude, Gemini, and Cursor MCP configuration plus shared AGENTS guidance without overwriting existing configuration."
-    },
-    {
-      "criterionId": "AC-6",
-      "kind": "test",
-      "passed": true,
-      "summary": "Quick workflow tests rejected missing evidence and required test, browser, screenshot, and review records before Done."
-    },
-    {
-      "criterionId": "AC-7",
-      "kind": "test",
-      "passed": true,
-      "summary": "The conformance tests preserved ai/ during v1 adoption and rejected a stale completion revision."
-    },
-    {
-      "criterionId": "AC-8",
-      "kind": "test",
-      "passed": true,
-      "summary": "bun run check, eight Bun tests, Node distribution smoke, npm pack inspection, and the cross-platform CI definition passed locally where executable."
-    },
-    {
-      "criterionId": "all",
-      "kind": "review",
-      "passed": true,
-      "summary": "Reviewed the shared core, atomic repository store, CLI, MCP adapter, agent integrations, migration behavior, tests, package contents, documentation, and CI; no blocking findings remain."
-    }
-  ],
   "updatedAt": "2026-07-28T21:30:13.172Z",
-  "specDigest": null,
+  "specDigest": "sha256:3a282427f56cde70db4584d2422cd1ff090bbec83022acb975f12dc178caa5ec",
   "capabilityArchiveRequired": false,
-  "capabilityDeltaDigest": null
+  "capabilityDeltaDigest": null,
+  "schemaVersion": 5,
+  "workflow": "complex",
+  "mode": "normal",
+  "approvedSpecRevision": 7,
+  "impactDigest": "sha256:fcdc9cd878cb8cca535b2839c35967430dd36394abe0236e169dc7c3ef063ff0",
+  "capabilityClaimId": null,
+  "authorizationDigest": null,
+  "evidenceReceiptIds": [],
+  "legacyEvidenceCount": 9,
+  "completion": {
+    "implemented": true,
+    "verified": true,
+    "integrated": false,
+    "delivered": false,
+    "published": false,
+    "highest": "verified",
+    "reasons": {
+      "integrated": "integrated has not been proven by a durable receipt.",
+      "delivered": "delivered has not been proven by a durable receipt.",
+      "published": "published has not been proven by a durable receipt."
+    }
+  }
 }

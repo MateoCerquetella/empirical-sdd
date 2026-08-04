@@ -1,5 +1,4 @@
 {
-  "schemaVersion": 4,
   "revision": 29,
   "activeFeature": "006-separate-the-pure-execution-loop-from-the",
   "request": "Separate the pure execution loop from the Fast and Complex SDD starters, keep Quick only for backward compatibility, and make ordinary agent prompts choose the SDD workflow automatically",
@@ -9,65 +8,30 @@
   "repairAttempts": 0,
   "message": "Reviewed the Fast, Complex, and resume-only Loop separation across the core, CLI, MCP tools, generated integrations, legacy compatibility, docs, installers, concurrency and schema handling, and package smoke coverage; no blocking findings remain.",
   "implementationActor": "agent",
-  "evidence": [
-    {
-      "criterionId": "AC-1",
-      "kind": "test",
-      "passed": true,
-      "artifact": "tests/core.test.ts",
-      "summary": "Core, built CLI, and MCP tests prove that Fast starts at implementation with generated AC-1, combined test/review gates, and direct --test/--review completion shortcuts."
-    },
-    {
-      "criterionId": "AC-2",
-      "kind": "test",
-      "passed": true,
-      "artifact": "tests/core.test.ts",
-      "summary": "Core, built CLI, and MCP tests prove project.complex, empirical complex, and empirical_complex enter Specify and retain Design, Plan, Implement, Verify, and Review gates."
-    },
-    {
-      "criterionId": "AC-3",
-      "kind": "test",
-      "passed": true,
-      "artifact": "tests/core.test.ts",
-      "summary": "Core and MCP tests prove loop is a read-only idle, active, or terminal snapshot, while runtime and built-CLI checks reject request arguments."
-    },
-    {
-      "criterionId": "AC-4",
-      "kind": "test",
-      "passed": true,
-      "artifact": "src/integrations.ts",
-      "summary": "Integration tests prove ordinary coding requests trigger managed skills and guidance that choose Fast only for tiny low-risk non-UI work, choose Complex otherwise, and continue returned packets to a terminal state."
-    },
-    {
-      "criterionId": "AC-5",
-      "kind": "test",
-      "passed": true,
-      "artifact": "README.md",
-      "summary": "Repository scans and distribution smoke tests prove normal help, docs, and generated guidance require no profile or JSON flags; programmatic output and low-level start remain available."
-    },
-    {
-      "criterionId": "AC-6",
-      "kind": "test",
-      "passed": true,
-      "artifact": "tests/core.test.ts",
-      "summary": "Compatibility tests resume existing Quick state and normalize legacy Strong state to Complex, while runtime guards, help, docs, skills, and MCP expose only Fast and Complex for new work."
-    },
-    {
-      "criterionId": "AC-7",
-      "kind": "test",
-      "passed": true,
-      "artifact": "package.json",
-      "summary": "bun run ci passed: 28 tests, 190 assertions, TypeScript checking, built Fast/Complex/Loop Node CLI plus stdio MCP smoke testing, integration safety, concurrency, schema and installer coverage, and npm pack dry-run."
-    },
-    {
-      "criterionId": "all",
-      "kind": "review",
-      "passed": true,
-      "summary": "Diff review confirmed all seven acceptance criteria are implemented consistently across runtime, integrations, documentation, and tests, with no exposed credentials or blocking quality findings."
-    }
-  ],
   "updatedAt": "2026-07-29T13:24:16.047Z",
-  "specDigest": "8af8f66e744c3884aba031e19396a57cc876e33308ec16dfa7b3bc7777e47bab",
+  "specDigest": "sha256:8af8f66e744c3884aba031e19396a57cc876e33308ec16dfa7b3bc7777e47bab",
   "capabilityArchiveRequired": false,
-  "capabilityDeltaDigest": null
+  "capabilityDeltaDigest": null,
+  "schemaVersion": 5,
+  "workflow": "complex",
+  "mode": "normal",
+  "approvedSpecRevision": 29,
+  "impactDigest": "sha256:fcdc9cd878cb8cca535b2839c35967430dd36394abe0236e169dc7c3ef063ff0",
+  "capabilityClaimId": null,
+  "authorizationDigest": null,
+  "evidenceReceiptIds": [],
+  "legacyEvidenceCount": 8,
+  "completion": {
+    "implemented": true,
+    "verified": true,
+    "integrated": false,
+    "delivered": false,
+    "published": false,
+    "highest": "verified",
+    "reasons": {
+      "integrated": "integrated has not been proven by a durable receipt.",
+      "delivered": "delivered has not been proven by a durable receipt.",
+      "published": "published has not been proven by a durable receipt."
+    }
+  }
 }

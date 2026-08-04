@@ -1,158 +1,127 @@
-# Empirical protocol 0.20
+# Empirical protocol 0.22
 
-## Action packet
+## Shared contract
 
-Every current action is a structured `ActionPacket`:
+Schema 5 uses strict runtime schemas from `empirical-sdd/protocol`. CLI, MCP,
+skills, storage, and the TypeScript API share the same workflow, phase, risk,
+receipt, authorization, impact, policy, and completion definitions. Canonical
+JSON and prefixed SHA-256 digests make durable documents independently
+verifiable.
+
+Every current action is an `ActionPacket` bound to one feature and exact
+revision. Its essential fields are:
 
 ```json
 {
   "kind": "action",
   "protocol": "empirical-sdd",
-  "schemaVersion": 4,
-  "root": "/repo",
+  "schemaVersion": 5,
   "feature": "add-team-invitations",
-  "request": "Add team invitations",
   "profile": "complex",
-  "phase": "design",
+  "mode": "normal",
+  "riskFloor": "behavioral",
+  "phase": "verify",
   "status": "waiting",
-  "revision": 2,
-  "instructions": "...",
-  "rationale": {
-    "currentState": "design/waiting at revision 2",
-    "nextAction": "Complete design at revision 2",
-    "reason": "...",
-    "requiredContext": [".../design.md", ".../decisions.md"],
-    "missingContext": ["..."],
-    "gate": "proceed"
-  },
-  "acceptanceCriteria": [],
-  "requiredEvidence": [],
-  "artifacts": [],
-  "projectContext": [],
-  "knowledgeContext": [
-    ".empirical/context/index.md",
-    ".empirical/context/architecture.md"
-  ],
-  "capabilityContext": [],
+  "revision": 5,
+  "completionLevel": { "highest": "implemented" },
   "completion": {
     "available": true,
     "mcpTool": "empirical_complete",
-    "cli": "empirical __internal complete --revision 2 ...",
-    "requiredFields": ["revision", "outcome", "summary"]
+    "requiredFields": ["revision", "outcome", "summary", "receiptIds"]
   }
 }
 ```
 
-The packet is bound to the one active feature selected in checkout-local Git
-metadata. `knowledgeContext` supports progressive retrieval from the compact
-file-backed repository context. Mutations require the exact revision. A stale
-caller receives `STALE_REVISION` and cannot overwrite newer state.
+All mutations require the exact revision. A stale caller receives
+`STALE_REVISION`; it cannot overwrite newer state.
 
-## Agent handoff
+## Routing and modes
 
-After Complex Specify passes, the handoff proposal contains Continue, Save, and
-detected-agent choices. Each agent option classifies the executable as
-prompt-capable or workspace-only and includes the exact cwd, prompt, argv, and
-an approval token bound to the feature and approved specification digest.
+Routing calculates the strongest matching floor:
 
-Authorization re-derives the option and rejects stale tokens. Neither proposal
-nor authorization starts a process; the current host may execute only an exact
-option that the human explicitly approved.
-
-## Start result
-
-Fast and Complex return either an ActionPacket or a read-only proposal:
-
-```json
-{
-  "kind": "worktree_proposal",
-  "request": "Fix password reset expiry",
-  "workflow": "complex",
-  "changeType": "fix",
-  "feature": "fix-password-reset-expiry",
-  "branch": "fix/fix-password-reset-expiry",
-  "path": "/projects/app-fix-password-reset-expiry",
-  "base": "main",
-  "baseCommit": "0123456789abcdef0123456789abcdef01234567",
-  "activeFeature": "add-team-invitations",
-  "approvalToken": "<sha256-of-approved-fields>",
-  "command": ["git", "worktree", "add", "-b", "...", "<baseCommit>"],
-  "requiresApproval": true
-}
+```text
+contract-neutral < behavioral < sensitive < migration
+                 < integration < delivery < publication
 ```
 
-Structured creation repeats every editable proposal field plus `baseCommit`,
-`activeFeature`, and `approvalToken`, and requires `approved: true`. Any change
-requires a fresh proposal. Success returns `kind: worktree_handoff`, checkout
-metadata, the first ActionPacket, and an exact resume command.
-
-## Socratic discovery submission
-
-Agent-native discovery saves an ordered prefix of the five canonical passes:
-
-```json
-{
-  "problem": "Improve team onboarding",
-  "id": "optional-id-returned-by-the-first-save",
-  "answers": [
-    {
-      "pass": "problem",
-      "title": "Problem and user",
-      "question": "Who needs this and why?",
-      "answer": "Team administrators lose time coordinating setup manually.",
-      "followUp": null
-    }
-  ]
-}
-```
-
-Draft calls persist JSON and Markdown without feature state. `approved: true`
-requires exactly `problem → outcome → boundaries → risks → verification`,
-derives one refined request, and starts Complex with that exact text. The result
-contains the record, portable paths, refined request, and either an ActionPacket
-or a worktree proposal. Draft responses also include one `nextQuestion` with
-`kind: pass` or `kind: follow_up`; no unnecessary follow-up is accepted. A
-record becomes `started` only after an action exists.
+Only contract-neutral requests may use Fast. Every other floor promotes to
+Complex. Normal and YOLO share the same risk classifier and safety floors.
+YOLO additionally records one immutable authorization document bound to the
+repository, feature, request digest, ceiling, target branch, agent permission,
+and optional expiry. Publication cannot be inferred or granted by YOLO.
 
 ## Workflows
 
-Fast phases: `implement → done`.
-
-Complex phases:
+Fast is contract-neutral:
 
 ```text
-specify → design → plan → implement → verify → review → archive → done
+implement → done (verified)
 ```
 
-Quick is read-only compatibility for migrated legacy state and is never chosen
-for new work.
+Complex is contract-bearing:
+
+```text
+specify → design → plan → implement → verify → review → integrate
+                                                            ├─→ done (integrated)
+                                                            └─→ deliver → done (delivered)
+```
+
+Delivery exists only when Policy v2 and standing authorization cover it.
+Publication is a separate explicit, immutable operation after delivery.
+`implemented`, `verified`, `integrated`, `delivered`, and `published` are
+derived states; callers cannot assert them directly.
 
 Outcomes are `passed`, `failed`, `awaiting_human`, and `blocked`. Fast failure
-escalates the same feature to Complex Specify. Verify/Review failure returns to
-Implement until the configured repair ceiling is exceeded.
+promotes the same feature to Complex Specify. Verify or Review failure returns
+to Implement within the configured repair limit.
 
-## Evidence
+## Impact and capabilities
 
-Every criterion needs passing test evidence. `[UI]` criteria additionally need
-browser evidence and a repository-relative screenshot artifact. Review needs a
-passing review record. Artifact traversal and absolute paths are rejected.
+Complex Specify freezes a digested impact manifest. Behavioral work must name
+capabilities and provide valid ADDED, MODIFIED, or REMOVED delta documents.
+Non-behavioral work must name no capability and provide a regression rationale.
 
-## Capability deltas
+Behavioral capabilities are claimed below the repository Git common directory,
+so linked worktrees see the same ownership. A claim records each capability's
+base digest. Integrate replays the reviewed delta against the current target,
+detects conflicts, validates the candidate in an independent worktree, commits
+the canonical projection transactionally, and writes an immutable receipt.
+Direct Schema-4 Archive is retired.
 
-Complex Specify validates one or more `deltas/<capability>.md` documents with
-ADDED, MODIFIED, or REMOVED requirement blocks and concrete scenarios. Their
-digest is frozen at Specify. Review and Archive reject later changes. Archive
-projects the reviewed deltas transactionally and is idempotent at its exact
-revision.
+## Evidence receipts
 
-## Persisted state
+`empirical_evidence_execute` runs one exact Policy v2 argv without a shell.
+`empirical_evidence_collect` fingerprints repository-contained artifacts.
+Both produce immutable receipts containing criteria, evidence kinds, source
+provenance, command or artifact results, timestamps, and a canonical digest.
+
+Completion accepts receipt IDs only. It validates digests, criterion coverage,
+required test/review/UI kinds, artifact containment, source binding, and phase
+applicability. A copied boolean such as `passed: true` is never evidence.
+
+## Persistence
 
 ```text
+.empirical/config.json                         # Schema 5
+.empirical/policy.json                         # Policy v2
+.empirical/context/manifest.json               # Manifest v2
+.empirical/capabilities/<capability>/spec.md
 .empirical/specs/<feature>/state.json
-.empirical/specs/<feature>/events/00000001.json
-.empirical/specs/<feature>/state.lock
+.empirical/specs/<feature>/impact.json
+.empirical/specs/<feature>/evidence/<receipt>.json
+.empirical/specs/<feature>/events/snapshot.json
+.empirical/specs/<feature>/events/NNNNNNNN.json
 ```
 
-`state.json` is a recoverable projection of the append-only transition journal.
-Configuration, project policy, discovery, and living capabilities are shared at
-the project level.
+Events contain sequence, previous-event digest, before/after state digests, and
+the resulting state. Terminal completion transactionally promotes a verified
+snapshot and retains one linked compaction-boundary event. State JSON remains a
+recoverable projection of that authoritative chain.
+
+## Isolation and handoff
+
+An unrelated request returns a read-only worktree proposal bound to the base
+commit, branch, path, active feature, and integrity token. Creation requires
+literal approval and revalidation. Agent handoff likewise proposes exact cwd,
+prompt, argv, capability class, and approval token; Empirical never launches
+the process itself.

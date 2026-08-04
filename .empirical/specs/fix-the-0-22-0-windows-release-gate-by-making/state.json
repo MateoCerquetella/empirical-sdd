@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 5,
+  "revision": 11,
+  "activeFeature": "fix-the-0-22-0-windows-release-gate-by-making",
+  "request": "Fix the 0.22.0 Windows release gate by making capability base/replay hashing newline-stable, returning portable migration receipt paths, and making cross-platform symlink/worktree assertions robust without weakening safety.",
+  "profile": "complex",
+  "workflow": "complex",
+  "mode": "normal",
+  "phase": "done",
+  "status": "done",
+  "repairAttempts": 0,
+  "message": "Integrated capability changes: living-specifications, migration-integrity",
+  "implementationActor": "agent",
+  "specDigest": "sha256:8477d012949632c90f8b359dbc68c8a92a6ec490c530a41a918c93fc7dd5216a",
+  "approvedSpecRevision": 2,
+  "capabilityArchiveRequired": true,
+  "capabilityDeltaDigest": "sha256:265ecc50aa80e2c3b1fe6679d0a0724f80a94bab06c6e28211a96d9e5769993a",
+  "impactDigest": "sha256:ed10b900d642eb9b02a7d907dafa1bce78f84b558e05c152600a4d6426aa02f2",
+  "capabilityClaimId": "fix-the-0-22-0-windows-release-gate-by-making-92e63111cfac",
+  "authorizationDigest": null,
+  "evidence": [],
+  "evidenceReceiptIds": [
+    "executed-92b992e8c091e8192e2175bf",
+    "collected-7590d9194ce01b4c453e0040",
+    "executed-71ca7dc8cf865db83531c8f5"
+  ],
+  "legacyEvidenceCount": 0,
+  "completion": {
+    "implemented": true,
+    "verified": true,
+    "integrated": true,
+    "delivered": false,
+    "published": false,
+    "highest": "integrated",
+    "reasons": {
+      "delivered": "delivered has not been proven by a durable receipt.",
+      "published": "published has not been proven by a durable receipt."
+    }
+  },
+  "updatedAt": "2026-08-04T03:22:16.505Z"
+}

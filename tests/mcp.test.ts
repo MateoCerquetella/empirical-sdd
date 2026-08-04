@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { EmpiricalProject } from "../src/core.js";
+import { OPERATIONS } from "../src/operations.js";
 
 const directories: string[] = [];
 
@@ -27,24 +28,12 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
   await client.connect(transport);
   try {
     const listed = await client.listTools();
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_next");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_complete");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_loop");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_fast");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_complex");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_explore");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_discovery");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_context");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_handoff");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_archive");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_worktree_propose");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_worktree_create");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_explain");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_configure");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_capabilities");
-    expect(listed.tools.map((tool) => tool.name)).toContain("empirical_policy");
-    expect(listed.tools.map((tool) => tool.name)).not.toContain("empirical_strong");
-    expect(listed.tools.map((tool) => tool.name)).not.toContain("empirical_workstreams");
+    expect(listed.tools.map((tool) => tool.name).sort())
+      .toEqual(OPERATIONS.map((operation) => operation.mcpName).sort());
+    for (const operation of OPERATIONS) {
+      expect(listed.tools.find((tool) => tool.name === operation.mcpName)?.description)
+        .toBe(operation.summary);
+    }
 
     const loopTool = listed.tools.find((tool) => tool.name === "empirical_loop");
     expect(Object.keys(loopTool?.inputSchema.properties ?? {})).toEqual(["root"]);
@@ -53,6 +42,9 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
       "evidenceRequired", "browserForUi", "screenshotForUi", "codeReview",
       "isolation", "base", "worktreePath", "branchPattern", "decisions",
     ]));
+    const completeTool = listed.tools.find((tool) => tool.name === "empirical_complete");
+    expect(Object.keys(completeTool?.inputSchema.properties ?? {})).toContain("receiptIds");
+    expect(Object.keys(completeTool?.inputSchema.properties ?? {})).not.toContain("evidence");
 
     const initialized = await client.callTool({
       name: "empirical_init",

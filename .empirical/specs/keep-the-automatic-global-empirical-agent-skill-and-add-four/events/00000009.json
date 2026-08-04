@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "sequence": 9,
+  "previousDigest": "sha256:d6cffced70e4884096624d98e8d044255994f9e7cc0ba71e3f56f1a9414e4363",
+  "actor": "schema-4-migration",
+  "type": "compaction-boundary",
+  "summary": "Compacted through journal event 8",
+  "createdAt": "2026-07-30T16:35:11.709Z",
+  "stateBeforeDigest": "sha256:51bc98b39af92871cc17e1d72ef02e0d1e572d20e8e325017e001492a40c2faa",
+  "stateAfterDigest": "sha256:51bc98b39af92871cc17e1d72ef02e0d1e572d20e8e325017e001492a40c2faa",
+  "state": {
+    "revision": 8,
+    "activeFeature": "keep-the-automatic-global-empirical-agent-skill-and-add-four",
+    "request": "Keep the automatic global empirical agent skill and add four explicit globally installed agent skills: empirical-init for first-run setup or repair and repository context only, empirical-spec for drafting a concrete Complex SDD specification and stopping for approval, empirical-socratic for a five-pass interview that saves and crystallizes an approved specification, and empirical-loop for resuming an active specification through completion. All skills must use MCP first with the private CLI namespace as fallback, install through the existing agent selector, remove stale managed project-local skills during initialization, preserve the public terminal CLI as only Install and Update, update documentation and tests, and do not restore separate Fast or Complex user skills.",
+    "profile": "complex",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Archived capability changes: agent-integrations, exploratory-discovery, repository-knowledge",
+    "implementationActor": "agent",
+    "specDigest": "sha256:716ce67cf6e7a92b51c037869b607ed23112627fadeb2e30d63cd80f8d5aec20",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "sha256:7185861b03071ac79fde738d713cdd2573b30d736ad5daff89d400fc568b8ae9",
+    "updatedAt": "2026-07-30T16:35:11.709Z",
+    "schemaVersion": 5,
+    "workflow": "complex",
+    "mode": "normal",
+    "approvedSpecRevision": 8,
+    "impactDigest": "sha256:6455a7f9a6ab1f7639f6e398c71ad74c34b2ac7cdf0b66e2578b25013f3b2c9f",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 13,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": true,
+      "delivered": false,
+      "published": false,
+      "highest": "integrated",
+      "reasons": {
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "digest": "sha256:92f937786e85dc32994f4a289a004b0e3cf6eeb40b13a1ba38119691883f70f2"
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "kind": "collected-legacy",
+  "satisfiesVerification": false,
+  "artifacts": [
+    {
+      "path": "verification-evidence.json",
+      "bytes": 2299,
+      "digest": "sha256:3b6561a1334676fb4df28afd8d38e52163981e1a77877794386769049db64393"
+    },
+    {
+      "path": "review-evidence.json",
+      "bytes": 555,
+      "digest": "sha256:c0112f2834efb31e8b9d508a43f7502462aede0104e46de060a25ae23c27ad40"
+    }
+  ],
+  "importedAssertions": 10,
+  "summary": "Schema-4 evidence lacked executable provenance and is retained for history only.",
+  "digest": "sha256:8e36405fb8d16e3eac828bc71122f6225dc4a311db9cbbe84373aec8cbfcad41"
+}

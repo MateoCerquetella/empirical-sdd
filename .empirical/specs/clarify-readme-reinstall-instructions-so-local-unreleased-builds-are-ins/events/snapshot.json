@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "feature": "clarify-readme-reinstall-instructions-so-local-unreleased-builds-are-ins",
+  "lastSequence": 2,
+  "lastEventDigest": "sha256:69e277ceade2bf75ee7bee474d42d82c2bc4032ffbb168b0700bd93f54cf9e68",
+  "stateDigest": "sha256:4e27ee8848ad686564db9ca0d8c7edd98a9ed45c60f2f09e930aaf192cc21f47",
+  "state": {
+    "revision": 2,
+    "activeFeature": "clarify-readme-reinstall-instructions-so-local-unreleased-builds-are-ins",
+    "request": "Clarify README reinstall instructions so local unreleased builds are installed from the repository instead of npm latest",
+    "profile": "fast",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Documented the correct local reinstall path and the npm latest version caveat",
+    "implementationActor": "agent",
+    "specDigest": "sha256:ed7d57f55ea4bbc0d6cd1587c05c679356396409fb31907449b11784b1f7d8b8",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "updatedAt": "2026-07-29T20:25:18.540Z",
+    "schemaVersion": 5,
+    "workflow": "fast",
+    "mode": "normal",
+    "approvedSpecRevision": 2,
+    "impactDigest": "sha256:fcdc9cd878cb8cca535b2839c35967430dd36394abe0236e169dc7c3ef063ff0",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 2,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": false,
+      "delivered": false,
+      "published": false,
+      "highest": "verified",
+      "reasons": {
+        "integrated": "integrated has not been proven by a durable receipt.",
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "compactedAt": "2026-07-29T20:25:18.540Z",
+  "digest": "sha256:0633909d25e8dc4c3ab0892284f12468f2080ec275377d3fd1e8727b097b9e97"
+}

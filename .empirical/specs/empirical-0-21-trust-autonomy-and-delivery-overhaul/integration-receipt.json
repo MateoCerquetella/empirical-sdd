@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "feature": "empirical-0-21-trust-autonomy-and-delivery-overhaul",
+  "claimId": "empirical-0-21-trust-autonomy-and-delivery-overhaul-92e63111cfac",
+  "repositoryId": "sha256:28b611fbe37d347c519ab3d25297c1747e77c067df41cf6a321e72b9cdddc4eb",
+  "baseCommit": "d8ee7e1bdaa53bfc92e278524a40e61d16125f64",
+  "baseTree": "f93dc26ef9a4144472af8a20542a0993f4f31f03",
+  "featureTree": "sha256:a355aeafbdb24b624abc3c74d42cbca5a97cd845b343727cf83df174e343575f",
+  "targetCommit": "d8ee7e1bdaa53bfc92e278524a40e61d16125f64",
+  "targetTree": "f93dc26ef9a4144472af8a20542a0993f4f31f03",
+  "capabilityBaseDigests": {
+    "agent-handoff": "sha256:91fb9edf9678f11e8102315a7a89e90cbefb2474bbfdc18b82d7675446c7013b",
+    "agent-integrations": "sha256:959091d09fe05ca4efce553fda79f56eb1316bcd9578426ce0b3adc3b45201fe",
+    "autonomous-delivery": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "exploratory-discovery": "sha256:11708860fbb54326d28ab5cb984e8e8dfe4a9553b1c22a5303b597d35d2d73b4",
+    "living-specifications": "sha256:912debc10e7c99ffc00ba384cb4900dc54cd1c85fc931c4bf6da0c3b270bca43",
+    "package-distribution": "sha256:cfb6d42cb1f7c228bfbf6c9aa0bfa62fa219351cf5c76eb8c47dee3a90170beb",
+    "project-policy": "sha256:b82bf810c5d9b05df5ce0fd20c8ffea689c9056abf332dfe9bc00abf5263e767",
+    "repository-knowledge": "sha256:184c396417ee8e4c0d03eef0924831b2b5b5f972f6090112a80388ac5022bb9b",
+    "verification-policy": "sha256:708eede34b4aad21c858394337400d9bf67d9e937599b8b2f4954d341219a328",
+    "workflow-routing": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "worktree-isolation": "sha256:f133becfe59a707d96ca2e370697a19d8c6eef4475cc1a1bf5e9ed6d08518c33"
+  },
+  "deltaDigest": "sha256:b1da775068de790437fa2f7f6cb0326341af5c3295c76a55c860b8bb05b4aca7",
+  "resultDigests": {
+    "agent-handoff": "sha256:22b137c7e531a25c332e8efb0b98b5b0c47cc4a7c7622a88eaa07041becb441b",
+    "agent-integrations": "sha256:1d0c8e14c45a219186373986aaf3b9ea3c042acc5b0bc1d018bf0e31a4e380b1",
+    "autonomous-delivery": "sha256:b691d96fb03bfb168b579d6705f1f83cc8720f8ad4eef41097bf316eb65a940a",
+    "exploratory-discovery": "sha256:8afc13c71bf33bbe332ef9b58e56ee5939a228059b6d811f53a83e11aa3a00e2",
+    "living-specifications": "sha256:a442bcb945447e97f21b0877601421e9fca480baf333715d5b8a8b7aa203a780",
+    "package-distribution": "sha256:b5a9a16aa692b2a62744a94a2100198cc7bfd6c92a8e75347af6e0ca5f988827",
+    "project-policy": "sha256:6808463f7666e5a975eeb927569db17c14999fb778e3f1168214e8bf4a19926d",
+    "repository-knowledge": "sha256:d458d68ea7f14ffe8bdb1ed9ebe4615e7ca9d2abb83d767557174b2d982c36cc",
+    "verification-policy": "sha256:25fd1c733e2aef29fe299f51d8332f229736c5e70b6910d8213bb807fa79ec75",
+    "workflow-routing": "sha256:a73978b5c63e1e20899f60c792eb5236daa75bb62acb0b4580d727ba1d79ae23",
+    "worktree-isolation": "sha256:ceeedb41544f500fb728f0f49fbee5478d36bb852d7ecfc5994f083c440dd306"
+  },
+  "verificationReceiptDigests": [
+    "sha256:a7c43f1b5a84af6287d8380a515fc34b3a443174fc16520b707c8fbdadd733ae"
+  ],
+  "integratedAt": "2026-08-03T22:51:17.364Z",
+  "digest": "sha256:fa77880d05f446cddd04257cbed1072df96979c79de5cb84bf78f2387dd6faf3"
+}

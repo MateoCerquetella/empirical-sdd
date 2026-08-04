@@ -1,0 +1,40 @@
+{
+  "revision": 8,
+  "activeFeature": "empirical-0-21-trust-autonomy-and-delivery-overhaul",
+  "request": "Implement the approved Empirical 0.21 Trust, Autonomy, and Delivery overhaul as one breaking Schema-5 change: add a sixth empirical-yolo skill with standing authorization and blocker-only questions; deterministic risk-floor routing with contract-neutral Fast; behavioral/non-behavioral Complex paths; immutable executed/collected evidence receipts; cross-worktree capability claims, base-digest replay, integration validation, and precise completion levels; GitHub source/evidence PR delivery with green-CI merge and explicit-release-only publication; Manifest-v2 stale knowledge, Policy-v2 verification/delivery configuration, Doctor diagnostics, hash-chained compacted terminal journals; shared runtime schemas and operation registry; narrower package exports; subcommand help; six-skill installer; Node >=22 CI and coverage gates. Preserve hard safety floors: never bypass host permissions or branch protection, force Git, replace immutable releases, extract credentials, infer publication, or delete real worktrees/branches. Migrate this repository atomically from Schema 4 to Schema 5, verify comprehensively, merge capability deltas, and do not publish or create a release.",
+  "profile": "complex",
+  "phase": "done",
+  "status": "done",
+  "repairAttempts": 0,
+  "message": "Integrated capability changes: agent-handoff, agent-integrations, autonomous-delivery, exploratory-discovery, living-specifications, package-distribution, project-policy, repository-knowledge, verification-policy, workflow-routing, worktree-isolation",
+  "implementationActor": "codex",
+  "specDigest": "sha256:6925bbfc262ae09f36e23ad2e57251a297ff853774d822d8361dd37ac26f9108",
+  "capabilityArchiveRequired": true,
+  "capabilityDeltaDigest": "sha256:b8662e986c1357ce850f1526dee721936f9780f1f8a55e60a89e8fa3634e90f3",
+  "updatedAt": "2026-08-03T22:51:17.394Z",
+  "schemaVersion": 5,
+  "workflow": "complex",
+  "mode": "normal",
+  "approvedSpecRevision": 4,
+  "impactDigest": "sha256:9a0953e4fc9c831d5f320adcb53dbc18e7d572fa0f34c3ef3b1582b9b55a26f8",
+  "capabilityClaimId": "empirical-0-21-trust-autonomy-and-delivery-overhaul-92e63111cfac",
+  "authorizationDigest": null,
+  "evidenceReceiptIds": [
+    "executed-0c54e05023bccd6a45566ac8",
+    "executed-f7d8aee7f0447354a84d3277"
+  ],
+  "legacyEvidenceCount": 0,
+  "completion": {
+    "implemented": true,
+    "verified": true,
+    "integrated": true,
+    "delivered": false,
+    "published": false,
+    "highest": "integrated",
+    "reasons": {
+      "delivered": "delivered has not been proven by a durable receipt.",
+      "published": "published has not been proven by a durable receipt."
+    }
+  },
+  "evidence": []
+}

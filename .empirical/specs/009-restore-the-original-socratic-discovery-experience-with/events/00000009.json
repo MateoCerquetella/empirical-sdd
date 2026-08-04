@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "sequence": 9,
+  "previousDigest": "sha256:69292a734ff1e75c3677a22475ca5b19666240ba44327abbe26bee42ce3b9748",
+  "actor": "schema-4-migration",
+  "type": "compaction-boundary",
+  "summary": "Compacted through journal event 8",
+  "createdAt": "2026-07-29T15:24:02.413Z",
+  "stateBeforeDigest": "sha256:c3a69a9ee2a3d7aea18b81aef726f29372fe8087f30e6428e7b483b515999d5d",
+  "stateAfterDigest": "sha256:c3a69a9ee2a3d7aea18b81aef726f29372fe8087f30e6428e7b483b515999d5d",
+  "state": {
+    "revision": 55,
+    "activeFeature": "009-restore-the-original-socratic-discovery-experience-with",
+    "request": "Restore the original Socratic discovery experience with an interactive CLI interview, adaptive questions, persisted answers, an approved refined request, and direct handoff into Fast or Complex without breaking read-only agent discovery or automation.",
+    "profile": "complex",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Archived capability changes: exploratory-discovery",
+    "implementationActor": "agent",
+    "updatedAt": "2026-07-29T15:24:02.413Z",
+    "specDigest": "sha256:a0af97c930a42e85df11e154a2f54637d0d360b0559a055ccf36654f0cad20ef",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "sha256:4ede8408575ec49017f27814e6cea9625f9594663eea9aa27d1758ae68b0401b",
+    "schemaVersion": 5,
+    "workflow": "complex",
+    "mode": "normal",
+    "approvedSpecRevision": 55,
+    "impactDigest": "sha256:0c398c1edcb5c2d2c2cafcf547646897fd7b225c0bdcda7574f5ad742c879753",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 9,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": true,
+      "delivered": false,
+      "published": false,
+      "highest": "integrated",
+      "reasons": {
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "digest": "sha256:edf966c995fe8b065e43ed922729029afd813b16039d7f2b0338aa6e13ebfebf"
+}

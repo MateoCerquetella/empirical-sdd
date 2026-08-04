@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "sequence": 2,
+  "previousDigest": "sha256:3c7eee3cded07b4d91ee153d8caaa1945c4ea4ae89dd37026f6e8759af5034a9",
+  "actor": "schema-4-migration",
+  "type": "compaction-boundary",
+  "summary": "Compacted through journal event 1",
+  "createdAt": "2026-07-28T21:19:18.796Z",
+  "stateBeforeDigest": "sha256:16dd68e4ba9cc55523f3c38aa93b8722d98833fc205c1aed82e887ad97c4ba6e",
+  "stateAfterDigest": "sha256:16dd68e4ba9cc55523f3c38aa93b8722d98833fc205c1aed82e887ad97c4ba6e",
+  "state": {
+    "revision": 0,
+    "activeFeature": "001-portable-resumable-sdd-library",
+    "request": null,
+    "profile": "complex",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Adopted non-destructively from ai/",
+    "implementationActor": null,
+    "updatedAt": "2026-07-28T21:19:18.796Z",
+    "specDigest": "sha256:f513b30818054593c139d580616aa3ef1064aebbc432b4de0fd1034255dcdc0f",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "schemaVersion": 5,
+    "workflow": "complex",
+    "mode": "normal",
+    "approvedSpecRevision": 0,
+    "impactDigest": "sha256:fcdc9cd878cb8cca535b2839c35967430dd36394abe0236e169dc7c3ef063ff0",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 0,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": false,
+      "delivered": false,
+      "published": false,
+      "highest": "verified",
+      "reasons": {
+        "integrated": "integrated has not been proven by a durable receipt.",
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "digest": "sha256:651685bcb448bf426e8b71b637238f4637d4c4f6b4b199f1425eb68d6df125a7"
+}

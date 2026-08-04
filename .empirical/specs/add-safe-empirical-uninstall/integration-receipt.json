@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "feature": "add-safe-empirical-uninstall",
+  "claimId": "add-safe-empirical-uninstall-92e63111cfac",
+  "repositoryId": "sha256:28b611fbe37d347c519ab3d25297c1747e77c067df41cf6a321e72b9cdddc4eb",
+  "baseCommit": "d8ee7e1bdaa53bfc92e278524a40e61d16125f64",
+  "baseTree": "f93dc26ef9a4144472af8a20542a0993f4f31f03",
+  "featureTree": "sha256:74bea36c5a355f2047fb5c487f5010e92367b47e4c3202f7bc5445f6e0c002c9",
+  "targetCommit": "d8ee7e1bdaa53bfc92e278524a40e61d16125f64",
+  "targetTree": "f93dc26ef9a4144472af8a20542a0993f4f31f03",
+  "capabilityBaseDigests": {
+    "agent-integrations": "sha256:1d0c8e14c45a219186373986aaf3b9ea3c042acc5b0bc1d018bf0e31a4e380b1"
+  },
+  "deltaDigest": "sha256:104921e4dc9daac2e6efe5b6830d464a3ae7642b3dadb6d657bb69a18ca1276e",
+  "resultDigests": {
+    "agent-integrations": "sha256:c5fa89e8214f9239b1a96d5a967afc73039a261ac8e1c11be3d4736ff29245dc"
+  },
+  "verificationReceiptDigests": [
+    "sha256:7c1725ee119e098aa1ecbd156a4bab2a17427c1b1eea2a4b2861f5dff6a08f3b"
+  ],
+  "integratedAt": "2026-08-04T01:15:01.725Z",
+  "digest": "sha256:41d1db6b6846876b77c116fb8d209f3ae7aad64372c02c0f994680d01ed5d8cf"
+}

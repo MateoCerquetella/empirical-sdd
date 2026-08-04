@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "sequence": 8,
+  "previousDigest": "sha256:f83f510eb4711bfb7473411b550f31658018f6f9b0ec52f7e86db162e70e1550",
+  "actor": "schema-4-migration",
+  "type": "compaction-boundary",
+  "summary": "Compacted through journal event 7",
+  "createdAt": "2026-07-28T21:30:13.172Z",
+  "stateBeforeDigest": "sha256:29c173c258e00b149655c71a30583d0adb81347b283e18373f3fec0a42f6e0e1",
+  "stateAfterDigest": "sha256:29c173c258e00b149655c71a30583d0adb81347b283e18373f3fec0a42f6e0e1",
+  "state": {
+    "revision": 7,
+    "activeFeature": "002-replace-rust-with-one-npm-installed-typescript",
+    "request": "Replace Rust with one npm-installed TypeScript package, self-guiding CLI, and optional MCP support for Codex, Claude, Gemini, Cursor, and Windsurf",
+    "profile": "complex",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Final review found no blocking correctness, security, portability, or packaging issues. The npm/Bun implementation preserves existing agent configuration, validates untrusted completion data, requires evidence, and keeps MCP optional.",
+    "implementationActor": "codex",
+    "updatedAt": "2026-07-28T21:30:13.172Z",
+    "specDigest": "sha256:3a282427f56cde70db4584d2422cd1ff090bbec83022acb975f12dc178caa5ec",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "schemaVersion": 5,
+    "workflow": "complex",
+    "mode": "normal",
+    "approvedSpecRevision": 7,
+    "impactDigest": "sha256:fcdc9cd878cb8cca535b2839c35967430dd36394abe0236e169dc7c3ef063ff0",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 9,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": false,
+      "delivered": false,
+      "published": false,
+      "highest": "verified",
+      "reasons": {
+        "integrated": "integrated has not been proven by a durable receipt.",
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "digest": "sha256:947b328eebf18d5b99c36b9b6788f450e01400b880a84d3cb9f9798c4e317ccf"
+}

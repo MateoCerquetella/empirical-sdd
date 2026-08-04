@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "classification": "behavioral",
+  "capabilities": [
+    "migration-integrity",
+    "repository-knowledge",
+    "verification-policy",
+    "worktree-isolation"
+  ],
+  "surfaces": [
+    "workflow"
+  ],
+  "regressionRationale": null,
+  "digest": "sha256:048a8793bd2764fb94bb96d9093df3057a05ddd4d0aee6573be4e7cc8a4cb853"
+}

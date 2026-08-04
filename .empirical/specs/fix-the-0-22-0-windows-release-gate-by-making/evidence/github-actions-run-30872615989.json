@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "provider": "github-actions",
+  "repository": "MateoCerquetella/empirical-sdd",
+  "workflow": "CI",
+  "workflowId": 322497786,
+  "event": "pull_request",
+  "runId": 30872615989,
+  "runUrl": "https://github.com/MateoCerquetella/empirical-sdd/actions/runs/30872615989",
+  "headSha": "873c2b49109569361bee4cb7a3dec231ee14bd62",
+  "status": "completed",
+  "conclusion": "success",
+  "startedAt": "2026-08-04T02:43:03Z",
+  "completedAt": "2026-08-04T02:46:45Z",
+  "jobs": [
+    {
+      "id": 91877525882,
+      "name": "test (22, ubuntu-latest)",
+      "url": "https://github.com/MateoCerquetella/empirical-sdd/actions/runs/30872615989/job/91877525882",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-08-04T02:43:05Z",
+      "completedAt": "2026-08-04T02:43:48Z"
+    },
+    {
+      "id": 91877525840,
+      "name": "test (24, ubuntu-latest)",
+      "url": "https://github.com/MateoCerquetella/empirical-sdd/actions/runs/30872615989/job/91877525840",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-08-04T02:43:09Z",
+      "completedAt": "2026-08-04T02:43:56Z"
+    },
+    {
+      "id": 91877525872,
+      "name": "test (26, ubuntu-latest)",
+      "url": "https://github.com/MateoCerquetella/empirical-sdd/actions/runs/30872615989/job/91877525872",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-08-04T02:43:11Z",
+      "completedAt": "2026-08-04T02:43:59Z"
+    },
+    {
+      "id": 91877525870,
+      "name": "test (macos-latest, 24)",
+      "url": "https://github.com/MateoCerquetella/empirical-sdd/actions/runs/30872615989/job/91877525870",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-08-04T02:43:06Z",
+      "completedAt": "2026-08-04T02:44:22Z"
+    },
+    {
+      "id": 91877525885,
+      "name": "test (windows-latest, 24)",
+      "url": "https://github.com/MateoCerquetella/empirical-sdd/actions/runs/30872615989/job/91877525885",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-08-04T02:43:06Z",
+      "completedAt": "2026-08-04T02:46:45Z"
+    }
+  ]
+}

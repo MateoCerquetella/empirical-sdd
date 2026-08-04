@@ -4,10 +4,13 @@
 
 - `bun install` installs development dependencies.
 - `npm install -g empirical-sdd` installs the published runtime CLI.
-- `empirical install` installs five global Empirical skills per selected agent;
+- `empirical install` installs six global Empirical skills per selected agent;
   `empirical update` upgrades and refreshes them.
-- Repository workflows run through native agent skills (`empirical`, Init,
-  Spec, Socratic, and Loop), not additional public terminal commands.
+- `empirical uninstall` confirms scope, removes marker-owned global skills and
+  selection metadata, then removes the global npm package while preserving
+  project history and repository integrations.
+- Repository workflows run through six native agent skills (`empirical`, Init,
+  Spec, Socratic, Loop, and YOLO), not additional public terminal commands.
 
 ## Run, test, and build
 

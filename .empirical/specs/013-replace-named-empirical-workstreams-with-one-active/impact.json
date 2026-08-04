@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "classification": "behavioral",
+  "capabilities": [
+    "decision-traceability",
+    "living-specifications",
+    "parallel-workstreams",
+    "worktree-isolation"
+  ],
+  "surfaces": [
+    "legacy-schema-4-workflow"
+  ],
+  "regressionRationale": null,
+  "digest": "sha256:4c0c91e59423c4b3b2983bffdbb4682d02aac8fe2701ad21abdef6422f8ef2a4"
+}

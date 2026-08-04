@@ -12,6 +12,7 @@ import {
   type GlobalAgentSkillTarget,
 } from "./agent-catalog.js";
 import { EmpiricalError } from "./errors.js";
+import { SKILLS } from "./operations.js";
 import { isFile, readJson, writeJsonAtomic, writeTextAtomic } from "./storage.js";
 import type { IntegrationReport } from "./types.js";
 
@@ -67,9 +68,11 @@ Complex and do not ask them to run hidden terminal commands.
    empirical __internal complex; these are agent operations, not user commands.
 5. Show any worktree proposal exactly and wait for approval before calling the
    approved creation operation. Never stash, force, or replace selected work.
-6. Execute every returned action, complete its exact revision with required
-   artifacts and evidence, consume the response as the next action, and archive
-   reviewed capability deltas. Stop only at Done, Blocked, or Awaiting Human.
+6. Execute every returned action, create immutable evidence receipts with the
+   configured commands or collected artifacts, complete its exact revision with
+   receipt ids, consume the response as the next action, and integrate reviewed
+   capability deltas against an independent target. Report the exact highest
+   completion level. Stop only at Done, Blocked, or Awaiting Human.
 7. After Complex Specify passes, empirical_handoff may offer Continue here,
    Save for later, or one detected agent. Detection and Save launch nothing;
    another runtime requires explicit approval of its exact target, cwd, and argv.
@@ -211,9 +214,10 @@ route a new feature request.
    described as accepting a prompt.
 5. For every subsequent action, retrieve only relevant repository context,
    preserve approved decisions and acceptance criteria, create required
-   artifacts, collect named evidence, call empirical_complete with the exact
-   revision, and continue from its response. Use empirical_retry only for a
-   returned repair path and empirical_archive only after reviewed deltas pass.
+   artifacts, execute configured commands or collect immutable evidence
+   receipts, call empirical_complete with the exact revision and receipt ids,
+   and continue from its response. Use empirical_retry only for a returned
+   repair path and empirical_integrate only after reviewed deltas pass.
 6. Show worktree or external-agent proposals exactly and wait for explicit
    approval before any authorized operation. Stop only at Done, Blocked, or
    Awaiting Human.
@@ -222,40 +226,73 @@ Use MCP operations first and empirical __internal only as fallback. Never start
 unrelated work, weaken gates, expose credentials, or persist private
 chain-of-thought.`;
 
+const YOLO_SKILL_BODY = `# Empirical YOLO
+
+Advance one request autonomously in the current host agent up to the exact
+standing-authorization ceiling. YOLO changes workflow approval semantics; it
+does not weaken host, Git, credential, release, evidence, or deletion safety.
+
+1. Require the exact request and an explicit completion ceiling. Default to
+   integrated. Delivered requires Policy v2 GitHub delivery configuration and
+   an exact target branch. Never accept published here: publication requires a
+   separate explicit publish operation with an exact version and dist-tag.
+2. Call empirical_yolo with that exact request, ceiling, target branch when
+   applicable, and external-agent permission. Its private fallback is empirical
+   __internal yolo with equivalent fields. The returned immutable authorization
+   cannot be widened or replaced; a broader request requires new feature state.
+3. Follow the returned deterministic route and risk floor. Fast remains
+   contract-neutral only. Autonomously draft and approve complete specification,
+   design, planning, implementation, verification, review, and integration
+   artifacts while the authorization covers them. Create executed or collected
+   immutable evidence receipts and pass only receipt ids to completion.
+4. Ask a product question only when two or more materially different correct
+   outcomes remain and repository facts, Policy v2, accepted decisions, and a
+   safe default cannot resolve them. Persist the blocker and stop. Do not ask
+   for routine workflow approval already covered by standing authorization.
+5. For behavioral work, maintain the impact manifest and capability deltas,
+   honor shared capability claims, and call empirical_integrate against an
+   independently resolved target. Never report integrated without its receipt.
+6. If the ceiling is delivered, use only empirical_deliver and its authorized
+   GitHub source/evidence pull-request sequence. Wait for required checks and a
+   normal protected merge. Report delivered only from independently queried
+   remote merge commits. Stop at the authorization ceiling.
+
+Never suppress host or operating-system prompts, force Git, bypass branch
+protection, replace immutable tags/releases/versions, inspect or extract
+credentials, infer publication, delete real worktrees or branches, accept
+caller-asserted evidence booleans, or claim a higher completion level than a
+durable receipt proves. Use the current host agent unless the authorization
+explicitly permits a detected external agent.`;
+
 function skillContent(name: string, description: string, body: string): string {
   return `---\nname: ${name}\ndescription: ${description}\n---\n\n<!-- ${MANAGED_FILE_MARKER} -->\n${body}\n\nUse Empirical MCP operations first. Use empirical __internal only when MCP is unavailable; it is a private agent fallback, never a command for the user to run.\n`;
 }
 
-export const EMPIRICAL_AGENT_SKILLS = [
-  {
-    name: "empirical",
-    description: "Automatically initialize, route, resume, and complete Empirical repository work.",
-    content: skillContent("empirical", "Automatically initialize, route, resume, and complete Empirical repository work.", AUTOMATIC_SKILL_BODY),
-  },
-  {
-    name: "empirical-init",
-    description: "Initialize or repair Empirical repository setup and compact context without starting feature work.",
-    content: skillContent("empirical-init", "Initialize or repair Empirical repository setup and compact context without starting feature work.", INIT_SKILL_BODY),
-  },
-  {
-    name: "empirical-spec",
-    description: "Draft a concrete Complex SDD contract and stop for approval before implementation.",
-    content: skillContent("empirical-spec", "Draft a concrete Complex SDD contract and stop for approval before implementation.", SPEC_SKILL_BODY),
-  },
-  {
-    name: "empirical-socratic",
-    description: "Conduct a durable five-pass Socratic interview and draft its Complex SDD contract for approval.",
-    content: skillContent("empirical-socratic", "Conduct a durable five-pass Socratic interview and draft its Complex SDD contract for approval.", SOCRATIC_SKILL_BODY),
-  },
-  {
-    name: "empirical-loop",
-    description: "Resume the active Empirical specification through evidence, review, archive, and completion.",
-    content: skillContent("empirical-loop", "Resume the active Empirical specification through evidence, review, archive, and completion.", LOOP_SKILL_BODY),
-  },
-] as const;
+type RegistrySkillId = typeof SKILLS[number]["id"];
+
+const SKILL_BODIES: Record<RegistrySkillId, string> = {
+  empirical: AUTOMATIC_SKILL_BODY,
+  "empirical-init": INIT_SKILL_BODY,
+  "empirical-loop": LOOP_SKILL_BODY,
+  "empirical-socratic": SOCRATIC_SKILL_BODY,
+  "empirical-spec": SPEC_SKILL_BODY,
+  "empirical-yolo": YOLO_SKILL_BODY,
+};
+
+export const EMPIRICAL_AGENT_SKILLS = Object.freeze(
+  SKILLS.map((definition) => ({
+    name: definition.id,
+    description: definition.description,
+    content: skillContent(
+      definition.id,
+      definition.description,
+      SKILL_BODIES[definition.id as RegistrySkillId]!,
+    ),
+  })),
+);
 
 export type EmpiricalAgentSkill = typeof EMPIRICAL_AGENT_SKILLS[number];
-export type EmpiricalAgentSkillName = EmpiricalAgentSkill["name"];
+export type EmpiricalAgentSkillName = RegistrySkillId;
 export const EMPIRICAL_AGENT_SKILL_NAMES: readonly EmpiricalAgentSkillName[] =
   EMPIRICAL_AGENT_SKILLS.map((skill) => skill.name);
 
@@ -385,6 +422,31 @@ export async function installGlobalAgentSkills(
     }
   }
   await writeGlobalSelection(home, report.selected, report);
+  return report;
+}
+
+export async function uninstallGlobalAgentSkills(
+  homeRoot = homedir(),
+): Promise<IntegrationReport> {
+  const home = validateHomeRoot(homeRoot);
+  const selection = await readGlobalSelection(home);
+  const selectedIds = new Set(
+    selection.selected ?? (await installedGlobalAgentIds(home)),
+  );
+  const selected = globalAgentSkillTargets()
+    .filter((definition) => selectedIds.has(definition.id));
+  const report = emptyReport("global");
+  report.selected = selected.map((definition) => definition.id);
+  report.destinations = [
+    ...new Set(selected.map((definition) => agentSkillTargetPath(home, definition))),
+  ];
+
+  for (const [skillRoot] of groupedGlobalTargets(home)) {
+    for (const name of [...EMPIRICAL_AGENT_SKILL_NAMES, ...OBSOLETE_ENTRYPOINTS]) {
+      await removeManagedFile(home, join(skillRoot, name, "SKILL.md"), report);
+    }
+  }
+  await removeGlobalSelection(home, report);
   return report;
 }
 
@@ -525,6 +587,28 @@ async function writeGlobalSelection(
   (existed ? report.updated : report.created).push(relativeLabel(home, path));
 }
 
+async function removeGlobalSelection(
+  home: string,
+  report: IntegrationReport,
+): Promise<void> {
+  const state = await readGlobalSelection(home);
+  if (!state.writable) {
+    if (state.warning && !report.preserved.includes(state.warning)) {
+      report.preserved.push(state.warning);
+    }
+    return;
+  }
+  if (state.selected === null) return;
+  const path = globalSelectionPath(home);
+  if (await preserveUnsafeTarget(home, path, report)) return;
+  if (!(await isFile(path))) return;
+  await rm(path);
+  report.removed.push(relativeLabel(home, path));
+  await rmdir(dirname(path)).catch((error: NodeJS.ErrnoException) => {
+    if (!["ENOENT", "ENOTEMPTY", "EEXIST"].includes(error.code ?? "")) throw error;
+  });
+}
+
 async function isSafeRegularFile(root: string, path: string): Promise<boolean> {
   const rootPath = resolve(root);
   const targetPath = resolve(path);
@@ -544,11 +628,11 @@ async function isSafeRegularFile(root: string, path: string): Promise<boolean> {
 
 function validateHomeRoot(homeRoot: string): string {
   if (!homeRoot.trim()) {
-    throw new EmpiricalError("INVALID_ARGUMENT", "Global installation requires a user home directory");
+    throw new EmpiricalError("INVALID_ARGUMENT", "Global integration requires a user home directory");
   }
   const home = resolve(homeRoot);
   if (dirname(home) === home) {
-    throw new EmpiricalError("INVALID_ARGUMENT", "Global installation refuses a filesystem root as the user home");
+    throw new EmpiricalError("INVALID_ARGUMENT", "Global integration refuses a filesystem root as the user home");
   }
   return home;
 }

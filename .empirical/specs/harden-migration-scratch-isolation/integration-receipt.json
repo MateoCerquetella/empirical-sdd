@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "feature": "harden-migration-scratch-isolation",
+  "claimId": "harden-migration-scratch-isolation-92e63111cfac",
+  "repositoryId": "sha256:28b611fbe37d347c519ab3d25297c1747e77c067df41cf6a321e72b9cdddc4eb",
+  "baseCommit": "d8ee7e1bdaa53bfc92e278524a40e61d16125f64",
+  "baseTree": "f93dc26ef9a4144472af8a20542a0993f4f31f03",
+  "featureTree": "sha256:06033ecafcc2f580187fb1bdc4ed00cbb04fbc64852298909059f57a175006f8",
+  "targetCommit": "d8ee7e1bdaa53bfc92e278524a40e61d16125f64",
+  "targetTree": "f93dc26ef9a4144472af8a20542a0993f4f31f03",
+  "capabilityBaseDigests": {
+    "migration-integrity": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "repository-knowledge": "sha256:d458d68ea7f14ffe8bdb1ed9ebe4615e7ca9d2abb83d767557174b2d982c36cc",
+    "verification-policy": "sha256:25fd1c733e2aef29fe299f51d8332f229736c5e70b6910d8213bb807fa79ec75",
+    "worktree-isolation": "sha256:ceeedb41544f500fb728f0f49fbee5478d36bb852d7ecfc5994f083c440dd306"
+  },
+  "deltaDigest": "sha256:48ed4c1f6e86e94e617ad3c4f4c41e7ba2f83c645ee4a5a095ff14a151234895",
+  "resultDigests": {
+    "migration-integrity": "sha256:7ec3ba4c2ac554dd5afc63292d9f7ab2f7adf8984cee14f62633a3aed1884a2d",
+    "repository-knowledge": "sha256:bf1f239c281ece00ed983babef6060aff02c33b7a803d0124e4ea3c16cea1648",
+    "verification-policy": "sha256:4abb31143f57eaf2cbc91aaef84163d6304488fb80c84393fa74fcc290755e37",
+    "worktree-isolation": "sha256:a61424ff914d7b30768a9576fb665c441e55468d74b8d9ea6ade5c5e7cd3f61e"
+  },
+  "verificationReceiptDigests": [
+    "sha256:4b492cbccf915037dc3474025854fd551f7cfaaeb55859e080f59fe75d301544"
+  ],
+  "integratedAt": "2026-08-03T23:28:03.436Z",
+  "digest": "sha256:b49cee7ca4f6ad5c9e1c57ec9872e6d9cada21948b54597addc56a91e0c55278"
+}

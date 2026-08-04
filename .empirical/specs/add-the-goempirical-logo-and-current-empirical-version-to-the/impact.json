@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "classification": "behavioral",
+  "capabilities": [
+    "cli-branding"
+  ],
+  "surfaces": [
+    "legacy-schema-4-workflow"
+  ],
+  "regressionRationale": null,
+  "digest": "sha256:07e59d7d46964756bd084cc97a5de2c05bbe6fcd642e962c86b45ce8d3ddf8e4"
+}

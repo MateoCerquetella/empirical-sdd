@@ -1,47 +1,24 @@
-# Empirical 0.20 compared with OpenSpec
+# Empirical 0.22 compared with OpenSpec
 
-Empirical adopts OpenSpec's strongest idea: repository-native change contracts
-and explicit deltas from current behavior. It adds an executable state machine,
-evidence gates, Socratic discovery, safe isolation, and living-spec projection.
+Empirical adopts OpenSpec's repository-native change contracts and explicit
+deltas from current behavior. It adds an executable, resumable trust protocol
+for autonomous coding agents.
 
-| Capability | OpenSpec | Empirical 0.20 |
-|---|---|---|
-| Change contract | Proposal/spec/design/tasks artifacts | Spec/design/plan plus observable criteria |
-| Behavior change | ADDED/MODIFIED/REMOVED deltas | Same delta vocabulary with archive projection |
-| Discovery | User/agent decides context process | Persisted five-pass Socratic interview and approval |
-| Execution | Agent follows tasks | Exact revisioned Fast or seven-gate Complex state machine |
-| Verification | Defined by the change | Criterion-scoped test/browser/screenshot/review evidence |
-| Decisions | Design narrative | Validated evidence/options/choice/risks/verification record |
-| Explanation | Read the artifacts | Deterministic Explain report with context gaps and gate |
-| Parallel code | Multiple change directories | One feature per checkout plus approved Git worktrees |
-| Current behavior | Specs remain repository artifacts | Reviewed deltas transactionally update living capabilities |
-| Agent support | Tool-specific integrations vary | CLI, TypeScript, MCP, and native skills for five agents |
+| Capability | OpenSpec | Empirical 0.22 |
+| --- | --- | --- |
+| Change contract | Proposal/spec/design/tasks | Spec/design/plan, impact manifest, observable criteria |
+| Behavior change | ADDED/MODIFIED/REMOVED deltas | Frozen deltas, shared claims, base replay, independent integration |
+| Discovery | Team-selected process | Durable five-pass interview and approval |
+| Execution | Agent follows tasks | Exact revisioned Fast or Complex workflow; normal or bounded YOLO |
+| Verification | Defined by the change | Immutable executed/collected receipts tied to criteria and source |
+| Completion | Convention | Derived implemented/verified/integrated/delivered/published levels |
+| Parallel work | Multiple change directories | One feature per checkout plus approved Git worktrees and common-dir claims |
+| Current behavior | Specs remain artifacts | Reviewed deltas transactionally update living capabilities |
+| Delivery | External process | Protected two-PR GitHub delivery; explicit immutable publication |
+| Diagnostics | Artifact inspection | Read-only Doctor across schema, journals, policy, evidence, Git, and tools |
 
-## Where Empirical is stronger
-
-- A vague request cannot quietly become an implementation: the current agent
-  asks problem/user, outcome, boundaries, risk, and verification one at a time,
-  then waits for approval.
-- Every mutation has an exact revision and recoverable event journal.
-- Complex Design cannot pass with empty decision ceremony; evidence, alternatives,
-  trade-offs, and verification are mechanically required.
-- UI criteria require real-browser and screenshot evidence.
-- An unrelated active request becomes a complete read-only Git proposal and an
-  explicit approval gate, not a second hidden state namespace.
-- Archive validates the frozen delta digest and applies current-behavior changes
-  transactionally.
-
-## Where OpenSpec remains simpler
-
-OpenSpec is ideal when a team wants a lightweight artifact convention without a
-runtime state machine, evidence protocol, or Git automation. Empirical has more
-guardrails and therefore more structure. Fast keeps that cost proportional for
-truly tiny work.
-
-## Scorecard
-
-For repository-native spec quality, Empirical and OpenSpec use the same proven
-core concepts. Empirical's additional Socratic, execution, verification,
-decision, and isolation contracts make it better suited to autonomous coding
-agents that must continue safely across sessions. Teams wanting documentation
-only may prefer OpenSpec's smaller surface.
+Empirical is a stronger fit when an agent must resume safely across sessions,
+prove what it ran, coordinate across worktrees, and report exact completion
+without overstating external effects. OpenSpec remains simpler when a team wants
+a lightweight artifact convention without a runtime, evidence, Git, or delivery
+protocol.

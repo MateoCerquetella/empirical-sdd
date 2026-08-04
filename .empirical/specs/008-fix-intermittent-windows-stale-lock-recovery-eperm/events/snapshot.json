@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "feature": "008-fix-intermittent-windows-stale-lock-recovery-eperm",
+  "lastSequence": 8,
+  "lastEventDigest": "sha256:8894968529c1110ad8d421015f61112ad0fd1493b28b5a45b817ac92d9cf03cf",
+  "stateDigest": "sha256:4ae6fc62db17b9984b178c6b2b6d2987b6f41bedc5ecbd1dceb3a3d43920184c",
+  "state": {
+    "revision": 47,
+    "activeFeature": "008-fix-intermittent-windows-stale-lock-recovery-eperm",
+    "request": "Fix intermittent Windows stale-lock recovery EPERM so concurrent clients recover safely and CI is deterministic.",
+    "profile": "complex",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Archived capability changes: parallel-workstreams",
+    "implementationActor": "agent",
+    "updatedAt": "2026-07-29T14:40:29.842Z",
+    "specDigest": "sha256:7a1094eccf6edd6d369db387786e0a53994cf4b313ed3741e28a9ab3db385f7b",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "sha256:f002f4d6e15f3f74ee8d8aae0152628d132f22d2de5e0f0bf6a465a0c454b114",
+    "schemaVersion": 5,
+    "workflow": "complex",
+    "mode": "normal",
+    "approvedSpecRevision": 47,
+    "impactDigest": "sha256:40af7ada356b586df6337e51b93713ff0ee461a70f066104fa746566dcd0b864",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 4,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": true,
+      "delivered": false,
+      "published": false,
+      "highest": "integrated",
+      "reasons": {
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "compactedAt": "2026-07-29T14:40:29.842Z",
+  "digest": "sha256:08ad79483ae035677564dd722308bf5b8d1850f472436ed7e65674a415e4bc1a"
+}

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "feature": "release-the-verified-two-command-cli-and-interactive-multi-agent",
+  "lastSequence": 8,
+  "lastEventDigest": "sha256:5a395171eafe2d1089165a35a59407dedbafaa54b50a02b97cae2d7aa7238b6e",
+  "stateDigest": "sha256:718aa8639b7aa4501c1d745bdb056d08b407804c6b89330600bb846b0d6db55c",
+  "state": {
+    "revision": 8,
+    "activeFeature": "release-the-verified-two-command-cli-and-interactive-multi-agent",
+    "request": "Release the verified two-command CLI and interactive multi-agent installer as empirical-sdd 0.20.1, publish it to npm under latest, and verify the registry tarball and clean consumer installation.",
+    "profile": "complex",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Archived capability changes: package-distribution",
+    "implementationActor": "agent",
+    "specDigest": "sha256:eed69220fb429426299e6685ece37a0a689f3b1b7b3e400ba2c7f05e9849ef26",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "sha256:de24432112a35062f184227a2828a145c5b8940439dc1a52b2c928a78baf6c3a",
+    "updatedAt": "2026-07-29T21:34:15.080Z",
+    "schemaVersion": 5,
+    "workflow": "complex",
+    "mode": "normal",
+    "approvedSpecRevision": 8,
+    "impactDigest": "sha256:afd5984966a19a00bb41cf75eb4b187fd03516c633891b9ceb8e7f0c4970cc46",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 7,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": true,
+      "delivered": false,
+      "published": false,
+      "highest": "integrated",
+      "reasons": {
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "compactedAt": "2026-07-29T21:34:15.080Z",
+  "digest": "sha256:287868c4a2232780d444ed41c1341f6f9d6ad6c2b935121aa86b7435267da5cb"
+}

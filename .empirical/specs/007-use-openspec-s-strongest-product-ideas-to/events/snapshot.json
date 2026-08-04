@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "feature": "007-use-openspec-s-strongest-product-ideas-to",
+  "lastSequence": 10,
+  "lastEventDigest": "sha256:32c77020db5bf8fd75ff937fa9c11a4b3a45f1112002d4ff2681d23babe81dfa",
+  "stateDigest": "sha256:759fb6bbe685b02ae2766d8d861972cd768f03185745e63a1aeb59e4f497e2a6",
+  "state": {
+    "revision": 39,
+    "activeFeature": "007-use-openspec-s-strongest-product-ideas-to",
+    "request": "Use OpenSpec's strongest product ideas to evolve Empirical into a 10/10 npm-only SDD workflow: add living capability specifications and delta archival, an exploratory discovery path, safe multiple active workstreams, strong customization where it improves UX, preserve automatic ordinary-request activation, Fast and Complex workflows, exact revisions, mandatory evidence, MCP, and cross-agent portability, and deliver cohesive documentation, migration, tests, and packaging.",
+    "profile": "complex",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Archived capability changes: exploratory-discovery, living-specifications, parallel-workstreams, project-policy",
+    "implementationActor": "agent",
+    "updatedAt": "2026-07-29T14:21:54.989Z",
+    "specDigest": "sha256:1e7c3e8048f2297d7e2f3293ed3ae581624eede60cdd71bbc4c3f9a8c1ab563d",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "sha256:682c6d2a822a9901a62c24f30243d123d32cc6b252ae847071c662ddc4c6f180",
+    "schemaVersion": 5,
+    "workflow": "complex",
+    "mode": "normal",
+    "approvedSpecRevision": 39,
+    "impactDigest": "sha256:167eaf3a0e4ac62097a0276292959f50a7764224955a00273d102bfbc99107a0",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 10,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": false,
+      "delivered": false,
+      "published": false,
+      "highest": "verified",
+      "reasons": {
+        "integrated": "integrated has not been proven by a durable receipt.",
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "compactedAt": "2026-07-29T14:21:54.989Z",
+  "digest": "sha256:15eae84e7124ddb24497f197ee6fdf6db4524e2fa6a2839051ab2a6d18dd134a"
+}

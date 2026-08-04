@@ -9,16 +9,22 @@ a clean consumer.
 
 ### Requirement: Published release integrity
 
-Every published Empirical version MUST use one matching version across its npm
-manifest, runtime diagnostics, tests, and release-facing documentation. The
-release MUST pass the complete repository CI and package dry-run before npm
-publication.
+Every published Empirical version MUST use one matching immutable version across
+its manifest, lockfile, runtime diagnostics, tests, tags, releases, npm package,
+dist-tag, and release-facing documentation. The release source MUST contain the
+complete explicitly approved candidate and its integrated capability evidence,
+while excluding generated coverage, build output, temporary archives, and
+credentials. It MUST pass repository CI, coverage gates, package dry-run,
+supported Node 22, 24, and 26 checks, and clean-consumer verification before
+publication. Protected delivery and publication receipts MUST bind the exact
+source commit to the evidence commit and public artifacts.
 
-#### Scenario: A release candidate is ready to publish
+#### Scenario: A complete minor release candidate is explicitly requested
 
-- **WHEN** the maintainer prepares a new immutable npm version
-- **THEN** all intentional product-version surfaces report that exact version
-- **AND** type checking, tests, built smoke, and package inspection pass
+- **WHEN** the exact unused minor version and intended working-tree scope are approved
+- **THEN** every public version surface and supported-runtime check converges
+- **AND** generated output and unrelated files are absent from the package and source commit
+- **AND** publication remains pending until exact source, evidence, and publication authorizations are present
 
 ### Requirement: Clean registry consumption
 
@@ -36,16 +42,26 @@ the intended dist-tag before the release is reported complete.
 
 ### Requirement: Public release surfaces converge
 
-Every completed Empirical release MUST expose one immutable semantic version
-through the merged default-branch commit, an annotated git tag, a published
-GitHub release, the npm package version, and the intended npm dist-tag. The git
-tag and GitHub release MUST identify the merged release commit, and public
-registry verification MUST succeed before the release is reported complete.
+Every completed release MUST expose one immutable semantic version through the
+merged default-branch commit, annotated Git tag, GitHub release, npm version,
+and intended dist-tag. Retries MUST recognize identical existing artifacts;
+conflicting tags, versions, or releases MUST stop without deletion or replacement.
 
-#### Scenario: A maintainer completes a public release
+#### Scenario: A retry finds the identical published version
 
-- **WHEN** the release pull request has passed required checks and merged
-- **THEN** the annotated version tag points at that merged release commit
-- **AND** GitHub publishes release notes for the same version tag
-- **AND** npm exposes the same exact version under the intended dist-tag
-- **AND** a clean consumer installs and runs that immutable registry version
+- **WHEN** digests, merged commit, tag, release, package, and dist-tag all match
+- **THEN** publication converges without creating replacements
+- **AND** status reports published from verified remote state
+
+### Requirement: Package exports are narrow and tested
+
+The package MUST expose only its supported root API and explicit `./protocol`,
+`./mcp`, and `./integrations` entrypoints. Internal source and storage modules
+MUST be unreachable through package exports, and declaration/runtime shapes MUST
+be verified from a clean packed consumer.
+
+#### Scenario: A clean consumer imports supported entrypoints
+
+- **WHEN** the packed package is installed without repository-local files
+- **THEN** all four supported entrypoints import and type-check
+- **AND** an attempted internal subpath import is rejected by package exports

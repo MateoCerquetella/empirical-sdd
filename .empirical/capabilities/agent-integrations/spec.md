@@ -11,27 +11,19 @@ agent's native extension mechanism.
 ### Requirement: Explicit global skill installation
 
 Empirical SHALL provide an interactive `empirical install` selector outside an
-initialized project. The selector MUST use a searchable, scrollable, terminal-
-width-safe multiselect over a checked-in catalog containing every global-capable
-target in the release's pinned and audited `vercel-labs/skills` agent catalog.
-It MUST prioritize detected and currently managed targets, remember the last
-explicit selection, show destination paths and status, accept explicit non-
-interactive agent flags, and install exactly five managed Empirical skills for
-each selected target: `empirical`, `empirical-init`, `empirical-spec`,
-`empirical-socratic`, and `empirical-loop`. It MUST NOT create project workflow
-state, require network access, invoke `npx`, or launch an agent.
+initialized project over the pinned audited agent catalog. It MUST prioritize
+detected and managed targets, remember explicit selection, show destinations and
+status, accept non-interactive flags, and install exactly every entry in the
+shared skill registry: `empirical`, `empirical-init`, `empirical-spec`,
+`empirical-socratic`, `empirical-loop`, and `empirical-yolo`. Counts and labels
+MUST derive from that registry. Installation MUST NOT initialize project state,
+require network access, invoke `npx`, or launch an agent.
 
-#### Scenario: A developer searches a large agent catalog
+#### Scenario: A developer installs one selected target
 
-- **WHEN** the developer types part of an agent name, id, or destination path
-- **THEN** the bounded selector shows matching targets with selection and status
-- **AND** submitting installs the five skills only for the exact selected set
-
-#### Scenario: No supported agent is detected
-
-- **WHEN** interactive installation has no detected or remembered selection
-- **THEN** the selector opens with no implicit all-agent selection
-- **AND** the developer must choose at least one target or cancel without mutation
+- **WHEN** selection is submitted
+- **THEN** exactly the six registered skills are reconciled at its safe destination
+- **AND** reports derive the installed count from the same registry
 
 ### Requirement: Global integration preserves user configuration
 
@@ -75,34 +67,33 @@ from the ability to read skill files.
 
 ### Requirement: Native user-invocable workflow entrypoints
 
-The system SHALL expose five global Empirical skills per selected agent. The
-automatic `empirical` skill MUST route end to end. `empirical-init` MUST only
-initialize or repair repository context. `empirical-spec` MUST draft concrete
-Complex specification artifacts and wait for approval. `empirical-socratic`
-MUST conduct and persist five-pass discovery, draft the approved Complex
-specification, and wait for approval. `empirical-loop` MUST only resume selected
-work through a terminal workflow result. Every skill MUST use MCP first and MAY
-use only the private internal transport as fallback.
+The system SHALL expose six global Empirical skills per selected agent. The
+automatic skill routes end to end; Init only configures context; Spec drafts a
+concrete Complex contract; Socratic conducts five-pass discovery; Loop resumes
+selected work; and YOLO records bounded standing authorization and runs through
+the authorized completion ceiling while asking only blocker product questions.
+Every skill MUST use MCP first and MAY use only private internal transport as
+fallback.
 
-#### Scenario: A developer chooses an explicit specification path
+#### Scenario: A developer invokes YOLO for implementation only
 
-- **WHEN** the developer invokes Spec or Socratic in a supported agent
-- **THEN** the current agent produces a reviewable specification and stops
-- **AND** Loop can continue it after explicit approval without rerouting the request
+- **WHEN** the current repository has an approved specification
+- **THEN** YOLO resumes it through the highest locally authorized safe completion
+- **AND** does not infer remote delivery or publication authorization
 
 ### Requirement: Honest command discovery report
 
-Normal help and README MUST present only `empirical install`, `empirical
-update`, and native in-agent skill invocations. Direct state-machine verbs MUST
-be rejected as human terminal commands. MCP, the TypeScript API, and a private
-internal CLI transport MAY retain workflow operations for installed agents and
-compatibility.
+Root and subcommand help and README MUST present only `empirical install`,
+`empirical update`, `empirical uninstall`, and the six native in-agent skills.
+Each public subcommand MUST provide usable `--help`. Direct state-machine verbs
+remain private and MUST be rejected as human terminal commands. Uninstall help
+MUST distinguish removed global artifacts from preserved project state.
 
-#### Scenario: A developer asks for terminal help
+#### Scenario: A developer asks for uninstall help
 
-- **WHEN** the developer runs `empirical --help`
-- **THEN** terminal commands remain limited to Install and Update
-- **AND** Init, Spec, Socratic, and Loop are described as in-agent skills rather than CLI verbs
+- **WHEN** the developer runs `empirical uninstall --help`
+- **THEN** help documents confirmation, global removal, and project preservation without mutation
+- **AND** it does not expose private workflow commands
 
 ### Requirement: Update converges package and integrations
 
@@ -162,3 +153,25 @@ reason.
 - **WHEN** catalog data changes for a release
 - **THEN** the reviewed diff records new provenance and target changes
 - **AND** runtime installation remains fully local after the package is installed
+
+### Requirement: Safe global uninstall is explicit and ownership-bound
+
+Empirical SHALL provide `empirical uninstall` outside initialized repositories.
+It MUST show the complete global removal and project-preservation scope before
+interactive mutation, default to cancellation, require `--yes` for
+non-interactive or JSON execution, remove only marker-owned current or obsolete
+global skills and valid Empirical-owned selection metadata, preserve and report
+unsafe or unmanaged targets, and invoke exact shell-free global npm package
+removal only after integration cleanup succeeds. Repeated cleanup MUST converge.
+
+#### Scenario: A developer confirms global removal
+
+- **WHEN** the user approves uninstall with managed and unmanaged targets present
+- **THEN** all Empirical-managed global skills and owned selection metadata are removed
+- **AND** unmanaged files, repository history, and project MCP configuration remain unchanged
+- **AND** `npm uninstall -g empirical-sdd` runs last
+
+#### Scenario: Automation omits confirmation
+
+- **WHEN** stdin is non-interactive or structured output is requested without `--yes`
+- **THEN** uninstall refuses before changing files or invoking npm

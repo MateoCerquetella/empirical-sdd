@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "feature": "restrict-the-human-empirical-cli-to-install-and-update-make",
+  "lastSequence": 8,
+  "lastEventDigest": "sha256:2cf57ef52c55db7d94dc9061cd0b202628d3a91e29f9745be62d27b6caf0691d",
+  "stateDigest": "sha256:5d550f1b69f160c9395ec0c314d67866cadf49aed2360759e7ee7f659b86a296",
+  "state": {
+    "revision": 8,
+    "activeFeature": "restrict-the-human-empirical-cli-to-install-and-update-make",
+    "request": "Restrict the human Empirical CLI to install and update, make install an interactive multi-agent selector modeled on npx skills with explicit non-interactive agent flags, keep workflow operations available only through MCP and the TypeScript API, and update README to exactly match the current commands",
+    "profile": "complex",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Archived capability changes: agent-integrations",
+    "implementationActor": "agent",
+    "specDigest": "sha256:31eb901828fad83236982530644418d744a9f5346b6e9b2bd7a8d68a4469f52b",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "sha256:f346fb4b0d00c743169abe35ad7a955afaa0716f125a88b79c808f5ac1b4d848",
+    "updatedAt": "2026-07-29T20:57:24.157Z",
+    "schemaVersion": 5,
+    "workflow": "complex",
+    "mode": "normal",
+    "approvedSpecRevision": 8,
+    "impactDigest": "sha256:d2385f9cb9c4bf67d07889dae3b49f81e71759c3f365f6f71d9290747765c3ce",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 10,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": true,
+      "delivered": false,
+      "published": false,
+      "highest": "integrated",
+      "reasons": {
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "compactedAt": "2026-07-29T20:57:24.157Z",
+  "digest": "sha256:aab543740a97e5423999791af21e82e113286e043754252fd9ae197d166ff2cc"
+}

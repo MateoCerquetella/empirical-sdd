@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "feature": "release-empirical-sdd-0-20-3",
+  "lastSequence": 8,
+  "lastEventDigest": "sha256:5038fdfe107115ee29de043269a9e18a56775b354d2a63d9e30aae11d20ece50",
+  "stateDigest": "sha256:84d0546f7caa2afa6602e46c4f8e35320891023a55fc53c01147d871eabfd328",
+  "state": {
+    "revision": 8,
+    "activeFeature": "release-empirical-sdd-0-20-3",
+    "request": "Release the completed Empirical setup wizard and broad 73-target agent installer as npm package empirical-sdd version 0.20.3, verify the live registry artifact from a clean consumer, then push the release commits and matching v0.20.3 tag.",
+    "profile": "fast",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Published empirical-sdd@0.20.3 as npm latest, verified the registry tarball and exact shasum from a clean consumer, exercised all 73 installer entrypoints in an isolated home, and pushed annotated tag v0.20.3 for merged commit eff18f7.",
+    "implementationActor": "codex",
+    "specDigest": "sha256:e06a70102d3774300e7b9aa7f7538087749bf9fe963e05523ae2c537223e2637",
+    "capabilityArchiveRequired": false,
+    "capabilityDeltaDigest": null,
+    "updatedAt": "2026-07-31T13:58:47.949Z",
+    "schemaVersion": 5,
+    "workflow": "fast",
+    "mode": "normal",
+    "approvedSpecRevision": 8,
+    "impactDigest": "sha256:fcdc9cd878cb8cca535b2839c35967430dd36394abe0236e169dc7c3ef063ff0",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 2,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": false,
+      "delivered": false,
+      "published": false,
+      "highest": "verified",
+      "reasons": {
+        "integrated": "integrated has not been proven by a durable receipt.",
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "compactedAt": "2026-07-31T13:58:47.949Z",
+  "digest": "sha256:1381d9ad3dd53b8d92ee1d039bb76e9bb88b7924415206eee64560b3d2e187ee"
+}

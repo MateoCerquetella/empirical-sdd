@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "classification": "behavioral",
+  "capabilities": [
+    "agent-integrations",
+    "exploratory-discovery",
+    "repository-knowledge"
+  ],
+  "surfaces": [
+    "legacy-schema-4-workflow"
+  ],
+  "regressionRationale": null,
+  "digest": "sha256:6455a7f9a6ab1f7639f6e398c71ad74c34b2ac7cdf0b66e2578b25013f3b2c9f"
+}

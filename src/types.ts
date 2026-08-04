@@ -1,6 +1,18 @@
-export const SCHEMA_VERSION = 4 as const;
-export const PRODUCT_VERSION = "0.20.4";
-export const POLICY_SCHEMA_VERSION = 1 as const;
+export {
+  MANIFEST_SCHEMA_VERSION,
+  POLICY_SCHEMA_VERSION,
+  PRODUCT_VERSION,
+  RECEIPT_SCHEMA_VERSION,
+  SCHEMA_VERSION,
+} from "./protocol.js";
+import {
+  POLICY_SCHEMA_VERSION,
+  SCHEMA_VERSION,
+  type CompletionReport,
+  type ExecutionMode,
+  type RiskFloor,
+  type StandingAuthorization,
+} from "./protocol.js";
 
 export type Workflow = "fast" | "complex";
 export type Profile = Workflow | "quick";
@@ -13,6 +25,9 @@ export type Phase =
   | "implement"
   | "verify"
   | "review"
+  | "integrate"
+  | "deliver"
+  | "publish"
   | "archive"
   | "done";
 export type WorkflowStatus =
@@ -67,15 +82,24 @@ export interface WorkflowState {
   activeFeature: string | null;
   request: string | null;
   profile: Profile;
+  workflow: Workflow;
+  mode: ExecutionMode;
   phase: Phase;
   status: WorkflowStatus;
   repairAttempts: number;
   message: string | null;
   implementationActor: string | null;
   specDigest: string | null;
+  approvedSpecRevision: number | null;
   capabilityArchiveRequired: boolean;
   capabilityDeltaDigest: string | null;
+  impactDigest: string | null;
+  capabilityClaimId: string | null;
+  authorizationDigest: string | null;
   evidence: Evidence[];
+  evidenceReceiptIds: string[];
+  legacyEvidenceCount: number;
+  completion: CompletionReport;
   updatedAt: string;
 }
 
@@ -83,6 +107,24 @@ export interface ProjectPolicy {
   schemaVersion: typeof POLICY_SCHEMA_VERSION;
   context: string[];
   phases: Partial<Record<Phase, string[]>>;
+  verification: {
+    evidence: ProjectConfig["evidence"];
+    commands: Array<{
+      id: string;
+      argv: string[];
+      cwd: string;
+      timeoutMs: number;
+      maxOutputBytes: number;
+      evidenceKinds: EvidenceKind[];
+      criteria: string[];
+    }>;
+  };
+  delivery: {
+    provider: "github";
+    targetBranch: string;
+    requiredChecks: string[];
+  } | null;
+  preferredAgent: AgentIntegrationId | null;
 }
 
 export interface Criterion {
@@ -105,6 +147,8 @@ export interface CompletionInput {
   outcome: Outcome;
   summary: string;
   actor?: string;
+  receiptIds?: string[];
+  /** Schema-4 compatibility input; Schema 5 rejects asserted evidence. */
   evidence?: Evidence[];
 }
 
@@ -125,6 +169,9 @@ export interface ActionPacket {
   feature: string | null;
   request: string | null;
   profile: Profile;
+  mode: ExecutionMode;
+  riskFloor: RiskFloor;
+  routeRationale: string[];
   phase: Phase;
   status: WorkflowStatus;
   revision: number;
@@ -136,9 +183,10 @@ export interface ActionPacket {
   projectContext: string[];
   knowledgeContext: string[];
   capabilityContext: string[];
+  completionLevel: CompletionReport;
   completion: {
     available: boolean;
-    mcpTool: "empirical_complete" | "empirical_archive";
+    mcpTool: "empirical_complete" | "empirical_integrate" | "empirical_deliver" | "empirical_publish";
     cli: string;
     requiredFields: string[];
   };
@@ -281,6 +329,52 @@ export interface ArchiveResult {
   report: ArchiveReport;
 }
 
+export interface IntegrationInput {
+  revision: number;
+  targetRoot: string;
+  actor?: string;
+}
+
+export interface IntegrationResult extends ArchiveResult {
+  receipt: Record<string, unknown>;
+}
+
+export interface DeliveryCommitInput {
+  branch: string;
+  paths: string[];
+  message: string;
+  title: string;
+  body: string;
+}
+
+export interface DeliveryInput {
+  revision: number;
+  source: DeliveryCommitInput;
+  evidence: DeliveryCommitInput;
+  actor?: string;
+}
+
+export interface DeliveryResult {
+  action: ActionPacket;
+  receipt: Record<string, unknown>;
+}
+
+export interface PublicationInput {
+  revision: number;
+  authorization: StandingAuthorization;
+  packageName: string;
+  version: string;
+  distTag: string;
+  commit: string;
+  approved: true;
+  actor?: string;
+}
+
+export interface PublicationResult {
+  action: ActionPacket;
+  receipt: Record<string, unknown>;
+}
+
 export interface TransitionEvent {
   schemaVersion: typeof SCHEMA_VERSION;
   revision: number;
@@ -300,6 +394,15 @@ export interface IntegrationReport {
   removed: string[];
   preserved: string[];
   entrypoints: AgentEntrypointReport[];
+}
+
+export interface UninstallReport {
+  package: "removed";
+  integrations: IntegrationReport;
+  preserved: {
+    projectHistory: true;
+    repositoryIntegrations: true;
+  };
 }
 
 export type AgentIntegrationId = "codex" | "claude" | "cursor" | "gemini" | "windsurf";
@@ -365,21 +468,36 @@ export interface RepositoryKnowledgeFile {
   digest: string;
 }
 
+export interface RepositoryKnowledgePage {
+  path: string;
+  generator: string;
+  managed: boolean;
+  dependencies: string[];
+  sourceDigest: string;
+  digest: string | null;
+  freshness: "fresh" | "stale" | "missing";
+}
+
 export interface RepositoryKnowledgeManifest {
-  schemaVersion: 1;
+  schemaVersion: 2;
+  generator: string;
+  sourceDigest: string;
   digest: string;
   files: RepositoryKnowledgeFile[];
+  pages: RepositoryKnowledgePage[];
   truncated: boolean;
 }
 
 export interface RepositoryKnowledgeReport {
   root: string;
-  status: "created" | "refreshed" | "current";
+  status: "created" | "refreshed" | "current" | "stale";
   digest: string;
   files: number;
   truncated: boolean;
   manifest: string;
   context: string[];
+  stale: string[];
+  missing: string[];
 }
 
 export interface InitOptions extends ProjectConfigurationInput {
@@ -394,6 +512,27 @@ export interface StartOptions {
 
 export interface FeatureStartOptions {
   id?: string;
+}
+
+export interface YoloOptions extends FeatureStartOptions {
+  ceiling?: "implemented" | "verified" | "integrated" | "delivered" | "published";
+  targetBranch?: string;
+  allowExternalAgent?: boolean;
+}
+
+export interface ExecuteEvidenceInput {
+  commandId: string;
+  criteria: string[];
+  evidenceKinds?: EvidenceKind[];
+  summary: string;
+}
+
+export interface CollectEvidenceInput {
+  criteria: string[];
+  evidenceKinds: EvidenceKind[];
+  summary: string;
+  collector: string;
+  artifacts: Array<{ path: string; mediaType: string }>;
 }
 
 export interface AdoptionOptions extends ProjectConfigurationInput {

@@ -1,5 +1,4 @@
 {
-  "schemaVersion": 4,
   "revision": 67,
   "activeFeature": "011-fix-empirical-integrate-so-it-installs-real",
   "request": "Fix empirical integrate so it installs real user-invocable Empirical commands for every supported agent: add the missing Claude slash command, retain and verify Cursor, Gemini, and Windsurf commands, expose Codex through its supported project skill invocation, report exact per-agent command names after integration, update documentation, and add integration tests that prove every generated command artifact and invocation.",
@@ -9,59 +8,29 @@
   "repairAttempts": 0,
   "message": "Archived capability changes: agent-integrations",
   "implementationActor": "agent",
-  "evidence": [
-    {
-      "criterionId": "AC-1",
-      "kind": "test",
-      "passed": true,
-      "artifact": "tests/integrations.test.ts",
-      "summary": "Focused integration tests passed and verified that fresh initialization and project integration create all five managed entrypoints for all five supported agents."
-    },
-    {
-      "criterionId": "AC-2",
-      "kind": "test",
-      "passed": true,
-      "artifact": "tests/integrations.test.ts",
-      "summary": "Integration assertions verified the native invocation matrix, including Codex $ skills and slash-command surfaces only where supported."
-    },
-    {
-      "criterionId": "AC-3",
-      "kind": "test",
-      "passed": true,
-      "artifact": "tests/integrations.test.ts",
-      "summary": "Generated entrypoint contents retain the Socratic approval contract, Fast eligibility guard, Complex gates, and request-free Loop resume behavior."
-    },
-    {
-      "criterionId": "AC-4",
-      "kind": "test",
-      "passed": true,
-      "artifact": "tests/integrations.test.ts",
-      "summary": "Real human and JSON CLI subprocess tests passed and exposed equivalent per-agent invocation, location, and reload metadata."
-    },
-    {
-      "criterionId": "AC-5",
-      "kind": "test",
-      "passed": true,
-      "artifact": "tests/integrations.test.ts",
-      "summary": "Repeat refresh, unmanaged collision, direct symlink, parent symlink, and invalid-home tests passed without overwriting preserved user content."
-    },
-    {
-      "criterionId": "AC-6",
-      "kind": "test",
-      "passed": true,
-      "artifact": "README.md",
-      "summary": "Documentation and CLI output distinguish terminal commands, native slash commands, Codex $ skills, project integration, and global installation. The focused CLI and integration run passed 10 tests with 142 assertions."
-    },
-    {
-      "criterionId": "all",
-      "kind": "review",
-      "passed": true,
-      "artifact": "src/integrations.ts",
-      "summary": "Reviewed AC-1 through AC-6 against accepted decision D-001 and the current implementation. The typed catalog renders all native project entrypoints, reports agent-accurate invocation and reload metadata, preserves managed-file and symlink safety, and matches the documented CLI/agent distinction. The focused suite passed 10 tests with 142 assertions and git diff --check is clean."
-    }
-  ],
   "updatedAt": "2026-07-29T19:26:25.110Z",
-  "specDigest": "e537ef3a2804411cdfe1b20ec336f45526de91404ff353dd642ef6719a32ec00",
+  "specDigest": "sha256:e537ef3a2804411cdfe1b20ec336f45526de91404ff353dd642ef6719a32ec00",
   "capabilityArchiveRequired": true,
-  "capabilityDeltaDigest": "05c584cae68f1cd3550912952e9354cf8c7d4418f7e7c756cecc82c79012ffa8"
+  "capabilityDeltaDigest": "sha256:05c584cae68f1cd3550912952e9354cf8c7d4418f7e7c756cecc82c79012ffa8",
+  "schemaVersion": 5,
+  "workflow": "complex",
+  "mode": "normal",
+  "approvedSpecRevision": 67,
+  "impactDigest": "sha256:d2385f9cb9c4bf67d07889dae3b49f81e71759c3f365f6f71d9290747765c3ce",
+  "capabilityClaimId": null,
+  "authorizationDigest": null,
+  "evidenceReceiptIds": [],
+  "legacyEvidenceCount": 7,
+  "completion": {
+    "implemented": true,
+    "verified": true,
+    "integrated": true,
+    "delivered": false,
+    "published": false,
+    "highest": "integrated",
+    "reasons": {
+      "delivered": "delivered has not been proven by a durable receipt.",
+      "published": "published has not been proven by a durable receipt."
+    }
+  }
 }

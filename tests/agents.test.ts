@@ -34,22 +34,13 @@ async function specifyComplexFeature(root: string): Promise<EmpiricalProject> {
     "# Handoff\n\n## Acceptance Criteria\n\n- [ ] [AC-1] The approved agent can continue.\n",
     "utf8",
   );
-  await mkdir(join(directory, "deltas"), { recursive: true });
-  await writeFile(join(directory, "deltas/handoff.md"), `## Purpose
-
-Allow explicit continuation.
-
-## ADDED Requirements
-
-### Requirement: Approved continuation
-
-The system MUST prepare an approved agent continuation.
-
-#### Scenario: Exact command
-
-- **WHEN** a user approves a detected agent
-- **THEN** the exact command is authorized
-`, "utf8");
+  await writeFile(join(directory, "impact.json"), `${JSON.stringify({
+    schemaVersion: 1,
+    classification: "non-behavioral",
+    capabilities: [],
+    surfaces: ["agent-handoff-test"],
+    regressionRationale: "The fixture exercises authorization without changing product behavior.",
+  }, null, 2)}\n`, "utf8");
   await project.complete({ revision: 1, outcome: "passed", summary: "Specified" });
   return project;
 }

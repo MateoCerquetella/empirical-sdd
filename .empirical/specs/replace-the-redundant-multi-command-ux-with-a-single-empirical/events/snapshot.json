@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "feature": "replace-the-redundant-multi-command-ux-with-a-single-empirical",
+  "lastSequence": 8,
+  "lastEventDigest": "sha256:7e2ac32430fd10e4ecbc725db7be598f88993b3f0a2752c48abb76241a42a388",
+  "stateDigest": "sha256:b75164a155ca74d5d5b2157d952f023b2b02c22f290d9f862b355a1c2e281a36",
+  "state": {
+    "revision": 8,
+    "activeFeature": "replace-the-redundant-multi-command-ux-with-a-single-empirical",
+    "request": "Replace the redundant multi-command UX with a single Empirical entrypoint installed for every detected supported agent. Keep only empirical install and empirical update as normal human terminal lifecycle commands; the installed agent entrypoint must initialize an uninitialized repository, create and maintain compact repository knowledge, conduct Socratic discovery only when needed, choose Fast or Complex internally, resume active work, and after an approved spec offer to continue in the current agent, save, or launch a user-selected detected agent. Preserve structured MCP operations as internal automation APIs and hidden compatibility surfaces where necessary, remove separate Explore, Fast, Complex, and Loop installed skills from the normal user experience, never launch an agent without explicit approval, and verify lifecycle installation/update, agent-owned initialization, repository knowledge refresh, routing, resume, agent detection, explicit handoff, and worktree startup from repositories containing terminal or blocked historical feature state.",
+    "profile": "complex",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Archived capability changes: agent-handoff, agent-integrations, exploratory-discovery, repository-knowledge, worktree-isolation",
+    "implementationActor": "agent",
+    "specDigest": "sha256:9e548cb3bf262acaa62ee8a04685e391b777496f1298ec62bbea6b2b8b630e85",
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "sha256:50ed791170f83ace742e5b504c3a7a058f39c728d4f05872a84081d9602d88f2",
+    "updatedAt": "2026-07-29T20:17:05.323Z",
+    "schemaVersion": 5,
+    "workflow": "complex",
+    "mode": "normal",
+    "approvedSpecRevision": 8,
+    "impactDigest": "sha256:011231e1b34b31b31657278ea16d1cdb3b4466ad976fd6ff61661e86acf7b2d1",
+    "capabilityClaimId": null,
+    "authorizationDigest": null,
+    "evidenceReceiptIds": [],
+    "legacyEvidenceCount": 13,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": true,
+      "delivered": false,
+      "published": false,
+      "highest": "integrated",
+      "reasons": {
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    }
+  },
+  "compactedAt": "2026-07-29T20:17:05.323Z",
+  "digest": "sha256:8e807121e3bda5a5b27d184d3a995dcc24b884211b857134cd6a7fac436245ce"
+}

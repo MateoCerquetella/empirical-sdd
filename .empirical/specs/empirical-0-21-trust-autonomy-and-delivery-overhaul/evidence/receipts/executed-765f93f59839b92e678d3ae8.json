@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "id": "executed-765f93f59839b92e678d3ae8",
+  "criteria": [
+    "AC-1",
+    "AC-10",
+    "AC-11",
+    "AC-12",
+    "AC-13",
+    "AC-14",
+    "AC-15",
+    "AC-16",
+    "AC-17",
+    "AC-18",
+    "AC-19",
+    "AC-2",
+    "AC-3",
+    "AC-4",
+    "AC-5",
+    "AC-6",
+    "AC-7",
+    "AC-8",
+    "AC-9"
+  ],
+  "evidenceKinds": [
+    "review",
+    "test"
+  ],
+  "summary": "Full Schema-5 CI passed: static checks, 157-test suite, weighted coverage thresholds, built MCP smoke, clean packed consumer, and registry/documentation consistency.",
+  "passed": false,
+  "startedAt": "2026-08-03T22:32:55.169Z",
+  "completedAt": "2026-08-03T22:34:17.380Z",
+  "provenance": {
+    "repositoryId": "sha256:28b611fbe37d347c519ab3d25297c1747e77c067df41cf6a321e72b9cdddc4eb",
+    "feature": "empirical-0-21-trust-autonomy-and-delivery-overhaul",
+    "specRevision": 4,
+    "specDigest": "sha256:6925bbfc262ae09f36e23ad2e57251a297ff853774d822d8361dd37ac26f9108",
+    "treeDigest": "sha256:5f8e87d0abd910622e0239843e6d8620e4ce3b16c63435a155648d0cf91be304",
+    "policyDigest": "sha256:888d86d00b83ec4a957413efb0701df5278d06de2077ba6b76f58dd2ba6eeeaf"
+  },
+  "digest": "sha256:d4a819133839ab5ded902976ff2fa141653591bb39bc73348fa373efd5239f22",
+  "kind": "executed",
+  "command": {
+    "argv": [
+      "bun",
+      "run",
+      "ci"
+    ],
+    "cwd": ".",
+    "timeoutMs": 900000,
+    "maxOutputBytes": 4194304,
+    "environmentKeys": [
+      "NO_COLOR",
+      "PATH",
+      "TMPDIR"
+    ]
+  },
+  "result": {
+    "exitCode": 1,
+    "signal": null,
+    "timedOut": false,
+    "stdoutDigest": "sha256:d6684989b8dd63b37d2f1954270826fbe1bd89a8debd12bcacf03ed1c6140ef6",
+    "stderrDigest": "sha256:5c1a84fa6844404c5658de8115d7664040bf9c64ba279362f9c92b558f58d4b8",
+    "stdoutTail": "bun test v1.3.14 (0d9b296a)\n",
+    "stderrTail": "xt/commands.md\": \"sha256:6e7039356b7f8d1d6068153a2b507d0fc691801828b50f5ce350abb7bb8f3c3c\",\n    \".empirical/context/conventions.md\": \"sha256:0c983b4e01913d9d0173f83de5566a9e7e6b569ed58eb2452599bfb8ea84b8a8\",\n    \".empirical/context/index.md\": \"sha256:3f16ebab037e3fdf79e0472a226255d4c4ea7c9d17e0b000eb2ee5592ad63fca\",\n    \".empirical/context/manifest.json\": \"sha256:cc1d3bb1ca2619862505e47fa5fec6d615cb310126d46a06c37a2e981b4662e2\",\n    \".empirical/context/overview.md\": \"sha256:c669cc617f3e15a8bc3a833a6ae7d21c51ef8dc4223f175cf1fcedfe8e8b0ddc\",\n    \".empirical/inspection.lock\": \"sha256:f371121a2eaf1530434e679ba19d405c46fafcfc3880c75c224309a526a671f0\",\n    \".empirical/policy.json\": \"sha256:7bf5779023c426b7e1ef403411a3cfa4da5c6b637821d6c2391f5eb916e9ddcc\",\n    \".empirical/specs/broken-receipts/delivery-receipt.json\": \"sha256:ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356\",\n    \".empirical/specs/broken-receipts/evidence/receipts/executed-bad.json\": \"sha256:ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356\",\n    \".empirical/specs/broken-receipts/integration-receipt.json\": \"sha256:ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356\",\n+   \".local/state/gh/device-id\": \"sha256:ef977c63aeed687e08a694d70254d035b1d255c1dc80324f75faf618003de45a\",\n    \"README.md\": \"sha256:f601420d339c4b1f395fbd703bfaa032106167c41d99b889d5f3802237848fbf\",\n    \"package.json\": \"sha256:dde12ae6def7eebcc1c4cda96b9f8a8eed79f0b81c47d8a20613909a54737bf7\",\n  }\n\n- Expected  - 0\n+ Received  + 1\n\n      at <anonymous> (/Users/mateocerquetella/Developer/projects/empirical-sdd/tests/doctor.test.ts:226:38)\n(fail) read-only Doctor diagnostics > reports legacy policy, stale knowledge, locks, and corrupt receipts together [787.69ms]\n(pass) read-only Doctor diagnostics > reports the shared coordination lock without removing it [832.59ms]\n(pass) read-only Doctor diagnostics > rejects unsupported and malformed schema or Policy-v2 documents [411.55ms]\n(pass) read-only Doctor diagnostics > flags terminal history without compaction and mismatched projections [788.63ms]\n\ntests/cli-config.test.ts:\n(pass) first-run configuration CLI > forced interactive init previews before writing and persists every customized answer [1203.10ms]\n(pass) first-run configuration CLI > setup cancellation happens before first-run or repair mutation [1438.42ms]\n(pass) first-run configuration CLI > non-interactive init uses safe defaults and explicit flags can replace them [1168.67ms]\n(pass) first-run configuration CLI > legacy workstream flags and commands are rejected [1032.84ms]\n(pass) first-run configuration CLI > interactive/default modes reject conflicting configuration flags before mutation [561.62ms]\n(pass) first-run configuration CLI > Explain has matching human and JSON surfaces [2260.78ms]\n\ntests/delivery.test.ts:\n(pass) bounded GitHub delivery > uses two protected pull requests and derives delivery from remote merge facts [7.01ms]\n(pass) bounded GitHub delivery > resumes from matching merged remote PRs without duplicate mutations [0.86ms]\n(pass) bounded GitHub delivery > waits for pending checks and stops on failed checks before merge [2.37ms]\n(pass) bounded GitHub delivery > requires matching explicit delivery authority before any command [0.51ms]\n(pass) bounded GitHub delivery > binds new commits to the exact branch and repository-contained paths [1.72ms]\n(pass) bounded GitHub delivery > rejects foreign or moved pull requests before checks or merge [1.43ms]\n(pass) bounded GitHub delivery > an explicitly empty required-check policy performs no check polling [1.98ms]\n(pass) bounded GitHub delivery > structurally rejects force, admin, deletion, credential, and worktree operations [0.34ms]\n(pass) explicit immutable publication > ordinary YOLO remains local/integrated and cannot infer publication [0.46ms]\n(pass) explicit immutable publication > plans only absent immutable artifacts and converges identical retries [0.42ms]\n(pass) explicit immutable publication > stops on immutable conflicts and executes an approved plan without replacement flags [1.70ms]\n(pass) explicit immutable publication > queries remote publication state and verifies convergence independently [2.28ms]\n\ntests/selector.test.ts:\n(pass) agent installer selector > preselects detected and remembered agents and renders status and paths [1.54ms]\n(pass) agent installer selector > supports movement, filtering by name, id, alias, and destination, and toggling [0.73ms]\n(pass) agent installer selector > bounds the viewport, reports hidden rows, and keeps every frame width-safe [0.87ms]\n(pass) agent installer selector > refuses empty submission and preserves an explicit empty default [0.09ms]\n(pass) agent installer selector > restores raw mode and cursor visibility when rendering fails [2.17ms]\n\ntests/lifecycle.test.ts:\n(pass) package lifecycle > update upgrades the package before refreshing installed agent entrypoints [0.25ms]\n(pass) package lifecycle > update stops with a stage-specific error when package update fails [0.12ms]\n(pass) package lifecycle > update reports integration refresh failures separately [0.12ms]\n\ntests/integrations.test.ts:\n(pass) agent integrations > project initialization installs runtime bridges without project-local workflow commands [71.83ms]\n(pass) agent integrations > project integration removes only marker-owned legacy commands and instruction blocks [85.82ms]\n(pass) agent integrations > global install creates all six registry-backed Empirical skills for every selected agent [937.25ms]\n(pass) agent integrations > global refresh updates current managed skills, removes managed legacy skills, and preserves unmanaged collisions [1058.61ms]\n(pass) agent integrations > an explicit selection installs selected agents and removes only deselected managed skills [968.09ms]\n(pass) agent integrations > shared roots are reconciled once and remain until the last selected target leaves [269.61ms]\n(pass) agent integrations > legacy aliases canonicalize, project-only targets fail, and unmanaged selection metadata is preserved [84.97ms]\n(pass) agent integrations > global refresh does not follow skill or parent-directory symbolic links [790.85ms]\n(pass) agent integrations > global integration rejects empty and filesystem-root homes [0.45ms]\n(pass) agent integrations > install CLI works outside a project and reports one human and JSON entrypoint per agent [1641.27ms]\n(pass) agent integrations > primary help exposes only install and update as normal terminal commands [1255.58ms]\n(pass) agent integrations > every registry operation and public subcommand has no-write usable help [10427.28ms]\n(pass) agent integrations > version aliases remain exact and unbranded [939.21ms]\n(pass) agent integrations > public workflow verbs are rejected before project discovery [2681.20ms]\n(pass) agent integrations > non-interactive install requires an explicit selection [647.13ms]\n(pass) agent integrations > repeatable agent flags install the exact selection [375.67ms]\n(pass) agent integrations > yes mode preserves detected agents without prompting [376.76ms]\n(pass) agent integrations > yes mode reuses a remembered broad selection without detecting it [815.82ms]\n\ntests/setup.test.ts:\n(pass) setup settings > renders every safe default before persistence [0.40ms]\n(pass) setup settings > explains inactive UI sub-policies without erasing them [0.11ms]\n(pass) setup settings > validates path and branch templates before save [0.32ms]\n\n4 tests failed:\n(fail) read-only Doctor diagnostics > reports incomplete initialization and a pending migration without mutating either [243.16ms]\n(fail) read-only Doctor diagnostics > reports a healthy Schema-5 repository without changing files or Git state [915.06ms]\n(fail) read-only Doctor diagnostics > validates Schema-5 policy, knowledge, journals, tools, claims, evidence, and worktrees without mutation [897.57ms]\n(fail) read-only Doctor diagnostics > reports legacy policy, stale knowledge, locks, and corrupt receipts together [787.69ms]\n\n 153 pass\n 4 fail\n 1344 expect() calls\nRan 157 tests across 20 files. [81.65s]\nerror: script \"test\" exited with code 1\nerror: script \"ci\" exited with code 1\n",
+    "stdoutTruncated": false,
+    "stderrTruncated": false
+  }
+}

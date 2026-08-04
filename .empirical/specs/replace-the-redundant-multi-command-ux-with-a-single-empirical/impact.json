@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "classification": "behavioral",
+  "capabilities": [
+    "agent-handoff",
+    "agent-integrations",
+    "exploratory-discovery",
+    "repository-knowledge",
+    "worktree-isolation"
+  ],
+  "surfaces": [
+    "legacy-schema-4-workflow"
+  ],
+  "regressionRationale": null,
+  "digest": "sha256:011231e1b34b31b31657278ea16d1cdb3b4466ad976fd6ff61661e86acf7b2d1"
+}

@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "feature": "release-0-22-0",
+  "lastSequence": 8,
+  "lastEventDigest": "sha256:8bf46cf91a5a29803e007f9ba9529dfdd7979102172edd1fb5d2e9ba2b356350",
+  "stateDigest": "sha256:8e7aa10eee7b3393845c72b4cb177d1bb0e3a4149d5d751458f644ed33e039d1",
+  "state": {
+    "schemaVersion": 5,
+    "revision": 8,
+    "activeFeature": "release-0-22-0",
+    "request": "Release the complete intended Schema 5 trust/autonomy/delivery overhaul, migration hardening, documentation and distribution updates, and safe empirical uninstall implementation as empirical-sdd 0.22.0. Bump every public version surface consistently, run the full release CI and package inspection, commit the complete intended working tree on an agent/release-0.22.0 branch, push through protected GitHub pull requests and merge required checks without bypasses, publish empirical-sdd@0.22.0 to npm under latest, create and push the immutable annotated v0.22.0 tag and GitHub release, verify the registry package and a clean consumer install, and preserve final evidence in the repository. Do not force-push, overwrite immutable artifacts, include generated build output, or publish any other version.",
+    "profile": "complex",
+    "workflow": "complex",
+    "mode": "normal",
+    "phase": "done",
+    "status": "done",
+    "repairAttempts": 0,
+    "message": "Integrated capability changes: package-distribution",
+    "implementationActor": "agent",
+    "specDigest": "sha256:b20c78a10dc1a44b986d837d631d88cf4ec98f918cf98a1229a243301c936864",
+    "approvedSpecRevision": 2,
+    "capabilityArchiveRequired": true,
+    "capabilityDeltaDigest": "sha256:3471ec02ce96cab08f3f0f3e238f010bed63d3ae2b9ef4157dc086666a072bec",
+    "impactDigest": "sha256:4f361f3f1194082b6a8cf4bb96ae17c6a477c22256b24f48b39c5b29aadcd27f",
+    "capabilityClaimId": "release-0-22-0-92e63111cfac",
+    "authorizationDigest": null,
+    "evidence": [],
+    "evidenceReceiptIds": [
+      "executed-f64009ff227376375572d6f8",
+      "executed-42cdf8999a63b48c4147aa90"
+    ],
+    "legacyEvidenceCount": 0,
+    "completion": {
+      "implemented": true,
+      "verified": true,
+      "integrated": true,
+      "delivered": false,
+      "published": false,
+      "highest": "integrated",
+      "reasons": {
+        "delivered": "delivered has not been proven by a durable receipt.",
+        "published": "published has not been proven by a durable receipt."
+      }
+    },
+    "updatedAt": "2026-08-04T02:02:33.635Z"
+  },
+  "compactedAt": "2026-08-04T02:02:33.674Z",
+  "digest": "sha256:68629a9be6b348f385bcd4578f1274a82635f57677262e78cc07e100112728d0"
+}

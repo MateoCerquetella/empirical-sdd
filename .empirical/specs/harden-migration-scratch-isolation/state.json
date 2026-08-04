@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 5,
+  "revision": 11,
+  "activeFeature": "harden-migration-scratch-isolation",
+  "request": "Harden Schema-5 migration scratch isolation: remove staged candidates after transform or validation failure, exclude .empirical migration scratch from knowledge fingerprints, evidence tree digests, and independent source overlays, report orphan scratch read-only in Doctor, and prove the boundaries with regression tests.",
+  "profile": "complex",
+  "workflow": "complex",
+  "mode": "normal",
+  "phase": "done",
+  "status": "done",
+  "repairAttempts": 0,
+  "message": "Integrated capability changes: migration-integrity, repository-knowledge, verification-policy, worktree-isolation",
+  "implementationActor": "codex",
+  "specDigest": "sha256:623aed507c58662449b457e8393617db2a0f2e03a99e97140546568ef0eb5b15",
+  "approvedSpecRevision": 2,
+  "capabilityArchiveRequired": true,
+  "capabilityDeltaDigest": "sha256:34a87701c36aec41897b74fc2b0cfa0fee7a8c67f090af8a35d36114fb189e71",
+  "impactDigest": "sha256:048a8793bd2764fb94bb96d9093df3057a05ddd4d0aee6573be4e7cc8a4cb853",
+  "capabilityClaimId": "harden-migration-scratch-isolation-92e63111cfac",
+  "authorizationDigest": null,
+  "evidence": [],
+  "evidenceReceiptIds": [
+    "executed-6976b754a0f87cfea7620a10",
+    "executed-8a1ce8021e5445f3ae7433e2"
+  ],
+  "legacyEvidenceCount": 0,
+  "completion": {
+    "implemented": true,
+    "verified": true,
+    "integrated": true,
+    "delivered": false,
+    "published": false,
+    "highest": "integrated",
+    "reasons": {
+      "delivered": "delivered has not been proven by a durable receipt.",
+      "published": "published has not been proven by a durable receipt."
+    }
+  },
+  "updatedAt": "2026-08-03T23:28:03.456Z"
+}

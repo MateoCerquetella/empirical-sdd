@@ -1,4 +1,4 @@
-# Empirical 0.20 demo
+# Empirical 0.22 demo
 
 ## Install once
 
@@ -7,75 +7,68 @@ npm install -g empirical-sdd
 empirical install
 ```
 
-Type to search the 73-target local catalog, use arrows and Space to choose, and
-press Enter. Detected, remembered, and already installed targets appear first
-with their native destinations. Empirical writes the five skills once per
-unique root; no project-local workflow skill is added and installation performs
-no runtime network request.
+Choose from the pinned 73-target catalog. Empirical writes all six skills once
+per unique root and performs no runtime network fetch during installation.
 
 ## Initialize deliberately
 
-In Codex:
+In Codex, invoke `$empirical-init`. The agent first shows current or recommended
+Verification, Parallel work, and Decisions settings. Apply, customize, or
+cancel; cancellation writes nothing. Initialization then persists Schema 5,
+Policy v2, Manifest v2, and supported runtime bridges without creating feature
+state.
 
-> `$empirical-init`
+## Normal mode
 
-The agent first inspects without writing and shows:
+> `$empirical` Fix the punctuation typo in the README heading.
 
-```text
-◆ Empirical setup
-│  Verification: criterion tests, UI browser, UI screenshots, code review
-│  Parallel work: ask; base auto; ../{repo}-{feature}; {type}/{feature}
-│  Decisions: require reviewable Complex decision records
-◇ Apply recommended settings · Customize · Cancel
-```
-
-Customize visits each section and finishes with Save, Edit, or Cancel. Existing
-repositories show current values and default to Keep. Only after confirmation
-does the agent repair runtime bridges, persist settings, build compact context,
-and stop without creating feature state. Cancellation writes nothing.
-
-## Small concrete contract
-
-> `$empirical-spec` Add a hello command that prints `hello`; do not change any
-> existing command output.
-
-The agent drafts the Complex specification and capability deltas, presents them,
-and stops before implementation. After review:
-
-> `$empirical-loop`
-
-Loop treats that invocation as approval and drives the selected contract to a
-terminal result. After Specify passes it offers Continue here, Save for later,
-or an exact approval-bound handoff to a detected agent.
-
-## Complex Socratic contract
-
-> `$empirical-socratic` Add expiring team invitations with revocation and audit
-> history.
-
-The agent asks the five passes one at a time, saves each answer, shows one exact
-refined request, waits for approval, drafts Specify, and stops for contract
-review. Invoke `$empirical-loop` after approval.
-
-## Automatic mode
-
-> `$empirical` Add a health command that prints `ok`.
-
-Automatic mode initializes if needed, routes this eligible tiny change
-internally to Fast, implements it, tests it, reviews it, and completes it.
+Routing assigns the contract-neutral floor, so Fast implements the change,
+executes configured verification, records immutable test/review receipts, and
+finishes at `verified`.
 
 > `$empirical` Add expiring team invitations with revocation and audit history.
 
-Automatic mode routes substantial work to Complex and drives Specify, Design,
-Plan, Implement, Verify, Review, and Archive. It uses Socratic discovery only if
-ambiguity is material.
+Routing assigns at least the behavioral floor. Complex freezes an impact
+manifest and capability deltas, then advances through Specify, Design, Plan,
+Implement, Verify, Review, and independent Integrate. If the request is
+materially ambiguous, the agent conducts and persists the five Socratic passes
+before drafting the contract.
 
-## Unrelated active work
+Use `$empirical-spec` to draft a known Complex request and stop at contract
+approval, `$empirical-socratic` to interview first, and `$empirical-loop` to
+resume the exact selected revision.
 
-Starting a different feature while one is selected returns an exact, read-only
-Git worktree proposal. After explicit approval Empirical creates the linked
-checkout and starts the request there. The original feature remains selected
-only in its original checkout.
+## Bounded autonomous mode
+
+> `$empirical-yolo` Implement and integrate the approved invitation feature;
+> stop before external delivery.
+
+YOLO stores standing authorization through `integrated`, then continues without
+routine preference questions. It still stops for an unresolved product choice,
+missing host permission, conflict, branch protection, credential boundary, or
+other hard safety floor. It cannot authorize publication.
+
+## Parallel work
+
+Starting an unrelated request while a feature is selected returns a complete,
+read-only Git worktree proposal. Literal approval creates exactly the displayed
+branch and path from the displayed base commit. The original feature remains
+selected only in its checkout; shared capability claims prevent conflicting
+behavioral integrations.
+
+## Delivery
+
+When Policy v2 names a GitHub target and authorization covers `delivered`,
+Complex integration can continue to Deliver. Empirical creates or converges one
+source PR, waits for declared checks, merges normally, then creates and merges a
+separate evidence PR bound to the source merge. No admin merge or force path is
+available.
+
+Publishing a package or release requires a separate explicit request containing
+the exact package, version, dist-tag, merged commit, exact-request authorization,
+and literal approval. Empirical queries the remote tag, GitHub release, npm
+version, and dist-tag both before and after acting; a conflicting immutable
+artifact blocks the operation.
 
 ## Upgrade
 
@@ -83,7 +76,19 @@ only in its original checkout.
 empirical update
 ```
 
-This upgrades the package and refreshes all five managed skills for remembered,
-detected, or legacy-managed agents without selecting new catalog entries. The
-only other public terminal command is
-`empirical install`.
+This upgrades the package and reconciles all six managed skills. A Schema 4
+repository migrates atomically to Schema 5 on its first mutating 0.22 workflow
+operation.
+
+## Uninstall safely
+
+```bash
+empirical uninstall
+```
+
+Interactive uninstall displays its complete scope and defaults to cancel.
+Automation uses `empirical uninstall --yes` or `empirical uninstall --yes
+--json`. Empirical removes marker-owned skills from every unique global catalog
+root, removes valid owned selection metadata, and runs `npm uninstall -g
+empirical-sdd` last. It preserves every project's `.empirical` history and
+repository MCP/agent configuration, plus any unmanaged or unsafe global target.

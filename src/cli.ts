@@ -33,9 +33,12 @@ import {
   installGlobalAgentSkills,
   installedGlobalAgentIds,
   managedGlobalAgentIds,
+  uninstallGlobalAgentSkills,
 } from "./integrations.js";
-import { updateEmpirical } from "./lifecycle.js";
+import { isUninstallConfirmed, uninstallEmpirical, updateEmpirical } from "./lifecycle.js";
 import { runMcpServer } from "./mcp.js";
+import { OPERATIONS, SKILLS, operationById } from "./operations.js";
+import { authorizationSchema } from "./protocol.js";
 import { selectAgentsInteractive, type AgentSelectorItem } from "./selector.js";
 import {
   recommendedSetupSettings,
@@ -54,11 +57,11 @@ import {
   type AgentIntegrationId,
   type AuthorizedAgentHandoff,
   type CompletionInput,
-  type Evidence,
   type ExplorationPacket,
   type FeatureStartResult,
   type IntegrationReport,
   type ProjectConfigurationInput,
+  type UninstallReport,
   type WorktreeHandoff,
   type WorktreeProposal,
   type Workflow,
@@ -76,16 +79,23 @@ async function main(): Promise<void> {
   if (!command) return printHelp();
   if (["help", "--help", "-h"].includes(command)) return printHelp();
   if (["version", "--version", "-v"].includes(command)) return void console.log(PRODUCT_VERSION);
-  if (command === "mcp") return runMcpServer(context.root);
+  if (command === "mcp") {
+    if (hasHelpFlag(context.args)) return printSubcommandHelp("mcp", false);
+    assertNoArgs(context.args, "mcp");
+    return runMcpServer(context.root);
+  }
   const internal = command === "__internal";
   if (internal) {
     command = context.args.shift();
     if (!command) throw new EmpiricalError("INVALID_ARGUMENT", "The private automation namespace requires an operation");
-  } else if (command !== "install" && command !== "update") {
+    if (hasHelpFlag(context.args)) return printSubcommandHelp(command, true);
+  } else if (command !== "install" && command !== "update" && command !== "uninstall") {
     throw new EmpiricalError(
       "UNKNOWN_COMMAND",
-      `Unknown public command '${command}'. Use empirical install or empirical update; repository workflows run inside the installed agent skills.`,
+      `Unknown public command '${command}'. Use empirical install, empirical update, or empirical uninstall; repository workflows run inside the installed agent skills.`,
     );
+  } else if (hasHelpFlag(context.args)) {
+    return printSubcommandHelp(command, false);
   }
 
   switch (command) {
@@ -144,6 +154,36 @@ async function main(): Promise<void> {
       ));
       return;
     }
+    case "uninstall": {
+      const yesLong = takeFlag(context.args, "--yes");
+      const yesShort = takeFlag(context.args, "-y");
+      const yes = yesLong || yesShort;
+      assertNoArgs(context.args, "uninstall");
+      if (!yes) {
+        if (context.json || !(process.stdin.isTTY && process.stdout.isTTY)) {
+          throw new EmpiricalError(
+            "UNINSTALL_CONFIRMATION_REQUIRED",
+            "Uninstall requires explicit confirmation outside an interactive terminal. Re-run with --yes; project .empirical history and repository integrations will remain preserved.",
+          );
+        }
+        if (!(await approveUninstall())) {
+          console.log("Empirical uninstall cancelled. Nothing changed.");
+          return;
+        }
+      }
+      const integrations = await uninstallGlobalAgentSkills(homedir());
+      const lifecycle = uninstallEmpirical(context.json ? runLifecycleQuietly : undefined);
+      const report: UninstallReport = {
+        ...lifecycle,
+        integrations,
+        preserved: {
+          projectHistory: true,
+          repositoryIntegrations: true,
+        },
+      };
+      emit(report, context.json, renderUninstallReport);
+      return;
+    }
     case "init": {
       const profile = readProfile(context.args);
       const integrations = !takeFlag(context.args, "--no-integrations");
@@ -189,7 +229,8 @@ async function main(): Promise<void> {
       );
       return;
     }
-    case "config": {
+    case "config":
+    case "configure": {
       const defaults = takeFlag(context.args, "--defaults");
       const forceInteractive = takeFlag(context.args, "--interactive");
       if (forceInteractive && (defaults || context.json)) {
@@ -292,6 +333,45 @@ async function main(): Promise<void> {
       await emitStart(project, result, context.json);
       return;
     }
+    case "route": {
+      const mode = takeOption(context.args, "--mode") ?? "normal";
+      if (mode !== "normal" && mode !== "yolo") {
+        throw new EmpiricalError("INVALID_ARGUMENT", "--mode must be normal or yolo");
+      }
+      const requestedProfile = readProfile(context.args);
+      const declaredContractNeutral = takeFlag(context.args, "--contract-neutral");
+      const request = takeOption(context.args, "--request") ?? context.args.join(" ");
+      context.args.splice(0);
+      const project = await EmpiricalProject.openReadOnly(context.root);
+      emit(project.route(request, {
+        mode,
+        ...(requestedProfile ? { requestedProfile } : {}),
+        ...(declaredContractNeutral ? { declaredContractNeutral: true } : {}),
+      }), context.json, (value) => JSON.stringify(value, null, 2));
+      return;
+    }
+    case "yolo": {
+      const id = takeOption(context.args, "--id");
+      const ceiling = takeOption(context.args, "--ceiling") ?? "integrated";
+      if (!["implemented", "verified", "integrated", "delivered"].includes(ceiling)) {
+        throw new EmpiricalError(
+          "INVALID_ARGUMENT",
+          "--ceiling must be implemented, verified, integrated, or delivered; publication is separate",
+        );
+      }
+      const targetBranch = takeOption(context.args, "--target-branch");
+      const allowExternalAgent = takeFlag(context.args, "--allow-external-agent");
+      const request = takeOption(context.args, "--request") ?? context.args.join(" ");
+      context.args.splice(0);
+      const project = await EmpiricalProject.open(context.root);
+      await emitStart(project, await project.yolo(request, {
+        ...(id ? { id } : {}),
+        ceiling: ceiling as "implemented" | "verified" | "integrated" | "delivered",
+        ...(targetBranch ? { targetBranch } : {}),
+        ...(allowExternalAgent ? { allowExternalAgent: true } : {}),
+      }), context.json);
+      return;
+    }
     case "start": {
       const profile = readProfile(context.args);
       const id = takeOption(context.args, "--id");
@@ -301,6 +381,38 @@ async function main(): Promise<void> {
         ...(profile ? { profile } : {}),
         ...(id ? { id } : {}),
       }), context.json);
+      return;
+    }
+    case "worktree-propose": {
+      const workflow = (takeOption(context.args, "--workflow") ?? "complex") as Workflow;
+      if (workflow !== "fast" && workflow !== "complex") {
+        throw new EmpiricalError("INVALID_PROFILE", "--workflow must be fast or complex");
+      }
+      const changeType = takeOption(context.args, "--type") as "feature" | "fix" | "chore" | undefined;
+      if (changeType && !["feature", "fix", "chore"].includes(changeType)) {
+        throw new EmpiricalError("INVALID_ARGUMENT", "--type must be feature, fix, or chore");
+      }
+      const feature = takeOption(context.args, "--id");
+      const branch = takeOption(context.args, "--branch");
+      const path = takeOption(context.args, "--path");
+      const base = takeOption(context.args, "--base");
+      const request = takeOption(context.args, "--request") ?? context.args.join(" ");
+      context.args.splice(0);
+      const project = await EmpiricalProject.openReadOnly(context.root);
+      const proposal = await project.proposeWorktree(request, workflow, {
+        ...(changeType ? { changeType } : {}),
+        ...(feature ? { feature } : {}),
+        ...(branch ? { branch } : {}),
+        ...(path ? { path } : {}),
+        ...(base ? { base } : {}),
+      });
+      emit(proposal, context.json, renderProposal);
+      return;
+    }
+    case "worktree-create": {
+      const input = await readJsonInput<import("./types.js").WorktreeCreateInput>(context.args, "worktree-create");
+      const project = await EmpiricalProject.openReadOnly(context.root);
+      emit(await project.createWorktree(input), context.json, renderHandoff);
       return;
     }
     case "worktree": {
@@ -395,6 +507,29 @@ async function main(): Promise<void> {
         : `Archived ${result.report.feature}: ${result.report.added} added, ${result.report.modified} modified, ${result.report.removed} removed.`);
       return;
     }
+    case "evidence-execute": {
+      const input = await readJsonInput<{
+        commandId: string;
+        criteria: string[];
+        evidenceKinds?: Array<"test" | "browser" | "screenshot" | "review" | "human">;
+        summary: string;
+      }>(context.args, "evidence-execute");
+      const project = await EmpiricalProject.open(context.root);
+      emit(await project.executeEvidence(input), context.json, (value) => JSON.stringify(value, null, 2));
+      return;
+    }
+    case "evidence-collect": {
+      const input = await readJsonInput<{
+        criteria: string[];
+        evidenceKinds: Array<"test" | "browser" | "screenshot" | "review" | "human">;
+        summary: string;
+        collector: string;
+        artifacts: Array<{ path: string; mediaType: string }>;
+      }>(context.args, "evidence-collect");
+      const project = await EmpiricalProject.open(context.root);
+      emit(await project.collectEvidence(input), context.json, (value) => JSON.stringify(value, null, 2));
+      return;
+    }
     case "verify": {
       assertNoArgs(context.args, "verify");
       const project = await EmpiricalProject.openReadOnly(context.root);
@@ -414,9 +549,58 @@ async function main(): Promise<void> {
       return;
     }
     case "integrate": {
+      const revision = requiredInteger(context.args, "--revision");
+      const targetRoot = takeOption(context.args, "--target-root");
+      if (!targetRoot) throw new EmpiricalError("INVALID_ARGUMENT", "integrate requires --target-root");
+      const actor = takeOption(context.args, "--actor") ?? "agent";
+      assertNoArgs(context.args, "integrate");
+      const project = await EmpiricalProject.open(context.root);
+      const result = await project.integrate(revision, targetRoot, actor);
+      emit(result, context.json, () => `Integrated ${result.report.feature}: ${result.report.added} added, ${result.report.modified} modified, ${result.report.removed} removed.`);
+      return;
+    }
+    case "deliver": {
+      const input = await readJsonInput<import("./types.js").DeliveryInput>(context.args, "deliver");
+      const project = await EmpiricalProject.open(context.root);
+      emit(await project.deliver(input), context.json, (value) => JSON.stringify(value, null, 2));
+      return;
+    }
+    case "publish": {
+      const input = await readJsonInput<{
+        revision: number;
+        authorization: unknown;
+        feature: string;
+        packageName: string;
+        version: string;
+        distTag: string;
+        commit: string;
+        approved: true;
+        actor?: string;
+      }>(context.args, "publish");
+      if (input.approved !== true) {
+        throw new EmpiricalError(
+          "PUBLICATION_AUTHORIZATION_REQUIRED",
+          "Publication input requires approved: true and an exact version",
+        );
+      }
+      const project = await EmpiricalProject.open(context.root, { feature: input.feature });
+      const result = await project.publish({
+        revision: input.revision,
+        authorization: authorizationSchema.parse(input.authorization),
+        packageName: input.packageName,
+        version: input.version,
+        distTag: input.distTag,
+        commit: input.commit,
+        approved: true,
+        ...(input.actor ? { actor: input.actor } : {}),
+      });
+      emit(result, context.json, (value) => JSON.stringify(value, null, 2));
+      return;
+    }
+    case "integrations": {
       const global = takeFlag(context.args, "--global");
       const all = takeFlag(context.args, "--all");
-      assertNoArgs(context.args, "integrate");
+      assertNoArgs(context.args, "integrations");
       if (global) {
         const report = await installGlobalAgentSkills(homedir(), { all });
         emit(report, context.json, () => renderIntegrationReport(
@@ -460,9 +644,14 @@ async function main(): Promise<void> {
       return;
     }
     case "policy": {
+      const inputPath = takeOption(context.args, "--input");
       assertNoArgs(context.args, "policy");
-      const project = await EmpiricalProject.openReadOnly(context.root);
-      const policy = await project.policy();
+      const project = inputPath
+        ? await EmpiricalProject.open(context.root)
+        : await EmpiricalProject.openReadOnly(context.root);
+      const policy = inputPath
+        ? await project.configurePolicy(JSON.parse(inputPath === "-" ? await readStdin() : await readFile(inputPath, "utf8")) as unknown)
+        : await project.policy();
       emit(policy, context.json, () => `Project policy: ${policy.context.length} context entries, ${Object.keys(policy.phases).length} customized phases (${project.store.policyPath}).`);
       return;
     }
@@ -751,6 +940,27 @@ async function approveProposal(proposal: WorktreeProposal): Promise<boolean> {
   finally { prompt.close(); }
 }
 
+async function approveUninstall(): Promise<boolean> {
+  console.log(`Empirical uninstall will remove:
+- all marker-owned Empirical skills from supported global agent roots
+- valid Empirical-owned global selection metadata
+- the global empirical-sdd npm package
+
+It will preserve:
+- every project .empirical history and evidence directory
+- repository MCP and agent configuration
+- unmanaged, malformed, non-file, or symlinked global targets`);
+  const prompt = new LinePrompter();
+  try {
+    return isUninstallConfirmed(await prompt.ask("\nRemove Empirical? [y/N]: "));
+  } catch (error) {
+    if (error instanceof InterviewQuit) return false;
+    throw error;
+  } finally {
+    prompt.close();
+  }
+}
+
 function renderProposal(value: unknown): string {
   const proposal = value as WorktreeProposal;
   return [
@@ -948,17 +1158,15 @@ async function completionInput(args: string[]): Promise<CompletionInput> {
   const summary = takeOption(args, "--summary");
   if (!summary) throw new EmpiricalError("SUMMARY_REQUIRED", "Use --summary \"<what happened>\"");
   const actor = takeOption(args, "--actor");
-  const evidencePath = takeOption(args, "--evidence");
-  const testSummary = takeOption(args, "--test");
-  const reviewSummary = takeOption(args, "--review");
-  if (evidencePath && (testSummary || reviewSummary)) throw new EmpiricalError("INVALID_ARGUMENT", "Use either --evidence or --test/--review shortcuts");
-  const shortcut: Evidence[] = [
-    ...(testSummary ? [{ criterionId: "AC-1", kind: "test" as const, passed: true, summary: testSummary }] : []),
-    ...(reviewSummary ? [{ criterionId: "all", kind: "review" as const, passed: true, summary: reviewSummary }] : []),
-  ];
-  const evidence = evidencePath ? JSON.parse(await readFile(evidencePath, "utf8")) as Evidence[] : shortcut.length ? shortcut : undefined;
+  const receiptIds = takeOptions(args, ["--receipt"]);
   assertNoArgs(args, "complete");
-  return { revision, outcome: outcome as CompletionInput["outcome"], summary, ...(actor ? { actor } : {}), ...(evidence ? { evidence } : {}) };
+  return {
+    revision,
+    outcome: outcome as CompletionInput["outcome"],
+    summary,
+    ...(actor ? { actor } : {}),
+    ...(receiptIds.length > 0 ? { receiptIds } : {}),
+  };
 }
 
 function readProfile(args: string[]): Workflow | undefined {
@@ -1004,6 +1212,30 @@ function takeFlag(args: string[], name: string): boolean {
   return true;
 }
 
+function hasHelpFlag(args: readonly string[]): boolean {
+  return args.includes("--help") || args.includes("-h");
+}
+
+async function readJsonInput<T>(args: string[], command: string): Promise<T> {
+  const inputPath = takeOption(args, "--input");
+  if (!inputPath) {
+    throw new EmpiricalError(
+      "INVALID_ARGUMENT",
+      `empirical __internal ${command} requires --input <json-file|->`,
+    );
+  }
+  assertNoArgs(args, command);
+  const text = inputPath === "-" ? await readStdin() : await readFile(inputPath, "utf8");
+  try {
+    return JSON.parse(text) as T;
+  } catch (error) {
+    throw new EmpiricalError(
+      "INVALID_ARGUMENT",
+      `${command} input is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 function assertNoArgs(args: string[], command: string): void {
   if (args.length) throw new EmpiricalError("INVALID_ARGUMENT", `Unknown ${command} arguments: ${args.join(" ")}`);
 }
@@ -1044,6 +1276,23 @@ function renderIntegrationReport(summary: string, report: IntegrationReport): st
     lines.push(`  Project MCP support: ${entry.projectMcp ? "verified" : "not claimed"}; executable handoff: ${entry.handoff ? "verified" : "not claimed"}.`);
   }
   return lines.join("\n");
+}
+
+function renderUninstallReport(value: unknown): string {
+  const report = value as UninstallReport;
+  return [
+    `Empirical removed the global npm package and ${report.integrations.removed.length} managed global artifact${report.integrations.removed.length === 1 ? "" : "s"}.`,
+    "",
+    "Filesystem outcomes:",
+    renderOutcome("Removed", report.integrations.removed),
+    renderOutcome("Preserved", report.integrations.preserved, true),
+    "",
+    "Preserved project state:",
+    "- project .empirical histories and evidence",
+    "- repository MCP and agent configuration",
+    "",
+    "Reload open coding agents to clear their cached Empirical skills.",
+  ].join("\n");
 }
 
 function renderOutcome(label: string, paths: string[], includeAll = false): string {
@@ -1109,7 +1358,7 @@ function renderAction(value: unknown): string {
 
 function phaseProgress(profile: ActionPacket["profile"], phase: ActionPacket["phase"]): string | null {
   if (phase === "idle" || phase === "done") return null;
-  const phases = profile === "fast" ? ["implement"] : profile === "quick" ? ["shape", "implement", "verify", "review"] : ["specify", "design", "plan", "implement", "verify", "review", "archive"];
+  const phases = profile === "fast" ? ["implement"] : profile === "quick" ? ["shape", "implement", "verify", "review"] : ["specify", "design", "plan", "implement", "verify", "review", "integrate", "deliver", "publish"];
   const index = phases.indexOf(phase);
   return index < 0 ? null : `step ${index + 1}/${phases.length}`;
 }
@@ -1126,6 +1375,11 @@ function shellDisplay(value: string): string {
   return /^[A-Za-z0-9_./:@+-]+$/.test(value) ? value : JSON.stringify(value);
 }
 
+function runLifecycleQuietly(command: string, args: string[]) {
+  const result = spawnSync(command, args, { stdio: "pipe", shell: false });
+  return { status: result.status, ...(result.error ? { error: result.error } : {}) };
+}
+
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
@@ -1140,6 +1394,7 @@ Install once: npm install -g empirical-sdd
 Lifecycle:
   empirical install            Choose agents in an interactive selector
   empirical update             Update the package and refresh installed skills
+  empirical uninstall          Remove managed global skills and the package
 
 Installer automation:
   empirical install --agent codex --agent cursor   (repeatable; -a alias)
@@ -1151,16 +1406,79 @@ Installer automation:
 The searchable installer uses a pinned local catalog of 73 global skill targets,
 remembers explicit selections, and performs no runtime network or npx calls.
 
-Repository work happens inside your coding agent through five installed skills:
-  empirical                    Automatic end-to-end routing and execution
-  empirical-init               Initialize or repair repository setup only
-  empirical-spec               Draft a concrete specification, then stop
-  empirical-socratic           Interview, draft a specification, then stop
-  empirical-loop               Resume an approved specification to completion
+Repository work happens inside your coding agent through ${SKILLS.length} installed skills:
+${SKILLS.map((skill) => `  ${skill.id.padEnd(28)} ${skill.description}`).join("\n")}
 
 Agents use native syntax such as $empirical in Codex, /empirical in Claude Code,
-and @empirical in Windsurf. Init, Spec, Socratic, and Loop are agent skills, not
-terminal commands. Fast and Complex remain internal routing profiles.`);
+and @empirical in Windsurf. Agent skills are not terminal workflow commands.
+Fast remains contract-neutral; Complex handles every material risk floor.
+The MCP/private adapter registry currently defines ${OPERATIONS.length} operations.`);
+}
+
+function printSubcommandHelp(command: string, internal: boolean): void {
+  if (!internal) {
+    if (command === "install") {
+      console.log(`Install all ${SKILLS.length} registry-backed Empirical skills for selected agents without project workflow mutation.
+
+  empirical install
+  empirical install --agent <agent> [--agent <agent> ...]
+  empirical install --all
+  empirical install --yes
+
+Options: --agent/-a, --all, --yes/-y, --json, --help/-h`);
+      return;
+    }
+    if (command === "update") {
+      console.log(`Update the installed package and reconcile all ${SKILLS.length} registry-backed skills.
+
+  empirical update
+  empirical update --check
+
+Options: --check, --json, --help/-h`);
+      return;
+    }
+    if (command === "uninstall") {
+      console.log(`Remove all marker-owned global Empirical skills, owned selection metadata, and then the global npm package.
+
+  empirical uninstall
+  empirical uninstall --yes
+  empirical uninstall --yes --json
+
+Project .empirical histories and repository MCP/agent configuration are always preserved.
+Unmanaged, malformed, non-file, and symlinked targets are preserved and reported.
+
+Options: --yes/-y, --json, --help/-h`);
+      return;
+    }
+    if (command === "mcp") {
+      console.log(`Run the registry-backed Empirical MCP server over stdio.
+
+  empirical mcp [--root <repository>]
+
+The server exposes ${OPERATIONS.length} internal operations. Configure it as a
+stdio MCP process; it does not open a network listener.`);
+      return;
+    }
+    console.log("Run empirical --help for public commands.");
+    return;
+  }
+  const aliases: Record<string, string> = {
+    config: "configure",
+    worktree: "worktree-create",
+  };
+  const id = aliases[command] ?? command;
+  const operation = operationById(id);
+  if (!operation) {
+    throw new EmpiricalError("UNKNOWN_COMMAND", `Unknown internal operation '${command}'`);
+  }
+  console.log(`${operation.summary}
+
+  empirical __internal ${operation.internalVerb}${operation.cliUsage}
+
+Registry id: ${operation.id}
+MCP tool: ${operation.mcpName}
+Profiles: ${operation.profiles.join(", ")}
+Modes: ${operation.modes.join(", ")}`);
 }
 
 function printExploreHelp(): void {
@@ -1178,13 +1496,11 @@ the refined contract, and waits for approval before Fast or Complex.`);
 function printCompleteHelp(): void {
   console.log(`Complete the current exact revision.
 
-Fast:
-  empirical __internal complete --revision N --outcome passed --summary "<change>" --test "<result>" --review "<diff review>"
+  empirical __internal complete --revision N --outcome passed --summary "<result>" --receipt <immutable-receipt-id>
 
-Complex evidence phases:
-  empirical __internal complete --revision N --outcome passed --summary "<result>" --evidence <evidence.json>
-
-Use --input <file|-> for a complete structured result document.`);
+Use --input <file|-> for a complete structured result document. Schema 5 rejects
+caller-asserted evidence booleans; create receipts with evidence-execute or
+evidence-collect first.`);
 }
 
 main().catch((error: unknown) => {

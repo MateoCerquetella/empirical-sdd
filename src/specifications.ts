@@ -1,8 +1,8 @@
 import { readFile, readdir } from "node:fs/promises";
-import { createHash } from "node:crypto";
 import type { Dirent } from "node:fs";
 import { join, relative } from "node:path";
 import { EmpiricalError } from "./errors.js";
+import { sha256 } from "./protocol.js";
 import { assertCapabilityId, isFile, isSymbolicLink, type ProjectStore } from "./storage.js";
 import type {
   ArchiveReport,
@@ -19,9 +19,27 @@ interface CapabilityProjection {
   next: string;
 }
 
+export interface CapabilityBaseSnapshot {
+  capability: string;
+  digest: string;
+  requirements: Record<string, string | null>;
+}
+
+export interface CapabilityReplayResult {
+  capability: string;
+  next: string;
+  baseDigest: string;
+  resultDigest: string;
+  issues: string[];
+}
+
 export interface CapabilityArchivePlan {
   report: Omit<ArchiveReport, "feature" | "converged">;
   commit: () => Promise<() => Promise<void>>;
+}
+
+export function capabilityMarkdownDigest(markdown: string | null): string {
+  return sha256(canonicalMarkdown(markdown ?? ""));
 }
 
 export async function loadCapabilityDeltas(
@@ -85,6 +103,116 @@ export function parseCapabilityDelta(
     throw new EmpiricalError("INVALID_DELTA", `${source}: no ADDED, MODIFIED, or REMOVED requirements found`);
   }
   return { capability, purpose: purpose?.trim() || null, requirements, source };
+}
+
+export function captureCapabilityBase(
+  capability: string,
+  markdown: string | null,
+  deltas: readonly CapabilityDelta[],
+): CapabilityBaseSnapshot {
+  assertCapabilityId(capability);
+  const canonical = canonicalMarkdown(markdown ?? "");
+  const current = new Map(
+    requirementBlocks(canonical).map((block) => [normalizedName(block.name), block]),
+  );
+  const requirements: Record<string, string | null> = {};
+  for (const delta of deltas) {
+    if (delta.capability !== capability) {
+      throw new EmpiricalError(
+        "INVALID_DELTA",
+        `Cannot capture ${capability} from delta ${delta.capability}`,
+      );
+    }
+    for (const requirement of delta.requirements) {
+      const key = normalizedName(requirement.name);
+      requirements[key] = current.has(key)
+        ? sha256(canonicalMarkdown(current.get(key)!.contents))
+        : null;
+    }
+  }
+  return {
+    capability,
+    digest: capabilityMarkdownDigest(canonical),
+    requirements,
+  };
+}
+
+export function replayCapabilityDeltas(
+  capability: string,
+  currentMarkdown: string | null,
+  deltas: readonly CapabilityDelta[],
+  base: CapabilityBaseSnapshot,
+): CapabilityReplayResult {
+  assertCapabilityId(capability);
+  if (base.capability !== capability) {
+    throw new EmpiricalError(
+      "INTEGRATION_CONFLICT",
+      `Capability base ${base.capability} cannot replay ${capability}`,
+    );
+  }
+  const canonicalCurrent = canonicalMarkdown(currentMarkdown ?? "");
+  const current = new Map(
+    requirementBlocks(canonicalCurrent).map((block) => [normalizedName(block.name), block]),
+  );
+  const touched = new Set<string>();
+  const issues: string[] = [];
+  let purpose = currentMarkdown ? sectionContents(canonicalCurrent, "Purpose") : null;
+  for (const delta of deltas) {
+    if (delta.capability !== capability) {
+      issues.push(`Delta ${delta.source} targets ${delta.capability}, not ${capability}`);
+      continue;
+    }
+    if (!purpose && delta.purpose) purpose = delta.purpose;
+    for (const requirement of delta.requirements) {
+      const key = normalizedName(requirement.name);
+      if (touched.has(key)) {
+        issues.push(`${delta.source}: requirement '${requirement.name}' is changed more than once`);
+        continue;
+      }
+      touched.add(key);
+      if (!(key in base.requirements)) {
+        issues.push(`${delta.source}: requirement '${requirement.name}' is missing its base digest`);
+        continue;
+      }
+      const existing = current.get(key);
+      const actual = existing ? sha256(canonicalMarkdown(existing.contents)) : null;
+      const expected = base.requirements[key] ?? null;
+      if (actual !== expected) {
+        issues.push(
+          `${delta.source}: requirement '${requirement.name}' changed since the feature base`,
+        );
+        continue;
+      }
+      if (requirement.operation === "added") {
+        if (existing) issues.push(`${delta.source}: cannot add existing requirement '${requirement.name}'`);
+        else current.set(key, { name: requirement.name, contents: requirement.contents });
+      } else if (requirement.operation === "modified") {
+        if (!existing) issues.push(`${delta.source}: cannot modify missing requirement '${requirement.name}'`);
+        else current.set(key, { name: requirement.name, contents: requirement.contents });
+      } else if (!existing) {
+        issues.push(`${delta.source}: cannot remove missing requirement '${requirement.name}'`);
+      } else {
+        current.delete(key);
+      }
+    }
+  }
+  if (!currentMarkdown && (!purpose || purpose.trim().length < 20)) {
+    issues.push(`${capability}: new capability needs a meaningful ## Purpose`);
+  }
+  const next = canonicalMarkdown(
+    renderCapability(
+      capability,
+      purpose,
+      [...current.values()].map((block) => block.contents),
+    ),
+  );
+  return {
+    capability,
+    next,
+    baseDigest: base.digest,
+    resultDigest: capabilityMarkdownDigest(next),
+    issues,
+  };
 }
 
 export async function validateFeatureDeltas(
@@ -291,8 +419,12 @@ function normalizedName(name: string): string {
   return name.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
+function canonicalMarkdown(markdown: string): string {
+  return markdown.replace(/\r\n?/g, "\n");
+}
+
 function digestCapabilityDeltas(deltas: CapabilityDelta[]): string {
-  return createHash("sha256").update(JSON.stringify(deltas)).digest("hex");
+  return sha256(JSON.stringify(deltas));
 }
 
 function escapeRegExp(value: string): string {
