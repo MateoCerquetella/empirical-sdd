@@ -16,9 +16,12 @@
 
 - `bun run check` runs TypeScript without emitting.
 - `bun run test` runs the full suite with the integration timeout.
+- `bun run test:coverage` runs the suite and enforces module coverage floors.
 - `bun run build` generates the Node-compatible `dist/` package.
 - `bun run test:dist` builds and exercises the bundled CLI and MCP server.
 - `bun run test:package` runs the npm package dry-run.
+- `bun run test:consistency` checks version, schema, skill, and operation
+  surfaces for drift.
 - `bun run ci` executes the complete required pipeline.
 
 ## Verification evidence

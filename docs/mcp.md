@@ -50,7 +50,11 @@ Schema-5 integration requirement.
    before creation.
 7. Execute configured evidence or collect artifacts, then complete the exact
    revision with immutable receipt IDs.
-8. For Complex work, integrate against an independent target worktree. Deliver
+8. When Context is returned, call `empirical_context`, refine every reported
+   placeholder topic from inspected evidence, remove its managed marker, call
+   context again, and complete only when `refinementRequired`, `stale`, and
+   `missing` are empty.
+9. For Complex work, integrate against an independent target worktree. Deliver
    only when Policy and authorization cover it. Never infer publication.
 
 Read operations, proposals, and Doctor do not mutate. Worktree creation,

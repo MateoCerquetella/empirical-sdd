@@ -61,7 +61,7 @@ implement → done (verified)
 Complex is contract-bearing:
 
 ```text
-specify → design → plan → implement → verify → review → integrate
+specify → design → plan → implement → context (when repository knowledge is invalid) → verify → review → integrate
                                                             ├─→ done (integrated)
                                                             └─→ deliver → done (delivered)
 ```
@@ -98,6 +98,13 @@ provenance, command or artifact results, timestamps, and a canonical digest.
 Completion accepts receipt IDs only. It validates digests, criterion coverage,
 required test/review/UI kinds, artifact containment, source binding, and phase
 applicability. A copied boolean such as `passed: true` is never evidence.
+
+After Implement, Empirical inspects Manifest v2. Source-neutral work advances
+normally; source changes that leave knowledge stale, missing, invalid, or
+placeholder-only route to the persisted `context` phase. Context completion
+requires an explicit refresh, evidence-backed topic refinement, managed-marker
+removal, and a second refresh whose report has empty `stale`, `missing`, and
+`refinementRequired` lists.
 
 ## Persistence
 

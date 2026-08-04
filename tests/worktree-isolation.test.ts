@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { basename, dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { EmpiricalProject } from "../src/core.js";
+import { refreshRepositoryKnowledge } from "../src/knowledge.js";
 import type { ActionPacket, WorktreeProposal } from "../src/types.js";
 
 const directories: string[] = [];
@@ -23,6 +24,14 @@ async function repository(): Promise<{ root: string; project: EmpiricalProject }
   git(root, ["config", "user.email", "empirical@example.test"]);
   await writeFile(join(root, "README.md"), "# Fixture\n", "utf8");
   await EmpiricalProject.initialize(root, { integrations: false, setupComplete: true });
+  await Promise.all(["overview", "architecture", "commands", "conventions"].map((page) =>
+    writeFile(
+      join(root, ".empirical", "context", `${page}.md`),
+      `# ${page}\n\nVerified worktree fixture context.\n`,
+      "utf8",
+    )
+  ));
+  await refreshRepositoryKnowledge(root);
   git(root, ["add", "."]);
   git(root, ["commit", "-m", "base"]);
   git(root, ["checkout", "-b", "feature/current-work"]);

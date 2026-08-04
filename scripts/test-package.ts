@@ -77,7 +77,7 @@ import { canonicalJson } from "empirical-sdd/protocol";
 import { createMcpServer } from "empirical-sdd/mcp";
 import { EMPIRICAL_AGENT_SKILL_NAMES, uninstallGlobalAgentSkills } from "empirical-sdd/integrations";
 
-if (typeof EmpiricalProject !== "function" || PRODUCT_VERSION !== "0.22.0" || SCHEMA_VERSION !== 5) throw new Error("root export mismatch");
+if (typeof EmpiricalProject !== "function" || PRODUCT_VERSION !== "0.22.1" || SCHEMA_VERSION !== 5) throw new Error("root export mismatch");
 if (canonicalJson({ b: 2, a: 1 }) !== '{"a":1,"b":2}') throw new Error("protocol export mismatch");
 if (typeof createMcpServer !== "function") throw new Error("MCP export mismatch");
 if (EMPIRICAL_AGENT_SKILL_NAMES.length !== 6 || typeof uninstallGlobalAgentSkills !== "function") throw new Error("integration export mismatch");

@@ -88,7 +88,7 @@ try {
 
   let fast = await runCli(root, ["fast", "Fix a docs punctuation typo"]);
   for (const expected of [
-    "Empirical · step 1/1",
+    "Empirical · step 1/2",
     "implement (fast, waiting, revision 1)",
     "Required evidence: test, review",
     "--receipt <receipt-id>",
@@ -161,14 +161,14 @@ try {
   const packageJson = JSON.parse(await readFile(resolve(import.meta.dir, "../package.json"), "utf8")) as { version: string };
   for (const args of [["version"], ["--version"], ["-v"]]) {
     const version = await runCli(root, args);
-    if (version.stdout !== "0.22.0\n" || packageJson.version !== "0.22.0") {
+    if (version.stdout !== "0.22.1\n" || packageJson.version !== "0.22.1") {
       throw new Error(`Bundled/package version mismatch: ${version.stdout}`);
     }
   }
   for (const args of [[], ["help"], ["--help"], ["-h"]]) {
     const help = await runCli(root, args);
     if (
-      !help.stdout.includes("empirical v0.22.0")
+      !help.stdout.includes("empirical v0.22.1")
       || !help.stdout.includes("through 6 installed skills")
       || !help.stdout.includes("empirical-yolo")
       || help.stdout.includes("\u001b[")

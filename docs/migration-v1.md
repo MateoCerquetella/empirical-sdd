@@ -16,6 +16,11 @@ is retained in the transaction backup until promotion and recovery complete.
 An interruption is either rolled forward from its verified transaction marker
 or restored without leaving mixed versions.
 
+Exact legacy TODO context templates remain marker-managed and are reported as
+refinement-required in nonempty repositories; custom legacy context is kept
+unmanaged and byte-preserved. The host agent must refine managed topics from
+repository evidence before a post-implementation Context gate can pass.
+
 Top-level `.empirical.schema5-*` stages/markers and
 `.empirical.schema4-backup-*` directories are reserved migration transaction
 state, not product source. A candidate failure before marker creation removes

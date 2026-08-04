@@ -94,11 +94,13 @@ being replaced.
 ## Knowledge and diagnostics
 
 Manifest v2 records normalized source fingerprints and generated-page source
-sets. Retrieval returns fresh pages by default; a changed source makes dependent
-pages explicitly stale. Doctor reads schema/migration state, journals and
-snapshots, locks and claims, tool versions, Policy v2, knowledge freshness,
-receipts, worktrees, and delivery artifacts. It never repairs, prunes, launches,
-or writes.
+sets. Retrieval returns only fresh, semantically refined pages. Managed or exact
+legacy placeholder topics in a nonempty repository are reported through
+`refinementRequired` and withheld from usable context. After source-changing
+Implement work, the state machine conditionally inserts Context: the host agent
+refreshes inventory, refines topics from inspected evidence, removes managed
+markers, and refreshes again before Verify or Done. Doctor reports stale,
+missing, invalid, and refinement-required knowledge without mutation.
 
 ## Package surface
 

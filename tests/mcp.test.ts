@@ -63,6 +63,7 @@ test("the bundled stdio MCP server exposes and executes the portable workflow to
     expect(context.isError).not.toBe(true);
     expect(context.structuredContent).toMatchObject({
       status: "current",
+      refinementRequired: [],
       context: [
         ".empirical/context/index.md",
         ".empirical/context/overview.md",

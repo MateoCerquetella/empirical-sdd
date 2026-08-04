@@ -6,6 +6,8 @@ Empirical SDD is a TypeScript library, Node.js CLI, and stdio MCP server for
 agent-neutral, resumable spec-driven repository work. It turns feature requests
 into exact Fast or Complex state-machine actions backed by committed contracts,
 evidence, review, living capability specifications, and safe Git worktrees.
+Source-changing work conditionally enters a persisted Context phase so stale or
+placeholder repository knowledge cannot survive a completed workflow.
 
 ## Boundaries
 
@@ -15,7 +17,8 @@ evidence, review, living capability specifications, and safe Git worktrees.
   modes. Public CLI commands are Install, Update, and ownership-bound Uninstall;
   workflow operations are MCP/private automation APIs.
 - Repository knowledge is bounded and file-backed. There are no embeddings,
-  hosted indexing services, or persisted private reasoning.
+  hosted indexing services, or persisted private reasoning. Managed placeholder
+  topics are reported as refinement-required and withheld from usable context.
 - Empirical does not publish, commit user work, force Git, or launch another
   agent without exact explicit approval.
 

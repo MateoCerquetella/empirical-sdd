@@ -6,6 +6,10 @@ import { EmpiricalError } from "./errors.js";
 import { digestJson, MANIFEST_SCHEMA_VERSION, PRODUCT_VERSION, sha256 } from "./protocol.js";
 import { isMigrationScratchPath } from "./migration-scratch.js";
 import {
+  isLegacyRepositoryKnowledgeTemplate,
+  MANAGED_CONTEXT_MARKER,
+} from "./knowledge-templates.js";
+import {
   isFile,
   isSymbolicLink,
   readJson,
@@ -28,7 +32,6 @@ export const KNOWLEDGE_CONTEXT_PATHS = [
   ".empirical/context/conventions.md",
 ] as const;
 
-const MANAGED_CONTEXT_MARKER = "<!-- empirical-sdd:managed-context-v2 -->";
 const GENERATOR = `empirical-${PRODUCT_VERSION}`;
 const MAX_FILES = 1_200;
 const MAX_FILE_BYTES = 1_000_000;
@@ -84,6 +87,12 @@ const BINARY_EXTENSIONS = new Set([
   ".woff",
   ".woff2",
   ".zip",
+]);
+const INTEGRATION_ONLY_PATHS = new Set([
+  ".codex/config.toml",
+  ".cursor/mcp.json",
+  ".gemini/settings.json",
+  ".mcp.json",
 ]);
 
 type ContextPageId = "index" | "overview" | "architecture" | "commands" | "conventions";
@@ -146,7 +155,21 @@ interface KnowledgeInspection {
   fresh: string[];
   stale: string[];
   missing: string[];
+  refinementRequired: string[];
   issues: string[];
+}
+
+function requiresSemanticRefinement(
+  definition: PageDefinition,
+  contents: string,
+  files: RepositoryKnowledgeFile[],
+): boolean {
+  if (
+    definition.id === "index" ||
+    !files.some((file) => !INTEGRATION_ONLY_PATHS.has(file.path))
+  ) return false;
+  if (contents.startsWith(MANAGED_CONTEXT_MARKER)) return true;
+  return isLegacyRepositoryKnowledgeTemplate(definition.path, contents);
 }
 
 function pageDependencies(
@@ -233,13 +256,18 @@ export async function inspectRepositoryKnowledge(
   const fresh: string[] = [];
   const stale: string[] = [];
   const missing: string[] = [];
+  const refinementRequired: string[] = [];
   for (const definition of PAGE_DEFINITIONS) {
     const absolute = join(root, definition.path);
     if (!(await isFile(absolute))) {
       missing.push(definition.path);
       continue;
     }
-    const currentDigest = sha256(await readFile(absolute));
+    const contents = await readFile(absolute, "utf8");
+    const currentDigest = sha256(contents);
+    if (requiresSemanticRefinement(definition, contents, inventory.files)) {
+      refinementRequired.push(definition.path);
+    }
     const currentSource = pageSourceDigest(definition, inventory.files);
     const previous = manifest?.pages.find((page) => page.path === definition.path);
     if (
@@ -255,13 +283,18 @@ export async function inspectRepositoryKnowledge(
   }
   return {
     root,
-    valid: issues.length === 0 && stale.length === 0 && missing.length === 0,
+    valid:
+      issues.length === 0 &&
+      stale.length === 0 &&
+      missing.length === 0 &&
+      refinementRequired.length === 0,
     manifest,
     files: inventory.files,
     truncated: inventory.truncated,
     fresh,
     stale,
     missing,
+    refinementRequired,
     issues,
   };
 }
@@ -286,17 +319,23 @@ export async function refreshRepositoryKnowledge(
   }
 
   const pages: RepositoryKnowledgePage[] = [];
+  const refinementRequired: string[] = [];
   let pageChanged = false;
   for (const definition of PAGE_DEFINITIONS) {
     const path = join(root, definition.path);
     const existing = await isFile(path) ? await readFile(path, "utf8") : null;
     const previousPage = previous?.pages.find((page) => page.path === definition.path);
     const sourceDigest = pageSourceDigest(definition, inventory.files);
-    const isManaged = existing?.startsWith(MANAGED_CONTEXT_MARKER) ?? true;
+    const hasManagedMarker = existing?.startsWith(MANAGED_CONTEXT_MARKER) ?? false;
+    const legacyPlaceholder = existing === null
+      ? false
+      : isLegacyRepositoryKnowledgeTemplate(definition.path, existing);
+    const isManaged = existing === null || hasManagedMarker || legacyPlaceholder;
     const managedStale =
       existing === null ||
       (isManaged &&
-        (previousPage?.sourceDigest !== sourceDigest ||
+        (!hasManagedMarker ||
+          previousPage?.sourceDigest !== sourceDigest ||
           previousPage.digest !== sha256(existing)));
     let contents = existing;
     if (managedStale) {
@@ -305,6 +344,9 @@ export async function refreshRepositoryKnowledge(
       pageChanged = true;
     }
     if (contents === null) throw new Error(`Could not create context page ${definition.path}.`);
+    if (requiresSemanticRefinement(definition, contents, inventory.files)) {
+      refinementRequired.push(definition.path);
+    }
     const managed = contents.startsWith(MANAGED_CONTEXT_MARKER);
     pages.push({
       path: definition.path,
@@ -328,13 +370,14 @@ export async function refreshRepositoryKnowledge(
   };
   const unchanged = previous !== null && digestJson(previous) === digestJson(manifest);
   if (!unchanged) await writeJsonAtomic(manifestPath, manifest);
-  const status: RepositoryKnowledgeReport["status"] =
-    previous === null
+  const status: RepositoryKnowledgeReport["status"] = refinementRequired.length > 0
+    ? "stale"
+    : previous === null
       ? "created"
       : unchanged && !pageChanged
         ? "current"
         : "refreshed";
-  return report(root, status, manifest);
+  return report(root, status, manifest, refinementRequired);
 }
 
 export function repositoryKnowledgePaths(): string[] {
@@ -343,7 +386,7 @@ export function repositoryKnowledgePaths(): string[] {
 
 export async function freshRepositoryKnowledgePaths(root: string): Promise<string[]> {
   const inspection = await inspectRepositoryKnowledge(root);
-  return inspection.fresh;
+  return inspection.fresh.filter((path) => !inspection.refinementRequired.includes(path));
 }
 
 async function repositoryInventory(
@@ -577,6 +620,7 @@ function report(
   root: string,
   status: RepositoryKnowledgeReport["status"],
   manifest: RepositoryKnowledgeManifest,
+  refinementRequired: string[],
 ): RepositoryKnowledgeReport {
   const fresh = manifest.pages
     .filter((page) => page.freshness === "fresh")
@@ -587,6 +631,7 @@ function report(
   const missing = manifest.pages
     .filter((page) => page.freshness === "missing")
     .map((page) => page.path);
+  const refinement = new Set(refinementRequired);
   return {
     root,
     status,
@@ -594,9 +639,10 @@ function report(
     files: manifest.files.length,
     truncated: manifest.truncated,
     manifest: ".empirical/context/manifest.json",
-    context: fresh,
+    context: fresh.filter((path) => !refinement.has(path)),
     stale,
     missing,
+    refinementRequired,
   };
 }
 

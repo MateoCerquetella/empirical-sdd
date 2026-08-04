@@ -15,6 +15,7 @@ import {
   createImpactManifest,
   deriveCompletion,
   digestJson,
+  PRODUCT_VERSION,
   sha256,
   verifyImpactManifest,
   type ImpactManifest,
@@ -28,6 +29,10 @@ import {
   MIGRATION_MARKER_NAME,
   MIGRATION_STAGE_PREFIX,
 } from "./migration-scratch.js";
+import {
+  isLegacyRepositoryKnowledgeTemplate,
+  MANAGED_CONTEXT_MARKER,
+} from "./knowledge-templates.js";
 
 const EMPIRICAL = ".empirical";
 
@@ -104,6 +109,25 @@ async function writeReplace(path: string, value: unknown): Promise<void> {
   await writeExclusive(temporary, value);
   await rename(temporary, path);
   await syncDirectory(dirname(path));
+}
+
+async function writeTextReplace(path: string, contents: string): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
+  let handle: Awaited<ReturnType<typeof open>> | null = null;
+  try {
+    handle = await open(temporary, "wx", 0o600);
+    await handle.writeFile(contents, "utf8");
+    await handle.sync();
+    await handle.close();
+    handle = null;
+    await rename(temporary, path);
+    await syncDirectory(dirname(path));
+  } catch (error) {
+    await handle?.close().catch(() => undefined);
+    await rm(temporary, { force: true });
+    throw error;
+  }
 }
 
 async function syncDirectory(path: string): Promise<void> {
@@ -536,11 +560,19 @@ async function transformManifest(stage: string): Promise<void> {
     const pageSourceDigest = digestJson(
       files.filter((file) => dependencies.includes(file.path)),
     );
-    const contents = present ? await readFile(path, "utf8") : null;
+    let contents = present ? await readFile(path, "utf8") : null;
+    const contextPath = `.empirical/context/${name}`;
+    if (
+      contents !== null &&
+      isLegacyRepositoryKnowledgeTemplate(contextPath, contents)
+    ) {
+      contents = `${MANAGED_CONTEXT_MARKER}\n${contents}`;
+      await writeTextReplace(path, contents);
+    }
     pages.push({
-      path: `.empirical/context/${name}`,
-      generator: "empirical-0.22.0",
-      managed: contents?.startsWith("<!-- empirical-sdd:managed-context-v2 -->") ?? true,
+      path: contextPath,
+      generator: `empirical-${PRODUCT_VERSION}`,
+      managed: contents?.startsWith(MANAGED_CONTEXT_MARKER) ?? true,
       dependencies,
       sourceDigest: pageSourceDigest,
       digest: contents === null ? null : sha256(contents),
@@ -548,11 +580,15 @@ async function transformManifest(stage: string): Promise<void> {
     });
   }
   const indexPath = join(context, "index.md");
-  const indexContents = (await exists(indexPath)) ? await readFile(indexPath, "utf8") : null;
+  let indexContents = (await exists(indexPath)) ? await readFile(indexPath, "utf8") : null;
+  if (indexContents !== null && !indexContents.startsWith(MANAGED_CONTEXT_MARKER)) {
+    indexContents = `${MANAGED_CONTEXT_MARKER}\n${indexContents}`;
+    await writeTextReplace(indexPath, indexContents);
+  }
   pages.unshift({
     path: ".empirical/context/index.md",
-    generator: "empirical-0.22.0",
-    managed: indexContents?.startsWith("<!-- empirical-sdd:managed-context-v2 -->") ?? true,
+    generator: `empirical-${PRODUCT_VERSION}`,
+    managed: indexContents?.startsWith(MANAGED_CONTEXT_MARKER) ?? true,
     dependencies: files.map((file) => file.path),
     sourceDigest,
     digest: indexContents === null ? null : sha256(indexContents),
@@ -560,7 +596,7 @@ async function transformManifest(stage: string): Promise<void> {
   });
   const body = {
     schemaVersion: 2,
-    generator: "empirical-0.22.0",
+    generator: `empirical-${PRODUCT_VERSION}`,
     sourceDigest,
     files,
     pages,
